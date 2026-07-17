@@ -1,0 +1,16 @@
+{
+  "name": "@g3/ingest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@g3/contracts": "*",
+    "@g3/shared": "*"
+  }
+}

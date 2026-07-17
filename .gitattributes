@@ -1,0 +1,5 @@
+# Chuẩn hóa LF toàn repo — Prettier & CI (Linux) đều dùng LF, tránh lệch trên Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

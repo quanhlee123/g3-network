@@ -1,0 +1,52 @@
+{
+  "name": "g3-network",
+  "version": "0.1.0",
+  "private": true,
+  "description": "G3 Network — nền tảng vận hành xe tải điện (Phase 1, chạy trên simulator)",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*",
+    "simulators/*"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/setup-env.mjs",
+    "prepare": "husky",
+    "dev": "concurrently -n api,portal -c blue,green \"npm run dev -w apps/api\" \"npm run dev -w apps/portal\"",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "openapi:generate": "npm run openapi:generate -w apps/api",
+    "sim:vehicles": "npm run start -w simulators/vehicle-sim --",
+    "sim:ocpp": "npm run start -w simulators/ocpp-sim --",
+    "gitleaks": "gitleaks dir . --no-banner --redact"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.28.0",
+    "eslint-config-prettier": "^10.1.0",
+    "globals": "^17.7.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.0",
+    "prettier": "^3.5.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.33.0",
+    "vitest": "^3.2.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

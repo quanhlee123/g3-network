@@ -1,0 +1,13 @@
+# Cấu hình gitleaks — dùng bộ rule mặc định, bỏ qua thư mục sinh tự động.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Thư mục sinh tự động / phụ thuộc — không chứa mã nguồn của dự án"
+paths = [
+  '''node_modules''',
+  '''\.next''',
+  '''\.expo''',
+  '''dist''',
+  '''package-lock\.json''',
+]
