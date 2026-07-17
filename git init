@@ -1,0 +1,28 @@
+g3-network/
+├── CLAUDE.md                      
+├── .github/
+│   ├── workflows/ci.yml           
+│   └── pull_request_template.md  
+├── apps/
+│   ├── api/        
+│   ├── portal/    
+│   └── mobile/     
+├── packages/
+│   ├── shared/    
+│   └── contracts/  
+├── services/
+│   ├── ingest/     
+│   └── csms/       
+├── simulators/
+│   ├── vehicle-sim/  
+│   └── ocpp-sim/     
+├── infra/
+│   ├── docker-compose.yml
+│   └── .env.example
+├── docs/
+│   ├── prd/ adr/ architecture/ handover/   
+│   ├── adr/ADR-template.md                 
+│   └── DECISION-LOG.md                     
+├── package.json (npm workspaces) · tsconfig.base.json (strict) 
+├── eslint.config.mjs · .prettierrc · .gitignore (gồm .env) · .gitleaks.toml
+└── README.md
