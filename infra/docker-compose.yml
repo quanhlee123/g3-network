@@ -1,0 +1,50 @@
+# Hạ tầng local G3 Network (Phase 1 — simulator, không expose ra internet công cộng).
+# Chạy từ gốc repo: docker compose -f infra/docker-compose.yml up -d
+# Biến môi trường đọc từ infra/.env (npm install tự tạo từ .env.example).
+name: g3-network
+
+services:
+  db:
+    # 1 container duy nhất có sẵn PostgreSQL 16 + TimescaleDB + PostGIS
+    image: timescale/timescaledb-ha:pg16
+    container_name: g3-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Thieu bien - copy infra/.env.example thanh infra/.env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Thieu bien - copy infra/.env.example thanh infra/.env}
+      POSTGRES_DB: ${POSTGRES_DB:?Thieu bien - copy infra/.env.example thanh infra/.env}
+    ports:
+      - '5432:5432'
+    volumes:
+      - db-data:/home/postgres/pgdata/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  emqx:
+    # MQTT broker cho telemetry xe (MQTT 1883, MQTT-over-WebSocket 8083, dashboard 18083)
+    image: emqx/emqx:5.8
+    container_name: g3-emqx
+    environment:
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD__DEFAULT_PASSWORD:?Thieu bien - copy infra/.env.example thanh infra/.env}
+    ports:
+      - '1883:1883'
+      - '8083:8083'
+      - '18083:18083'
+    volumes:
+      - emqx-data:/opt/emqx/data
+    healthcheck:
+      test: ['CMD', 'emqx', 'ctl', 'status']
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  emqx-data:

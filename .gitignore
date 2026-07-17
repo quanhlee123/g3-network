@@ -1,0 +1,24 @@
+# Phụ thuộc & build
+node_modules/
+dist/
+build/
+.next/
+.expo/
+*.tsbuildinfo
+next-env.d.ts
+coverage/
+
+# Biến môi trường — KHÔNG BAO GIỜ commit secret (.env.example thì được)
+.env
+.env.local
+.env.*.local
+
+# Log & rác hệ điều hành
+npm-debug.log*
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

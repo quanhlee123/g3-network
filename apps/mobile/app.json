@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "G3 Tài xế",
+    "slug": "g3-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "platforms": ["android", "ios"],
+    "android": {
+      "package": "vn.g3.driver"
+    }
+  }
+}
