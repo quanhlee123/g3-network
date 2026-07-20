@@ -1,0 +1,93 @@
+%% G3 Network — Sơ đồ kiến trúc tổng quan Phase 1
+%% Vẽ lại từ ảnh sheet "4b. P1 Thiết kế" (update by Duc.xlsx), HIỆU CHỈNH theo CLAUDE.md:
+%% - Modular monolith, KHÔNG Kafka/RabbitMQ (bản gốc có "Hàng đợi thông điệp Kafka/RabbitMQ" — đã bỏ)
+%% - KHÔNG RFID (bản gốc có "Đầu đọc RFID" trên trụ & "Thẻ RFID" trong Identity — đang chờ D-02)
+%% - KHÔNG Redis cache riêng, KHÔNG Time-Series DB riêng — 1 PostgreSQL duy nhất + TimescaleDB + PostGIS
+%% - Bổ sung khối còn thiếu: Policy & Warranty engine (Module B), Payment gateway adapter,
+%%   Notification (FCM/SMS mock), Device management (F-J), E-invoice adapter
+%% Giải thích từng khối: xem system-overview.md
+
+flowchart TB
+  subgraph ngoai["Tác nhân bên ngoài — Phase 1 giả lập 100%"]
+    xe["Thiết bị telematics trên xe<br/>BMS/CAN — SOC, GPS, nhiệt độ pin<br/>(giả lập: simulators/vehicle-sim)"]
+    tru["Trụ sạc OCPP 1.6J<br/>không RFID — chờ D-02<br/>(giả lập: simulators/ocpp-sim)"]
+    taixe["Tài xế"]
+    quanly["Quản lý đội xe / Vận hành /<br/>Bảo hành / Admin"]
+  end
+
+  subgraph client["Ứng dụng người dùng"]
+    mobile["App tài xế<br/>React Native + Expo<br/>(apps/mobile — F-D1..D5)"]
+    portal["Portal đội xe & quản trị<br/>Next.js<br/>(apps/portal — F-E1..E4)"]
+  end
+
+  subgraph server["Hệ thống máy chủ — modular monolith trong 1 monorepo (không Kafka/RabbitMQ)"]
+    subgraph gateway["Lớp cổng giao tiếp"]
+      emqx["EMQX MQTT broker<br/>(infra/docker-compose.yml)"]
+      ingest["Telemetry ingest<br/>(services/ingest — F-G1, F-A1)"]
+      csms["CSMS / OCPP Gateway<br/>WebSocket, tham chiếu SteVe<br/>(services/csms — F-G2)"]
+      api["API REST + OpenAPI<br/>Fastify (apps/api)"]
+    end
+
+    subgraph modules["Các module nghiệp vụ trong apps/api"]
+      telem["Telematics & Cảnh báo pin<br/>(Module A — F-A1..A6)"]
+      policy["Policy & Warranty engine<br/>(Module B — F-B1..B6)"]
+      station["Quản lý trạm sạc<br/>(Module C — F-C1..C6)"]
+      session["Phiên sạc & Billing<br/>(F-B2, F-C6, F-H1..H4)"]
+      doisoat["Đối soát 3 chiều trụ–xe–thanh toán<br/>(NF-10)"]
+      identity["Tài khoản & RBAC + audit log<br/>(F-F1, F-F2)"]
+      notify["Notification — FCM/SMS mock<br/>(F-F3, F-F4)"]
+      device["Device management<br/>(Module F-J — J1..J3)"]
+      cskh["CSKH & SOS<br/>(F-I1..I3)"]
+    end
+
+    subgraph adapters["packages/contracts — interface tích hợp ngoài, luôn có mock"]
+      pay["Payment gateway adapter<br/>VNPay/Momo SANDBOX (F-H1)"]
+      einvoice["E-invoice adapter<br/>HĐĐT mock (F-H3)"]
+      mapadp["Map adapter<br/>VietMap/Google — chờ Q5"]
+      push["Push/SMS adapter<br/>FCM + SMS brandname mock"]
+    end
+
+    db[("PostgreSQL duy nhất<br/>+ TimescaleDB (telematics)<br/>+ PostGIS (không gian)<br/>charging_sessions & violations:<br/>APPEND-ONLY — NF-11")]
+  end
+
+  xe -- "MQTT/TLS telemetry (~30s/lần)" --> emqx
+  emqx --> ingest
+  ingest --> telem
+  ingest --> db
+  tru <-- "OCPP 1.6J qua WebSocket" --> csms
+  csms --> session
+  csms --> station
+
+  taixe --> mobile
+  quanly --> portal
+  mobile --> api
+  portal --> api
+
+  api --> telem
+  api --> policy
+  api --> station
+  api --> session
+  api --> identity
+  api --> cskh
+  api --> device
+
+  telem -- "ngưỡng 30/20/10%" --> notify
+  policy -- "gắn cờ vi phạm" --> notify
+  device -- "thiết bị offline/tamper" --> notify
+  session --> doisoat
+  telem --> doisoat
+  pay -- "webhook sandbox" --> doisoat
+  session --> pay
+  session --> einvoice
+  mobile -.-> mapadp
+  notify --> push
+  push -.-> mobile
+
+  telem --> db
+  policy --> db
+  station --> db
+  session --> db
+  doisoat --> db
+  identity --> db
+  device --> db
+  cskh --> db
