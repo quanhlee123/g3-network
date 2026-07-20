@@ -21,6 +21,9 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "openapi:generate": "npm run openapi:generate -w apps/api",
+    "db:migrate": "npm run db:migrate -w packages/db",
+    "db:seed": "npm run db:seed -w packages/db",
+    "db:types": "npm run db:types -w packages/db",
     "sim:vehicles": "npm run start -w simulators/vehicle-sim --",
     "sim:ocpp": "npm run start -w simulators/ocpp-sim --",
     "gitleaks": "gitleaks dir . --no-banner --redact"
