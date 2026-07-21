@@ -7,14 +7,15 @@ sách sạc & bằng chứng bảo hành, quản lý trạm sạc (OCPP 1.6J), t
 > Phase 1 chạy 100% trên **simulator** và **dữ liệu giả**: không phần cứng thật, không VIN
 > thật, không tiền thật. Đọc `CLAUDE.md` trước khi làm bất cứ việc gì.
 
-## Chạy toàn hệ trong 3 lệnh
+## Chạy toàn hệ trong 4 lệnh
 
 Yêu cầu máy: **Node.js ≥ 22**, **Docker Desktop** (đang chạy), **Git**.
 
 ```bash
 npm install                                        # 1. Cài phụ thuộc + tự tạo infra/.env từ .env.example
 docker compose -f infra/docker-compose.yml up -d   # 2. Bật PostgreSQL (Timescale+PostGIS) và EMQX
-npm run dev                                        # 3. Chạy API (cổng 3000) + Portal (cổng 3100)
+npm run db:migrate && npm run db:seed              # 3. Dựng schema DB + seed dữ liệu giả (Prompt 03)
+npm run dev                                        # 4. Chạy API (cổng 3000) + Portal (cổng 3100)
 ```
 
 Kiểm tra nhanh sau khi chạy:
@@ -36,7 +37,8 @@ g3-network/
 │   ├── portal/          # Portal đội xe Next.js — cổng 3100
 │   └── mobile/          # App tài xế Expo/React Native — KHUNG TRỐNG, build ở Prompt 09 (chờ D-01)
 ├── packages/
-│   ├── shared/          # Hằng số & tiện ích dùng chung (schema_version, đơn vị VNĐ/km/kWh)
+│   ├── shared/          # Hằng số & tiện ích dùng chung + db-types.ts sinh từ schema (F-G4)
+│   ├── db/              # Migration SQL đánh số + runner + seed + sinh types (F-G4, Prompt 03)
 │   └── contracts/       # Interface cho MỌI tích hợp ngoài + mocks (quy tắc 2 — cấm gọi thẳng SDK)
 ├── services/
 │   ├── ingest/          # Nhận telemetry xe–pin từ MQTT (logic thật ở Prompt 05)
@@ -63,6 +65,9 @@ g3-network/
 | Lệnh | Việc |
 |---|---|
 | `docker compose -f infra/docker-compose.yml up -d` + `npm run dev` | Khởi động toàn hệ |
+| `npm run db:migrate` | Chạy migration DB (packages/db/migrations) + áp retention NF-16 |
+| `npm run db:seed` | Seed dữ liệu GIẢ: 20 xe, 3 trạm × 4 trụ, 5 tài khoản, 2 chính sách |
+| `npm run db:types` | Sinh lại types TypeScript từ schema DB (packages/shared/src/db-types.ts) |
 | `npm test` | Toàn bộ test |
 | `npm test -w apps/api` | Test 1 workspace |
 | `npm run lint` | ESLint + Prettier check |
@@ -79,6 +84,7 @@ g3-network/
 | `DATABASE_URL` | Chuỗi kết nối PostgreSQL cho ứng dụng |
 | `MQTT_HOST` / `MQTT_PORT` / `MQTT_WS_PORT` / `MQTT_URL` | Kết nối EMQX (MQTT 1883, WebSocket 8083) |
 | `EMQX_DASHBOARD__DEFAULT_PASSWORD` | Mật khẩu dashboard EMQX (http://localhost:18083) |
+| `TELEMETRY_RETENTION_MONTHS` | Số tháng giữ dữ liệu telematics hot (NF-16, mặc định 12) — áp khi `npm run db:migrate` |
 | `API_PORT` / `PORTAL_PORT` | Cổng API (3000) và Portal (3100) |
 | `CSMS_WS_PORT` | Cổng WebSocket CSMS cho OCPP (dùng từ Prompt 05) |
 

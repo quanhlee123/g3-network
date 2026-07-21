@@ -1,5 +1,8 @@
 // Khung khởi tạo (Prompt 01, chưa gắn F-xx) — hằng số & tiện ích dùng chung toàn hệ.
 
+// F-G4: types sinh từ schema DB (npm run db:types — xem packages/db)
+export * from './db-types';
+
 /**
  * Phiên bản schema bản ghi telematics (NF-16).
  * Đổi schema = migration mới + tăng số này. KHÔNG sửa migration cũ đã merge.
