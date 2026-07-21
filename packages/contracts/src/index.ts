@@ -3,7 +3,10 @@
 // SMS, push, hóa đơn điện tử) đi qua interface khai báo trong package này.
 // CẤM gọi thẳng SDK/API bên ngoài từ logic nghiệp vụ.
 // Mỗi interface luôn có ít nhất 1 bản mock hoạt động được trong ./mocks.
-// Interface nghiệp vụ cụ thể sẽ được thêm ở các prompt sau (04, 05, 08...).
+// Interface nghiệp vụ cụ thể sẽ được thêm ở các prompt sau (05, 08...).
+
+export * from './telemetry';
+export { MockTelemetryPublisher, type MockPublishedMessage } from './mocks/telemetry';
 
 /** Loại adapter — chọn qua biến môi trường, mặc định 'mock' ở Phase 1 (dữ liệu giả 100%). */
 export type ProviderKind = 'mock' | 'real';

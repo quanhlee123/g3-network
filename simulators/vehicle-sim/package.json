@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@g3/shared": "*"
+    "@g3/contracts": "*",
+    "@g3/shared": "*",
+    "mqtt": "^5.10.1"
   }
 }

@@ -44,7 +44,7 @@ g3-network/
 │   ├── ingest/          # Nhận telemetry xe–pin từ MQTT (logic thật ở Prompt 05)
 │   └── csms/            # CSMS tự xây — OCPP 1.6J qua WebSocket (logic thật ở Prompt 05)
 ├── simulators/
-│   ├── vehicle-sim/     # Giả lập xe tải điện (logic thật ở Prompt 04)
+│   ├── vehicle-sim/     # Giả lập xe tải điện — MQTT telemetry, 5 kịch bản (F-A1, docs/simulators.md)
 │   └── ocpp-sim/        # Giả lập trụ sạc OCPP (logic thật ở Prompt 05)
 ├── infra/
 │   ├── docker-compose.yml  # PostgreSQL 16 + TimescaleDB + PostGIS (1 container) + EMQX
@@ -71,7 +71,7 @@ g3-network/
 | `npm test` | Toàn bộ test |
 | `npm test -w apps/api` | Test 1 workspace |
 | `npm run lint` | ESLint + Prettier check |
-| `npm run sim:vehicles -- --count 20` | Giả lập 20 xe |
+| `npm run sim:vehicles -- --count 20` | Giả lập 20 xe gửi telemetry MQTT (kịch bản & flag: `docs/simulators.md`) |
 | `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc |
 | `npm run openapi:generate` | Sinh lại `apps/api/openapi.json` |
 | `npm run gitleaks` | Quét secret toàn thư mục |
