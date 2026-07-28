@@ -154,6 +154,50 @@ Lệnh: `npm run sim:vehicles -- --count 300 --scenario normal`
 | RAM tiến trình sim | 75–80 MB, đi ngang (không rò rỉ) |
 | Kết luận | Máy dev không nghẽn; còn dư địa lớn cho mốc 1.200 xe (2029) |
 
+## Trụ sạc ảo OCPP 1.6J (`simulators/ocpp-sim`) + CSMS (`services/csms`) — F-G2
+
+Trụ ảo kết nối `ws://localhost:9220/ocpp/{mãTrạm}` (subprotocol `ocpp1.6`), mã trạm và
+idTag khớp seed: trạm `G3-ST-001…003`, idTag = VIN GIẢ `G3-SIM-VIN-0001…` (ADR-005 —
+idTag lạ bị CSMS từ chối). Message hỗ trợ: BootNotification, Heartbeat, StatusNotification,
+StartTransaction, MeterValues (Energy/SoC/Power), StopTransaction,
+RemoteStartTransaction/RemoteStopTransaction.
+
+```bash
+docker compose -f infra/docker-compose.yml up -d && npm run db:migrate && npm run db:seed
+npm run start -w services/csms          # cửa sổ 1: CSMS (WS 9220 + HTTP nội bộ 9221)
+npm run sim:ocpp -- --stations 3        # cửa sổ 2: 3 trụ, kịch bản normal
+```
+
+| Flag | Mặc định | Ý nghĩa |
+|---|---|---|
+| `--stations` | `1` | Số trụ (mã `G3-ST-001`… phải có trong DB — seed tạo sẵn 3) |
+| `--scenario` | `normal` | `normal` \| `faulted` \| `disconnect` |
+| `--interval-ms` | `2000` | Chu kỳ MeterValues (ms) |
+| `--session-ticks` | `6` | Số tick MeterValues của 1 phiên |
+| `--power-kw` | `120` | Công suất sạc mô phỏng |
+| `--csms-url` | env `CSMS_URL` hoặc `ws://localhost:9220` | Địa chỉ CSMS |
+
+### Kịch bản & nghiệm thu Prompt 05
+
+- **`normal`** — phiên sạc trọn vẹn. Kiểm tra: `SELECT * FROM charging_sessions ORDER BY
+  recorded_at DESC LIMIT 3;` → đúng 1 dòng/trụ, `energy_kwh` = (meterStop−meterStart)/1000,
+  SOC đầu/cuối khớp log sim.
+- **`faulted`** — trụ hỏng GIỮA phiên (StatusNotification `Faulted` + Stop reason `Other`).
+  Nghiệm thu NF-02 tự bấm giờ: xem log sim in lúc phát Faulted rồi
+  `SELECT status, updated_at FROM connectors;` — chênh lệch ≤30s (thực tế ≪1s; test tự động
+  `session.test.ts` cũng tự bấm giờ khẳng định ≤30s).
+- **`disconnect`** — đứt WS đột ngột giữa phiên (terminate, không close frame), công tơ trụ
+  vẫn chạy offline, nối lại và gửi **StopTransaction bù**: vẫn ra ĐÚNG 1 dòng
+  `charging_sessions` với kWh đủ cả phần sạc lúc mất kết nối. Khi đứt, connectors về
+  `Unavailable`; nối lại thì trở về theo StatusNotification.
+- **RemoteStart (chuẩn bị F-H1)** — sau khi phiên kịch bản xong, sim giữ kết nối:
+
+```bash
+curl -X POST http://localhost:9221/internal/remote-start -H "Content-Type: application/json" -d '{"stationCode":"G3-ST-001","connectorId":1,"idTag":"G3-SIM-VIN-0001"}'
+```
+
+→ trụ tự mở phiên mới; `remote-stop` với `transactionId` để dừng.
+
 ## Sự cố thường gặp
 
 | Triệu chứng | Nguyên nhân / cách xử lý |

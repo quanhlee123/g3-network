@@ -11,6 +11,14 @@
   },
   "dependencies": {
     "@g3/contracts": "*",
-    "@g3/shared": "*"
+    "@g3/db": "*",
+    "@g3/shared": "*",
+    "pg": "^8.16.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@g3/ocpp-sim": "*",
+    "@types/pg": "^8.15.0",
+    "@types/ws": "^8.18.0"
   }
 }

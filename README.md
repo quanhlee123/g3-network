@@ -42,10 +42,10 @@ g3-network/
 │   └── contracts/       # Interface cho MỌI tích hợp ngoài + mocks (quy tắc 2 — cấm gọi thẳng SDK)
 ├── services/
 │   ├── ingest/          # F-G1: MQTT → validate theo schema_version → telematics_readings + quarantine + metric NF-01
-│   └── csms/            # CSMS tự xây — OCPP 1.6J qua WebSocket (logic thật ở Prompt 05)
+│   └── csms/            # F-G2: CSMS tự xây OCPP 1.6J — connectors NF-02, charging_sessions F-B2, RemoteStart F-H1
 ├── simulators/
 │   ├── vehicle-sim/     # Giả lập xe tải điện — MQTT telemetry, 5 kịch bản (F-A1, docs/simulators.md)
-│   └── ocpp-sim/        # Giả lập trụ sạc OCPP (logic thật ở Prompt 05)
+│   └── ocpp-sim/        # F-G2: trụ sạc ảo OCPP 1.6J — 3 kịch bản normal/faulted/disconnect (docs/simulators.md)
 ├── infra/
 │   ├── docker-compose.yml  # PostgreSQL 16 + TimescaleDB + PostGIS (1 container) + EMQX
 │   ├── .env.example        # Mẫu biến môi trường — copy thành .env (npm install tự làm)
@@ -73,7 +73,8 @@ g3-network/
 | `npm run lint` | ESLint + Prettier check |
 | `npm run sim:vehicles -- --count 20` | Giả lập 20 xe gửi telemetry MQTT (kịch bản & flag: `docs/simulators.md`) |
 | `npm run start -w services/ingest` | Chạy service ingest: MQTT → DB, metrics tại http://localhost:9464/metrics |
-| `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc |
+| `npm run start -w services/csms` | Chạy CSMS: OCPP WebSocket cổng 9220, HTTP nội bộ RemoteStart cổng 9221 |
+| `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc OCPP (kịch bản: `--scenario normal\|faulted\|disconnect`) |
 | `npm run openapi:generate` | Sinh lại `apps/api/openapi.json` |
 | `npm run gitleaks` | Quét secret toàn thư mục |
 
@@ -87,7 +88,8 @@ g3-network/
 | `EMQX_DASHBOARD__DEFAULT_PASSWORD` | Mật khẩu dashboard EMQX (http://localhost:18083) |
 | `TELEMETRY_RETENTION_MONTHS` | Số tháng giữ dữ liệu telematics hot (NF-16, mặc định 12) — áp khi `npm run db:migrate` |
 | `API_PORT` / `PORTAL_PORT` | Cổng API (3000) và Portal (3100) |
-| `CSMS_WS_PORT` | Cổng WebSocket CSMS cho OCPP (dùng từ Prompt 05) |
+| `CSMS_WS_PORT` | Cổng WebSocket CSMS cho OCPP 1.6J (trụ kết nối `ws://…/ocpp/{mãTrạm}`) |
+| `CSMS_HTTP_PORT` | Cổng HTTP nội bộ CSMS: RemoteStart/RemoteStop (chuẩn bị F-H1, mặc định 9221) |
 | `INGEST_METRICS_PORT` | Cổng HTTP `/metrics` Prometheus của service ingest (NF-01/NF-14, mặc định 9464) |
 
 Quy tắc: **không hardcode secret** — biến mới phải thêm vào `infra/.env.example`

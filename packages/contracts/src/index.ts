@@ -9,6 +9,8 @@ export * from './telemetry';
 export { MockTelemetryPublisher, type MockPublishedMessage } from './mocks/telemetry';
 export * from './telematics-source';
 export { MockTelematicsSource } from './mocks/telematics-source';
+export * from './ocpp';
+export { MockChargePointTransport, createMockTransportPair } from './mocks/ocpp';
 
 /** Loại adapter — chọn qua biến môi trường, mặc định 'mock' ở Phase 1 (dữ liệu giả 100%). */
 export type ProviderKind = 'mock' | 'real';
