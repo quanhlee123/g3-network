@@ -8,10 +8,18 @@ import { CsmsStationSession, type CsmsSessionOptions, type Queryable } from './s
 class WsChargePointTransport implements IChargePointTransport {
   #messageHandlers: ((data: string) => void)[] = [];
   #closeHandlers: (() => void)[] = [];
+  // Trụ gửi BootNotification NGAY sau khi bắt tay WS, trước khi server kịp tra DB mã trạm
+  // — đệm lại, xả khi handler đầu tiên đăng ký, để không rơi frame nào.
+  #buffered: string[] = [];
 
   constructor(private readonly ws: WebSocket) {
     ws.on('message', (data) => {
-      for (const h of this.#messageHandlers) h(data.toString());
+      const text = data.toString();
+      if (this.#messageHandlers.length === 0) {
+        this.#buffered.push(text);
+        return;
+      }
+      for (const h of this.#messageHandlers) h(text);
     });
     ws.on('close', () => {
       for (const h of this.#closeHandlers) h();
@@ -28,6 +36,15 @@ class WsChargePointTransport implements IChargePointTransport {
 
   onMessage(handler: (data: string) => void): void {
     this.#messageHandlers.push(handler);
+    if (this.#buffered.length > 0) {
+      // Xả backlog Ở MICROTASK SAU: OcppRpc đăng ký onMessage trong constructor,
+      // trước khi CsmsStationSession kịp gắn onCall — xả đồng bộ sẽ thành NotImplemented.
+      const backlog = this.#buffered;
+      this.#buffered = [];
+      queueMicrotask(() => {
+        for (const msg of backlog) handler(msg);
+      });
+    }
   }
 
   onClose(handler: () => void): void {
@@ -55,6 +72,9 @@ export function startOcppServer(
   });
 
   wss.on('connection', (ws, req) => {
+    // Tạo transport NGAY để bắt đầu đệm message — BootNotification thường đến
+    // trước khi truy vấn mã trạm dưới đây xong.
+    const transport = new WsChargePointTransport(ws);
     void (async () => {
       // path /ocpp/{stationCode} — identity trụ = charging_stations.code (seed G3-ST-001…)
       const match = /^\/ocpp\/([^/]+)$/.exec(req.url ?? '');
@@ -70,7 +90,6 @@ export function startOcppServer(
         ws.close(1008, 'ma tram khong ton tai');
         return;
       }
-      const transport = new WsChargePointTransport(ws);
       const session = new CsmsStationSession(transport, db, stationCode, stationId, opts);
       sessions.set(stationCode, session);
       transport.onClose(() => {

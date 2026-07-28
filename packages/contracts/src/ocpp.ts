@@ -197,9 +197,8 @@ export class OcppRpc {
     if (frame[0] === 2) {
       const [, uid, action, payload] = frame;
       try {
-        const result = this.#handler
-          ? await this.#handler(action, payload)
-          : Promise.reject(new Error('NotImplemented'));
+        if (!this.#handler) throw new Error(`NotImplemented: chưa đăng ký onCall (${action})`);
+        const result = await this.#handler(action, payload);
         this.transport.send(JSON.stringify([3, uid, result ?? {}] satisfies OcppCallResult));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
