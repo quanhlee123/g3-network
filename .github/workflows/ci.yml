@@ -9,6 +9,25 @@ jobs:
   lint-test:
     name: Lint & Test
     runs-on: ubuntu-latest
+    # Test packages/db (và ingest/csms từ Prompt 05) cần PostgreSQL thật có TimescaleDB
+    # + PostGIS — cùng image với container g3-db local (infra/docker-compose.yml).
+    services:
+      db:
+        image: timescale/timescaledb-ha:pg16
+        env:
+          POSTGRES_USER: g3
+          # Giá trị dùng một lần cho container sống vài phút trong CI — không phải secret
+          POSTGRES_PASSWORD: g3_ci_khong_phai_secret # gitleaks:allow
+          POSTGRES_DB: g3
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U g3 -d g3"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgres://g3:g3_ci_khong_phai_secret@localhost:5432/g3
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
