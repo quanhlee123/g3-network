@@ -1,6 +1,7 @@
 // F-F1 — Cấu hình apps/api đọc TỪ BIẾN MÔI TRƯỜNG (quy tắc 3: cấm hardcode secret).
 // Mọi biến ở đây phải có mặt trong infra/.env.example và bảng biến môi trường của README.
 import { loadEnv } from '@g3/db';
+import { RECONCILE_DEFAULTS } from './modules/reconciliation/reconcile';
 
 export interface ApiConfig {
   port: number;
@@ -12,6 +13,15 @@ export interface ApiConfig {
   otpMaxAttempts: number;
   /** Trần số bản ghi 1 lần gọi lịch sử telemetry — chặn truy vấn quét cả hypertable. */
   telemetryHistoryMaxRows: number;
+  /** Cấu hình job đối soát 3 chiều (F-C6, NF-10). */
+  reconcile: {
+    /** Chu kỳ chạy tự động (ms); 0 = tắt, chỉ chạy tay. */
+    intervalMs: number;
+    nguongPct: number;
+    hieuSuatSac: number;
+    giaVndMoiKwh: number;
+    cuaSoSocGiay: number;
+  };
 }
 
 const MIN_SECRET_LEN = 32;
@@ -22,6 +32,22 @@ function intEnv(env: NodeJS.ProcessEnv, name: string, fallback: number, min: num
   const value = Number(raw);
   if (!Number.isInteger(value) || value < min) {
     throw new Error(`${name} không hợp lệ: "${raw}" (cần số nguyên >= ${min})`);
+  }
+  return value;
+}
+
+function floatEnv(
+  env: NodeJS.ProcessEnv,
+  name: string,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const raw = env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < min || value > max) {
+    throw new Error(`${name} không hợp lệ: "${raw}" (cần số trong khoảng ${min}–${max})`);
   }
   return value;
 }
@@ -45,6 +71,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     otpTtlS: intEnv(env, 'OTP_TTL_SECONDS', 300, 30),
     otpMaxAttempts: intEnv(env, 'OTP_MAX_ATTEMPTS', 5, 1),
     telemetryHistoryMaxRows: intEnv(env, 'TELEMETRY_HISTORY_MAX_ROWS', 1000, 1),
+    reconcile: {
+      intervalMs: intEnv(env, 'RECONCILE_INTERVAL_MS', 300_000, 0),
+      nguongPct: floatEnv(env, 'RECONCILE_NGUONG_PCT', RECONCILE_DEFAULTS.nguongPct, 0, 100),
+      // Hiệu suất sạc: xem docs/adr/ADR-007. 1.0 chỉ đúng với simulator.
+      hieuSuatSac: floatEnv(env, 'CHARGE_EFFICIENCY', RECONCILE_DEFAULTS.hieuSuatSac, 0.1, 1),
+      giaVndMoiKwh: floatEnv(
+        env,
+        'CHARGING_PRICE_VND_PER_KWH',
+        RECONCILE_DEFAULTS.giaVndMoiKwh,
+        1,
+        1_000_000,
+      ),
+      cuaSoSocGiay: intEnv(env, 'RECONCILE_SOC_WINDOW_S', RECONCILE_DEFAULTS.cuaSoSocGiay, 1),
+    },
   };
 }
 

@@ -7,6 +7,11 @@ import { databaseUrl, loadEnv } from '@g3/db';
 import { startInternalHttp } from './http';
 import { startOcppServer, type SessionRegistry } from './ws-server';
 
+// Cho script demo Gate 0 dựng lại CSMS trong cùng tiến trình.
+export { startInternalHttp } from './http';
+export { startOcppServer, type SessionRegistry } from './ws-server';
+export { CsmsStationSession } from './session';
+
 /** Đọc cổng WebSocket CSMS từ biến môi trường (xem infra/.env.example). */
 export function resolveCsmsPort(env: NodeJS.ProcessEnv): number {
   const port = Number(env.CSMS_WS_PORT ?? 9220);

@@ -2311,6 +2311,460 @@
           }
         }
       }
+    },
+    "/reconciliation/results": {
+      "get": {
+        "summary": "Kết quả đối soát 3 chiều theo phiên sạc (F-C6, NF-10)",
+        "tags": [
+          "doi-soat"
+        ],
+        "description": "kWh trụ (công tơ OCPP) ↔ kWh xe (ΔSOC × dung lượng pin, nội suy từ telematics) ↔ kWh quy từ số tiền giao dịch. Lệch > ngưỡng thì status = \"lech\" và có alert kèm theo. \"thieu_du_lieu\" KHÔNG phải là lệch — thường do xe mất sóng (NF-09), sẽ xét lại sau.",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "khop"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "lech"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "thieu_du_lieu"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "nguong_pct",
+                    "tong_hop",
+                    "items"
+                  ],
+                  "properties": {
+                    "nguong_pct": {
+                      "type": "number"
+                    },
+                    "tong_hop": {
+                      "type": "object",
+                      "required": [
+                        "khop",
+                        "lech",
+                        "thieu_du_lieu"
+                      ],
+                      "properties": {
+                        "khop": {
+                          "type": "integer"
+                        },
+                        "lech": {
+                          "type": "integer"
+                        },
+                        "thieu_du_lieu": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "session_id",
+                          "vin",
+                          "ma_tram",
+                          "started_at",
+                          "kwh_tru",
+                          "kwh_xe",
+                          "kwh_thanh_toan",
+                          "so_tien_vnd",
+                          "lech_xe_pct",
+                          "lech_tien_pct",
+                          "lech_max_pct",
+                          "status",
+                          "ghi_chu",
+                          "checked_at"
+                        ],
+                        "properties": {
+                          "session_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "ma_tram": {
+                            "type": "string"
+                          },
+                          "started_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "kwh_tru": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "kwh_xe": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "kwh_thanh_toan": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "so_tien_vnd": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lech_xe_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lech_tien_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lech_max_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "khop"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "lech"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "thieu_du_lieu"
+                                ]
+                              }
+                            ]
+                          },
+                          "ghi_chu": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "checked_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reconciliation/run": {
+      "post": {
+        "summary": "Chạy tay job đối soát 3 chiều (F-C6, NF-10)",
+        "tags": [
+          "doi-soat"
+        ],
+        "description": "Chạy lại được nhiều lần: kết quả ghi kiểu upsert theo phiên và alert có chống trùng nên không sinh cảnh báo lặp.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "to": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "lam_lai_tat_ca": {
+                    "default": false,
+                    "description": "Đối soát lại cả phiên đã có kết luận khớp/lệch",
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "da_xet",
+                    "khop",
+                    "lech",
+                    "thieu_du_lieu",
+                    "nguong_pct"
+                  ],
+                  "properties": {
+                    "da_xet": {
+                      "type": "integer"
+                    },
+                    "khop": {
+                      "type": "integer"
+                    },
+                    "lech": {
+                      "type": "integer"
+                    },
+                    "thieu_du_lieu": {
+                      "type": "integer"
+                    },
+                    "nguong_pct": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "security": [

@@ -7,14 +7,45 @@ sách sạc & bằng chứng bảo hành, quản lý trạm sạc (OCPP 1.6J), t
 > Phase 1 chạy 100% trên **simulator** và **dữ liệu giả**: không phần cứng thật, không VIN
 > thật, không tiền thật. Đọc `CLAUDE.md` trước khi làm bất cứ việc gì.
 
-## Chạy toàn hệ trong 4 lệnh
+## DEMO GATE 0 — máy sạch, 3 lệnh
 
 Yêu cầu máy: **Node.js ≥ 22**, **Docker Desktop** (đang chạy), **Git**.
 
 ```bash
+npm install
+```
+
+```bash
+docker compose -f infra/docker-compose.yml up -d
+```
+
+```bash
+npm run demo:gate0
+```
+
+Lệnh thứ ba tự chạy migration + seed rồi diễn toàn bộ luồng **tiêu chí Gate 0 ③** trong
+khoảng 3 phút, in kết quả từng bước ra console:
+
+| Bước | Nội dung |
+|---|---|
+| 1–2 | Dựng DB (migration + dữ liệu giả) · khởi động ingest, CSMS, API |
+| 3 | 20 xe giả lập gửi telemetry qua MQTT (F-A1) |
+| 4 | 1 xe tụt pin → **cảnh báo phân cấp 30% / 20% / 10%** kèm gợi ý trạm (F-A2) |
+| 5 | Xe cắm sạc → **phiên sạc qua OCPP 1.6J** ghi vào bảng append-only (F-B2, NF-11) |
+| 6 | Giao dịch thanh toán (bản ghi GIẢ do simulator sinh) |
+| 7 | **Đối soát 3 chiều trụ ↔ xe ↔ thanh toán → KHỚP** trong ngưỡng 1% (F-C6, NF-10) |
+| 8 | Bơm sai 5% có chủ ý → hệ thống **phát hiện và cảnh báo**; thử sửa bảng append-only → DB từ chối |
+| 9 | Vận hành G3 Energy gọi API vị trí xe → **403**, mọi lần truy cập đều vào audit log (quy tắc 5) |
+| 10 | Bảng tóm tắt toàn bộ số liệu lần chạy |
+
+Demo giữ API sống sau khi xong để trình bày thêm tại <http://localhost:3000/docs>; `Ctrl+C` để tắt sạch.
+
+## Chạy để phát triển
+
+```bash
 npm install                                        # 1. Cài phụ thuộc + tự tạo infra/.env từ .env.example
 docker compose -f infra/docker-compose.yml up -d   # 2. Bật PostgreSQL (Timescale+PostGIS) và EMQX
-npm run db:migrate && npm run db:seed              # 3. Dựng schema DB + seed dữ liệu giả (Prompt 03)
+npm run db:migrate && npm run db:seed              # 3. Dựng schema DB + seed dữ liệu giả
 npm run dev                                        # 4. Chạy API (cổng 3000) + Portal (cổng 3100)
 ```
 
@@ -72,11 +103,13 @@ g3-network/
 │   ├── db/              # Migration SQL đánh số + runner + seed + sinh types (F-G4, Prompt 03)
 │   └── contracts/       # Interface cho MỌI tích hợp ngoài + mocks (quy tắc 2 — cấm gọi thẳng SDK)
 ├── services/
-│   ├── ingest/          # F-G1: MQTT → validate theo schema_version → telematics_readings + quarantine + metric NF-01
+│   ├── ingest/          # F-G1: MQTT → validate → telematics_readings + quarantine + metric NF-01 + cảnh báo pin F-A2
 │   └── csms/            # F-G2: CSMS tự xây OCPP 1.6J — connectors NF-02, charging_sessions F-B2, RemoteStart F-H1
 ├── simulators/
-│   ├── vehicle-sim/     # Giả lập xe tải điện — MQTT telemetry, 5 kịch bản (F-A1, docs/simulators.md)
+│   ├── vehicle-sim/     # Giả lập xe tải điện — MQTT telemetry, 6 kịch bản (F-A1, docs/simulators.md)
 │   └── ocpp-sim/        # F-G2: trụ sạc ảo OCPP 1.6J — 3 kịch bản normal/faulted/disconnect (docs/simulators.md)
+├── tools/
+│   └── demo-gate0/      # Kịch bản demo end-to-end cho Gate 0 (npm run demo:gate0)
 ├── infra/
 │   ├── docker-compose.yml  # PostgreSQL 16 + TimescaleDB + PostGIS (1 container) + EMQX
 │   ├── .env.example        # Mẫu biến môi trường — copy thành .env (npm install tự làm)
@@ -106,6 +139,8 @@ g3-network/
 | `npm run start -w services/ingest` | Chạy service ingest: MQTT → DB, metrics tại http://localhost:9464/metrics |
 | `npm run start -w services/csms` | Chạy CSMS: OCPP WebSocket cổng 9220, HTTP nội bộ RemoteStart cổng 9221 |
 | `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc OCPP (kịch bản: `--scenario normal\|faulted\|disconnect`) |
+| `npm run demo:gate0` | **Demo Gate 0 end-to-end** (tự migrate + seed, ~3 phút) |
+| `npm run reconcile` | Chạy tay job đối soát 3 chiều (thêm `-- --lam-lai-tat-ca` để soát lại từ đầu) |
 | `npm run openapi:generate` | Sinh lại `apps/api/openapi.json` |
 | `npm run gitleaks` | Quét secret toàn thư mục |
 
@@ -126,6 +161,11 @@ g3-network/
 | `JWT_EXPIRES_IN` | Hạn dùng token (mặc định `12h`) |
 | `OTP_TTL_SECONDS` / `OTP_MAX_ATTEMPTS` | Hạn dùng mã OTP (300s) và số lần nhập sai tối đa (5) |
 | `TELEMETRY_HISTORY_MAX_ROWS` | Trần bản ghi mỗi lần gọi lịch sử telemetry (mặc định 1000) |
+| `RECONCILE_INTERVAL_MS` | Chu kỳ job đối soát 3 chiều trong tiến trình API (mặc định 300000; `0` = chỉ chạy tay) |
+| `RECONCILE_NGUONG_PCT` | Ngưỡng NF-10 — lệch hơn mức này (%) thì sinh cảnh báo (mặc định 1) |
+| `CHARGE_EFFICIENCY` | Hiệu suất sạc lưới → pin. **1.0 chỉ đúng với simulator** — phải hiệu chuẩn trước Gate 1 ([ADR-007](docs/adr/ADR-007-hieu-suat-sac-doi-soat.md)) |
+| `CHARGING_PRICE_VND_PER_KWH` | Đơn giá điện GIẢ để quy tiền về kWh (mặc định 3500) |
+| `RECONCILE_SOC_WINDOW_S` | Telemetry xa mốc phiên quá số giây này → kết luận "thiếu dữ liệu" (mặc định 60) |
 
 Quy tắc: **không hardcode secret** — biến mới phải thêm vào `infra/.env.example`
 (không kèm giá trị thật) và ghi chú vào bảng trên. `infra/.env` không được commit.

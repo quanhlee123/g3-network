@@ -271,15 +271,23 @@ describe('CsmsStationSession (DB g3_test)', () => {
 
     const status = await session!.remoteStart(2, VIN);
     expect(status).toBe('Accepted');
-    // phiên chạy nền với sleep tức thì — chờ microtask xả hết
-    await new Promise((r) => setTimeout(r, 50));
 
-    const rows = await db.query(
-      `SELECT energy_kwh FROM charging_sessions cs
-       JOIN connectors c ON c.id = cs.connector_id
-       WHERE cs.station_id = $1 AND c.ocpp_connector_id = 2`,
-      [stationId],
-    );
+    // Phiên chạy NỀN (sleep tức thì nhưng vẫn có ~7 lượt đi–về database). Chờ cứng một
+    // khoảng cố định là nguồn gốc test rung khi máy bận — thăm dò tới khi phiên được ghi.
+    const docPhien = () =>
+      db.query(
+        `SELECT energy_kwh FROM charging_sessions cs
+         JOIN connectors c ON c.id = cs.connector_id
+         WHERE cs.station_id = $1 AND c.ocpp_connector_id = 2`,
+        [stationId],
+      );
+    let rows = await docPhien();
+    const han = Date.now() + 10_000;
+    while ((rows.rowCount ?? 0) === 0 && Date.now() < han) {
+      await new Promise((r) => setTimeout(r, 25));
+      rows = await docPhien();
+    }
+
     expect(rows.rowCount).toBe(1); // RemoteStart đã tạo đúng 1 phiên hoàn chỉnh
     expect(Number(rows.rows[0]!.energy_kwh)).toBeGreaterThan(0);
   });

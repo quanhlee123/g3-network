@@ -47,16 +47,28 @@ Chạy qua script gốc: `npm run sim:vehicles -- <flags>`
 | Flag | Mặc định | Ý nghĩa |
 |---|---|---|
 | `--count` | `1` | Số xe giả lập (VIN đánh số `{prefix}-0001`…) |
-| `--scenario` | `normal` | `normal` \| `drain` \| `offline` \| `temp` \| `power-loss` |
+| `--scenario` | `normal` | `normal` \| `drain` \| `offline` \| `temp` \| `power-loss` \| `charge` |
 | `--vin-prefix` | `G3-SIM` | Tiền tố VIN giả (cấm `/ + #` và khoảng trắng) |
+| `--vin-start` | `1` | Số thứ tự VIN đầu tiên — chạy nhiều tiến trình song song mà không trùng VIN |
 | `--interval-ms` | `10000` | Chu kỳ gửi mỗi xe (ms), tối thiểu 100 |
 | `--drain-minutes` | `30` | (drain) SOC tụt 100% → 5% trong số phút này |
+| `--charge-power-kw` | `120` | (charge) công suất sạc — SOC tăng theo công suất và dung lượng pin |
+| `--charge-start-soc` | `30` | (charge) SOC lúc cắm sạc (%) |
 | `--offline-after-minutes` | `1` | (offline) chạy bình thường bao lâu rồi mới mất sóng |
 | `--offline-minutes` | `120` | (offline) thời gian mất sóng (mặc định 2 giờ theo đề) |
 | `--temp-ramp-minutes` | `10` | (temp) thời gian nhiệt độ leo từ ~32°C lên 60°C |
 | `--power-loss-after-minutes` | `2` | (power-loss) chạy bao lâu rồi cắt nguồn đột ngột |
 | `--seed` | `42` | Seed ngẫu nhiên — cùng seed cho ra cùng dữ liệu |
 | `--mqtt-url` | env `MQTT_URL` | Ghi đè địa chỉ broker |
+
+> **Dòng xe theo VIN** khớp `packages/db/src/seed.ts`: `0001–0008` EVT-262 (pin 105 kWh),
+> `0009–0015` EVT-400 (210 kWh), `0016–0020` EVT-825 (420 kWh). Dung lượng pin phải khớp
+> vì đối soát 3 chiều (NF-10) quy đổi ΔSOC × dung lượng pin.
+
+> **Lưu ý vùng địa lý (D-10, đang MỞ):** tuyến mô phỏng là Hà Nội – Lạng Sơn trong khi
+> seed đặt 3 trạm sạc quanh TP.HCM/Long An, nên "trạm gần nhất" trong cảnh báo pin ra
+> hơn 1.000 km. Đúng về tính toán nhưng vô nghĩa về vận hành — chờ quyết định dời tuyến
+> hoặc bổ sung trạm phía Bắc.
 
 ## Cách quan sát dữ liệu
 
@@ -116,6 +128,16 @@ trong vòng ~25s). Đối chứng: tắt bằng Ctrl+C sẽ ra `{"status":"offli
 Lưu ý: kịch bản này mở 1 kết nối/xe — dùng `--count` vừa phải (≤50); yêu cầu 300 xe (NF-04)
 áp cho các kịch bản dùng kết nối chung (`normal`, `drain`, `offline`, `temp`).
 
+### f) `charge` — xe đang cắm sạc (chiều "xe" của đối soát NF-10)
+```bash
+npm run sim:vehicles -- --count 1 --vin-prefix G3-SIM-VIN --scenario charge \
+  --charge-power-kw 120 --charge-start-soc 10 --interval-ms 1000
+```
+Xe **đứng yên** (tốc độ 0, odometer không đổi), SOC **tăng** theo đúng công thức
+`công suất × thời gian ÷ dung lượng pin`. Đây là nguồn dữ liệu độc lập để đối soát với
+công tơ của trụ sạc: chạy song song với `npm run sim:ocpp` cùng `--power-kw` thì hai chiều
+phải khớp nhau trong ngưỡng 1% (NF-10). `npm run demo:gate0` tự làm việc ghép này.
+
 ## Demo end-to-end với service ingest (F-G1 — Prompt 05)
 
 ```bash
@@ -155,6 +177,11 @@ Lệnh: `npm run sim:vehicles -- --count 300 --scenario normal`
 | Kết luận | Máy dev không nghẽn; còn dư địa lớn cho mốc 1.200 xe (2029) |
 
 ## Trụ sạc ảo OCPP 1.6J (`simulators/ocpp-sim`) + CSMS (`services/csms`) — F-G2
+
+> **Đồng hồ ảo của trụ:** dấu thời gian OCPP do trụ ảo phát đi theo một đồng hồ tiến đúng
+> `--interval-ms` mỗi tick, không phải giờ hệ thống. Nhờ vậy `kWh công tơ` và `độ dài phiên`
+> luôn nhất quán — nếu dùng giờ thật, chi phí gửi/nhận WebSocket làm hai đại lượng lệch ~1%
+> và đối soát 3 chiều (ngưỡng 1%) sẽ báo động giả. Test: `dong-ho-ao.test.ts`.
 
 Trụ ảo kết nối `ws://localhost:9220/ocpp/{mãTrạm}` (subprotocol `ocpp1.6`), mã trạm và
 idTag khớp seed: trạm `G3-ST-001…003`, idTag = VIN GIẢ `G3-SIM-VIN-0001…` (ADR-005 —

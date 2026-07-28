@@ -3,13 +3,18 @@
 import { buildApp } from './app';
 import { loadConfigFromEnvFile } from './config';
 import { createPool } from './db';
+import { batLichDoiSoat } from './modules/reconciliation/scheduler';
 
 const config = loadConfigFromEnvFile();
 const pool = createPool();
 const app = await buildApp({ config, db: pool });
 
+// F-C6: job đối soát 3 chiều chạy định kỳ ngay trong tiến trình API (modular monolith).
+const lichDoiSoat = batLichDoiSoat(pool, config, (m) => app.log.info(m));
+
 const shutdown = async (signal: string): Promise<void> => {
   app.log.info(`nhận ${signal} — tắt sạch…`);
+  lichDoiSoat.dung();
   await app.close();
   await pool.end();
   process.exit(0);

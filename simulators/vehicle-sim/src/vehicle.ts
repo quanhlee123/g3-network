@@ -7,14 +7,21 @@ import { positionAtKm, type Route } from './route';
 
 const MODELS: readonly VehicleModel[] = ['EVT-262', 'EVT-400', 'EVT-825'];
 
-/** Thông số giả lập theo model: dải điện áp pack + mức hao SOC trên mỗi km. */
-const MODEL_SPECS: Record<VehicleModel, { vMin: number; vMax: number; socPerKm: number }> = {
-  'EVT-262': { vMin: 320, vMax: 400, socPerKm: 0.35 },
-  'EVT-400': { vMin: 480, vMax: 590, socPerKm: 0.22 },
-  'EVT-825': { vMin: 540, vMax: 690, socPerKm: 0.12 },
+/**
+ * Thông số giả lập theo model: dải điện áp pack, mức hao SOC trên mỗi km, dung lượng pin.
+ * capacityKwh phải KHỚP với packages/db/src/seed.ts — đối soát 3 chiều (NF-10) quy đổi
+ * ΔSOC × dung lượng pin, lệch bảng này với seed là lệch kết quả đối soát.
+ */
+const MODEL_SPECS: Record<
+  VehicleModel,
+  { vMin: number; vMax: number; socPerKm: number; capacityKwh: number }
+> = {
+  'EVT-262': { vMin: 320, vMax: 400, socPerKm: 0.35, capacityKwh: 105 },
+  'EVT-400': { vMin: 480, vMax: 590, socPerKm: 0.22, capacityKwh: 210 },
+  'EVT-825': { vMin: 540, vMax: 690, socPerKm: 0.12, capacityKwh: 420 },
 };
 
-export type VehiclePhase = 'running' | 'offline' | 'stopped' | 'dead';
+export type VehiclePhase = 'running' | 'offline' | 'stopped' | 'dead' | 'charging';
 
 export interface VehicleState {
   vin: string;
@@ -45,18 +52,40 @@ export function createVehicle(
   startMs: number,
   rand: () => number,
 ): VehicleState {
-  const vin = `${cfg.vinPrefix}-${String(i + 1).padStart(4, '0')}`;
+  // vinStart cho phép nhiều tiến trình simulator chia nhau dải VIN mà không đụng nhau.
+  const soThuTu = cfg.vinStart + i;
+  const vin = `${cfg.vinPrefix}-${String(soThuTu).padStart(4, '0')}`;
+  // Model phải khớp seed: seed cấp 8 xe EVT-262, 7 xe EVT-400, 5 xe EVT-825 theo thứ tự VIN.
+  const model = modelTheoSoThuTu(soThuTu);
   return {
     vin,
-    model: MODELS[i % MODELS.length]!,
-    phase: 'running',
-    socPct: cfg.scenario === 'drain' ? 100 : 60 + rand() * 35,
+    model,
+    phase: cfg.scenario === 'charge' ? 'charging' : 'running',
+    socPct:
+      cfg.scenario === 'drain'
+        ? 100
+        : cfg.scenario === 'charge'
+          ? cfg.chargeStartSocPct
+          : 60 + rand() * 35,
     odometerKm: Math.round(rand() * 80_000),
     routeKm: (i * route.lengthKm) / Math.max(1, cfg.count),
     batteryTempC: 30,
     startedAtMs: startMs,
     lastTickMs: startMs,
   };
+}
+
+/**
+ * Dòng xe theo số thứ tự VIN, KHỚP packages/db/src/seed.ts:
+ * 0001–0008 EVT-262 · 0009–0015 EVT-400 · 0016–0020 EVT-825.
+ * VIN ngoài dải seed (chạy --count lớn hơn 20) quay vòng — những xe đó không có trong DB
+ * nên bản tin của chúng sẽ vào telemetry_quarantine, đúng như thiết kế F-G1.
+ */
+function modelTheoSoThuTu(n: number): VehicleModel {
+  if (n <= 8) return 'EVT-262';
+  if (n <= 15) return 'EVT-400';
+  if (n <= 20) return 'EVT-825';
+  return MODELS[(n - 1) % MODELS.length]!;
 }
 
 function round(value: number, decimals: number): number {
@@ -96,10 +125,21 @@ export function tickVehicle(
     elapsedMs < offlineStartMs + cfg.offlineMinutes * 60_000;
   next.phase = isOffline ? 'offline' : 'running';
 
+  const spec = MODEL_SPECS[state.model];
+
   // Kịch bản b — tụt pin tuyến tính 100% → 5% trong drainMinutes (cắt ngưỡng 30/20/10 — F-A2).
   if (cfg.scenario === 'drain') {
     next.socPct = Math.max(5, 100 - (95 * elapsedMs) / (cfg.drainMinutes * 60_000));
     if (next.socPct <= 5) next.phase = 'stopped';
+  }
+
+  // Kịch bản f — ĐANG SẠC: xe đứng yên, SOC tăng theo công suất sạc và dung lượng pin.
+  // Đây là chiều "xe" của đối soát 3 chiều (NF-10): SOC do BMS báo phải nhất quán với
+  // số kWh trụ đo được. Cùng công suất + đúng dung lượng pin ⇒ hai chiều tự khớp.
+  if (cfg.scenario === 'charge') {
+    const tangSoc = ((cfg.chargePowerKw * dtHours) / spec.capacityKwh) * 100;
+    next.socPct = Math.min(100, state.socPct + tangSoc);
+    next.phase = 'charging';
   }
 
   // Kịch bản d — nhiệt độ pin leo bất thường lên 60°C (F-A4).
@@ -111,13 +151,13 @@ export function tickVehicle(
     next.batteryTempC = 28 + rand() * 7;
   }
 
-  // Chuyển động dọc tuyến + hao pin theo km.
-  const spec = MODEL_SPECS[state.model];
-  const speedKmh = next.phase === 'stopped' ? 0 : 40 + rand() * 30;
+  // Chuyển động dọc tuyến + hao pin theo km. Xe đang sạc hoặc đã dừng thì đứng yên.
+  const dungYen = next.phase === 'stopped' || next.phase === 'charging';
+  const speedKmh = dungYen ? 0 : 40 + rand() * 30;
   const deltaKm = speedKmh * dtHours;
   next.routeKm = state.routeKm + deltaKm;
   next.odometerKm = state.odometerKm + deltaKm;
-  if (cfg.scenario !== 'drain') {
+  if (cfg.scenario !== 'drain' && cfg.scenario !== 'charge') {
     next.socPct = Math.max(5, state.socPct - deltaKm * spec.socPerKm);
     if (next.socPct <= 5 && next.phase === 'running') next.phase = 'stopped';
   }

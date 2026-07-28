@@ -8,6 +8,7 @@ import {
   type TelematicsEnvelope,
   type TelemetryStatus,
 } from '@g3/contracts';
+import { BatteryAlertEvaluator } from './battery-alerts';
 import type { IngestMetrics } from './metrics';
 import { peekSchemaVersion, validateStatus, validateTelemetry } from './validate';
 
@@ -26,12 +27,18 @@ interface VehicleRef {
 
 export class IngestPipeline {
   #vinCache = new Map<string, VehicleRef>();
+  #canhBaoPin: BatteryAlertEvaluator;
 
   constructor(
     private readonly db: Queryable,
     private readonly metrics: IngestMetrics,
     private readonly clock: () => number = () => Date.now(),
-  ) {}
+    log: (msg: string) => void = () => {
+      /* mặc định im lặng — index.ts truyền console.log vào */
+    },
+  ) {
+    this.#canhBaoPin = new BatteryAlertEvaluator(db, log);
+  }
 
   async handle(msg: TelematicsEnvelope): Promise<void> {
     if (msg.topic.startsWith(TELEMETRY_TOPIC_PREFIX)) {
@@ -94,6 +101,14 @@ export class IngestPipeline {
     } else {
       this.metrics.count('valid');
       this.metrics.observeLag((this.clock() - Date.parse(record.ts)) / 1000);
+      // F-A2: đánh giá ngưỡng pin NGAY trên dòng dữ liệu mới (không chờ job quét).
+      // Chỉ chạy với bản ghi mới: dữ liệu gửi bù sau mất sóng không bắn lại cảnh báo cũ.
+      await this.#canhBaoPin.danhGia(
+        ref.vehicleId,
+        record.soc_pct,
+        { lat: record.lat, lng: record.lng },
+        record.ts,
+      );
     }
     await this.#touchDevice(ref, msg.receivedAtMs);
   }

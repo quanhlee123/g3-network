@@ -45,6 +45,17 @@ export class ChargePointSim {
   #transport: IChargePointTransport | null = null;
   #meterWh: number;
   #socPct: number;
+  /**
+   * ĐỒNG HỒ ẢO của trụ. Mốc đầu lấy từ clock() thật, sau đó mỗi tick cộng đúng intervalMs.
+   *
+   * Vì sao không dùng thẳng Date.now(): công tơ ảo cộng năng lượng theo intervalMs DANH ĐỊNH,
+   * còn thời gian thực mỗi tick luôn dài hơn một chút (chi phí gửi/nhận WebSocket). Nếu dấu
+   * thời gian lấy giờ thật thì kWh và khoảng thời gian phiên lệch nhau ~1% — đủ để đối soát
+   * 3 chiều (NF-10, ngưỡng 1%) báo động giả. Đồng hồ ảo giữ hai đại lượng nhất quán.
+   * Nó cũng khiến test tua nhanh (sleep tức thì, tick = 15 phút ảo) sinh ra phiên có
+   * độ dài hợp lý thay vì gần 0 giây.
+   */
+  #gioAoMs: number | null = null;
   #inSession = false;
   #remoteStopRequested = false;
   #heartbeatIntervalS = 30;
@@ -129,8 +140,10 @@ export class ChargePointSim {
 
       for (let tick = 1; tick <= o.sessionTicks; tick++) {
         await o.sleep(o.intervalMs);
-        // Trụ vẫn đo dù mất kết nối — nguồn sự thật là công tơ trong trụ
+        // Trụ vẫn đo dù mất kết nối — nguồn sự thật là công tơ trong trụ.
+        // Công tơ và đồng hồ ảo tiến CÙNG NHAU để kWh luôn khớp độ dài phiên.
         this.#meterWh += ((o.powerKw * o.intervalMs) / 3_600_000) * 1_000;
+        this.#tienGio();
         this.#socPct = Math.min(100, this.#socPct + o.socPerTick);
 
         if (o.scenario === 'faulted' && tick === faultTick) {
@@ -264,7 +277,13 @@ export class ChargePointSim {
   }
 
   #now(): string {
-    return new Date(this.#opts.clock()).toISOString();
+    this.#gioAoMs ??= this.#opts.clock();
+    return new Date(this.#gioAoMs).toISOString();
+  }
+
+  /** Đẩy đồng hồ ảo lên 1 chu kỳ đo — gọi đúng 1 lần mỗi tick cùng lúc với cộng công tơ. */
+  #tienGio(): void {
+    this.#gioAoMs = (this.#gioAoMs ?? this.#opts.clock()) + this.#opts.intervalMs;
   }
 
   #log(msg: string): void {

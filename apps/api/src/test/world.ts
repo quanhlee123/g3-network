@@ -34,6 +34,8 @@ const PHONES: Record<Role, string> = {
 export async function resetWorld(db: pg.Client): Promise<void> {
   await db.query(`TRUNCATE audit_logs, auth_otp_challenges RESTART IDENTITY`);
   await db.query(`DELETE FROM payment_transactions`);
+  // reconciliation_results tham chiếu charging_sessions → phải xóa trước
+  await db.query(`DELETE FROM reconciliation_results`);
   await db.query(`ALTER TABLE charging_sessions DISABLE TRIGGER charging_sessions_append_only`);
   await db.query(`DELETE FROM charging_sessions`);
   await db.query(`ALTER TABLE charging_sessions ENABLE TRIGGER charging_sessions_append_only`);
@@ -133,6 +135,55 @@ export async function seedWorld(db: pg.Client): Promise<TestWorld> {
     deviceA1,
     users,
   };
+}
+
+/** Tạo 1 phiên sạc (append-only — chỉ INSERT) và trả về id. */
+export async function taoPhienSac(
+  db: pg.Client,
+  w: TestWorld,
+  opts: {
+    vehicleId?: string;
+    startMs: number;
+    endMs: number;
+    energyKwh: number;
+    socStartPct?: number;
+    socEndPct?: number;
+    ocppTxId?: string;
+  },
+): Promise<string> {
+  const res = await db.query<{ id: string }>(
+    `INSERT INTO charging_sessions
+       (vehicle_id, station_id, connector_id, ocpp_transaction_id, started_at, ended_at,
+        energy_kwh, soc_start_pct, soc_end_pct)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING id`,
+    [
+      opts.vehicleId ?? w.vehicleA1,
+      w.stationId,
+      w.connectorId,
+      opts.ocppTxId ?? `TEST-${String(opts.startMs)}`,
+      new Date(opts.startMs).toISOString(),
+      new Date(opts.endMs).toISOString(),
+      opts.energyKwh,
+      opts.socStartPct ?? null,
+      opts.socEndPct ?? null,
+    ],
+  );
+  return res.rows[0]!.id;
+}
+
+/** Bản ghi thanh toán GIẢ do simulator sinh (Phase 1 — chưa có cổng thật). */
+export async function taoThanhToan(
+  db: pg.Client,
+  sessionId: string,
+  amountVnd: number,
+  status: 'succeeded' | 'pending' | 'failed' = 'succeeded',
+): Promise<void> {
+  await db.query(
+    `INSERT INTO payment_transactions (session_id, method, amount_vnd, status, gateway_ref)
+     VALUES ($1, 'vnpay', $2, $3, $4)`,
+    [sessionId, Math.round(amountVnd), status, `SANDBOX-${sessionId.slice(0, 8)}`],
+  );
 }
 
 /**

@@ -2,13 +2,19 @@
 // Mọi thời lượng là flag để nghiệm thu nhanh (không phải chờ 2h thật); mặc định đúng đề bài.
 import { parseArgs } from 'node:util';
 
-export const SCENARIOS = ['normal', 'drain', 'offline', 'temp', 'power-loss'] as const;
+export const SCENARIOS = ['normal', 'drain', 'offline', 'temp', 'power-loss', 'charge'] as const;
 export type Scenario = (typeof SCENARIOS)[number];
 
 export interface SimConfig {
   count: number;
   scenario: Scenario;
   vinPrefix: string;
+  /**
+   * Số thứ tự VIN đầu tiên (mặc định 1 → VIN ...-0001).
+   * Cho phép chạy NHIỀU tiến trình vehicle-sim song song với kịch bản khác nhau mà
+   * không trùng VIN — demo Gate 0 cần 19 xe "normal" + 1 xe "drain".
+   */
+  vinStart: number;
   intervalMs: number;
   /** Kịch bản drain: SOC 100% → 5% trong số phút này. */
   drainMinutes: number;
@@ -20,6 +26,10 @@ export interface SimConfig {
   tempRampMinutes: number;
   /** Kịch bản power-loss: cắt nguồn đột ngột sau số phút này (F-J3). */
   powerLossAfterMinutes: number;
+  /** Kịch bản charge: xe đứng yên, SOC TĂNG theo công suất sạc này (kW). */
+  chargePowerKw: number;
+  /** Kịch bản charge: SOC lúc cắm sạc (%). */
+  chargeStartSocPct: number;
   seed: number;
   mqttUrl: string;
 }
@@ -51,7 +61,10 @@ export function parseSimArgs(argv: string[], env: NodeJS.ProcessEnv = process.en
       count: { type: 'string', default: '1' },
       scenario: { type: 'string', default: 'normal' },
       'vin-prefix': { type: 'string', default: 'G3-SIM' },
+      'vin-start': { type: 'string' },
       'interval-ms': { type: 'string' },
+      'charge-power-kw': { type: 'string' },
+      'charge-start-soc': { type: 'string' },
       'drain-minutes': { type: 'string' },
       'offline-after-minutes': { type: 'string' },
       'offline-minutes': { type: 'string' },
@@ -84,7 +97,10 @@ export function parseSimArgs(argv: string[], env: NodeJS.ProcessEnv = process.en
     count,
     scenario: scenario as Scenario,
     vinPrefix,
+    vinStart: parseIntFlag('vin-start', values['vin-start'], 1, 1),
     intervalMs: parseIntFlag('interval-ms', values['interval-ms'], 10_000, 100),
+    chargePowerKw: parseIntFlag('charge-power-kw', values['charge-power-kw'], 120, 1),
+    chargeStartSocPct: parseIntFlag('charge-start-soc', values['charge-start-soc'], 30, 0),
     drainMinutes: parseIntFlag('drain-minutes', values['drain-minutes'], 30, 1),
     offlineAfterMinutes: parseIntFlag(
       'offline-after-minutes',

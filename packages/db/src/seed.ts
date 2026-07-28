@@ -2,6 +2,7 @@
 // Idempotent: chạy lại không tạo bản ghi trùng (upsert theo khóa tự nhiên).
 // Nội dung theo Prompt 03: 20 xe (EVT-262/400/825), 3 trạm × 4 trụ,
 // 5 tài khoản các vai trò sheet 9, 2 chính sách sạc mẫu (SOC 20–90%, ToU).
+import { pathToFileURL } from 'node:url';
 import pg from 'pg';
 import { databaseUrl } from './env';
 
@@ -37,7 +38,8 @@ const STATIONS = [
   },
 ] as const;
 
-async function seed(client: pg.Client): Promise<void> {
+/** Seed vào client đã kết nối sẵn — script demo Gate 0 gọi lại hàm này. */
+export async function seed(client: pg.Client): Promise<void> {
   // --- 2 khách hàng / đội xe ---
   const customers: Record<string, string> = {};
   for (const c of [
@@ -219,7 +221,10 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exitCode = 1;
-});
+// Chỉ chạy khi được gọi trực tiếp (npm run db:seed) — import từ nơi khác thì không tự chạy.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err: unknown) => {
+    console.error(err instanceof Error ? err.message : err);
+    process.exitCode = 1;
+  });
+}
