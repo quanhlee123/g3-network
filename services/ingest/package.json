@@ -11,6 +11,14 @@
   },
   "dependencies": {
     "@g3/contracts": "*",
-    "@g3/shared": "*"
+    "@g3/db": "*",
+    "@g3/shared": "*",
+    "@sinclair/typebox": "^0.34.0",
+    "mqtt": "^5.10.1",
+    "pg": "^8.16.0",
+    "prom-client": "^15.1.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.0"
   }
 }

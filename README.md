@@ -41,7 +41,7 @@ g3-network/
 │   ├── db/              # Migration SQL đánh số + runner + seed + sinh types (F-G4, Prompt 03)
 │   └── contracts/       # Interface cho MỌI tích hợp ngoài + mocks (quy tắc 2 — cấm gọi thẳng SDK)
 ├── services/
-│   ├── ingest/          # Nhận telemetry xe–pin từ MQTT (logic thật ở Prompt 05)
+│   ├── ingest/          # F-G1: MQTT → validate theo schema_version → telematics_readings + quarantine + metric NF-01
 │   └── csms/            # CSMS tự xây — OCPP 1.6J qua WebSocket (logic thật ở Prompt 05)
 ├── simulators/
 │   ├── vehicle-sim/     # Giả lập xe tải điện — MQTT telemetry, 5 kịch bản (F-A1, docs/simulators.md)
@@ -72,6 +72,7 @@ g3-network/
 | `npm test -w apps/api` | Test 1 workspace |
 | `npm run lint` | ESLint + Prettier check |
 | `npm run sim:vehicles -- --count 20` | Giả lập 20 xe gửi telemetry MQTT (kịch bản & flag: `docs/simulators.md`) |
+| `npm run start -w services/ingest` | Chạy service ingest: MQTT → DB, metrics tại http://localhost:9464/metrics |
 | `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc |
 | `npm run openapi:generate` | Sinh lại `apps/api/openapi.json` |
 | `npm run gitleaks` | Quét secret toàn thư mục |
@@ -87,6 +88,7 @@ g3-network/
 | `TELEMETRY_RETENTION_MONTHS` | Số tháng giữ dữ liệu telematics hot (NF-16, mặc định 12) — áp khi `npm run db:migrate` |
 | `API_PORT` / `PORTAL_PORT` | Cổng API (3000) và Portal (3100) |
 | `CSMS_WS_PORT` | Cổng WebSocket CSMS cho OCPP (dùng từ Prompt 05) |
+| `INGEST_METRICS_PORT` | Cổng HTTP `/metrics` Prometheus của service ingest (NF-01/NF-14, mặc định 9464) |
 
 Quy tắc: **không hardcode secret** — biến mới phải thêm vào `infra/.env.example`
 (không kèm giá trị thật) và ghi chú vào bảng trên. `infra/.env` không được commit.

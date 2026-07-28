@@ -116,6 +116,30 @@ trong vòng ~25s). Đối chứng: tắt bằng Ctrl+C sẽ ra `{"status":"offli
 Lưu ý: kịch bản này mở 1 kết nối/xe — dùng `--count` vừa phải (≤50); yêu cầu 300 xe (NF-04)
 áp cho các kịch bản dùng kết nối chung (`normal`, `drain`, `offline`, `temp`).
 
+## Demo end-to-end với service ingest (F-G1 — Prompt 05)
+
+```bash
+docker compose -f infra/docker-compose.yml up -d   # DB + EMQX
+npm run db:migrate && npm run db:seed              # seed tạo VIN G3-SIM-VIN-0001..0020
+npm run start -w services/ingest                   # cửa sổ 1: ingest MQTT → DB
+npm run sim:vehicles -- --count 5 --vin-prefix G3-SIM-VIN   # cửa sổ 2: 5 xe seed gửi dữ liệu
+```
+
+> **Lưu ý VIN:** ingest chỉ nhận VIN có trong bảng `vehicles` (seed dùng tiền tố
+> `G3-SIM-VIN`). Chạy sim với `--vin-prefix` mặc định `G3-SIM` sẽ ra VIN `G3-SIM-0001`
+> không tồn tại → toàn bộ vào `telemetry_quarantine` (đúng thiết kế chống thiết bị lạ,
+> xem ADR-004) — dùng chính điều này để demo luồng quarantine.
+
+Quan sát:
+
+- Số bản ghi vào DB: `SELECT count(*) FROM telematics_readings;`
+- Độ trễ NF-01 (p95 ≤30s): http://localhost:9464/metrics → `g3_ingest_lag_seconds`
+  (bucket `le="30"` phải chiếm ~100% khi xe online).
+- Thiết bị online/offline (F-J1/F-J3): `SELECT device_serial, last_seen_at, power_status
+  FROM devices;` — chạy kịch bản `power-loss` sẽ thấy `power_status = 'lost'` sau ~25s.
+- Bản tin hỏng: `SELECT reason, count(*) FROM telemetry_quarantine GROUP BY reason;`
+  và alert: `SELECT * FROM alerts WHERE type = 'data_quality';`
+
 ## Nghiệm thu NF-04 — 300 xe / 10 phút trên máy dev
 
 Lệnh: `npm run sim:vehicles -- --count 300 --scenario normal`
