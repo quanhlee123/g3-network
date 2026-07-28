@@ -56,36 +56,66 @@ async function seed(client: pg.Client): Promise<void> {
   const saoMaiId = customers['HD-G3-SIM-001']!;
   const binhMinhId = customers['HD-G3-SIM-002']!;
 
-  // --- 5 tài khoản theo vai trò sheet 9 (enum còn cskh/sale cho giai đoạn sau) ---
+  // --- 7 tài khoản, đủ 7 vai trò sheet 9 (F-F1) ---
+  // SĐT GIẢ dải 09000000xx — dùng để đăng nhập OTP (apps/api). Không phải số thật (quy tắc 12).
   const users: Record<string, string> = {};
   for (const u of [
-    { email: 'admin@g3.test', name: 'Admin G3 Network (GIẢ)', role: 'admin', customerId: null },
-    { email: 'taixe01@g3.test', name: 'Nguyễn Văn Giả', role: 'driver', customerId: saoMaiId },
+    {
+      email: 'admin@g3.test',
+      phone: '0900000010',
+      name: 'Admin G3 Network (GIẢ)',
+      role: 'admin',
+      customerId: null,
+    },
+    {
+      email: 'taixe01@g3.test',
+      phone: '0900000001',
+      name: 'Nguyễn Văn Giả',
+      role: 'driver',
+      customerId: saoMaiId,
+    },
     {
       email: 'doitruong@saomai.test',
+      phone: '0900000002',
       name: 'Trần Thị Mô Phỏng',
       role: 'fleet_manager',
       customerId: saoMaiId,
     },
     {
       email: 'vanhanh@g3energy.test',
+      phone: '0900000003',
       name: 'Lê Vận Hành (GIẢ)',
       role: 'energy_ops',
       customerId: null,
     },
     {
       email: 'baohanh@g3mobility.test',
+      phone: '0900000004',
       name: 'Phạm Bảo Hành (GIẢ)',
       role: 'warranty_admin',
       customerId: null,
     },
+    {
+      email: 'cskh@g3holding.test',
+      phone: '0900000005',
+      name: 'Võ Chăm Sóc (GIẢ)',
+      role: 'cskh',
+      customerId: null,
+    },
+    {
+      email: 'sale@g3holding.test',
+      phone: '0900000006',
+      name: 'Đỗ Kinh Doanh (GIẢ)',
+      role: 'sale',
+      customerId: null,
+    },
   ]) {
     const res = await client.query<{ id: string }>(
-      `INSERT INTO users (email, full_name, role, customer_id)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name
+      `INSERT INTO users (email, full_name, role, customer_id, phone)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name, phone = EXCLUDED.phone
        RETURNING id`,
-      [u.email, u.name, u.role, u.customerId],
+      [u.email, u.name, u.role, u.customerId, u.phone],
     );
     users[u.email] = res.rows[0]!.id;
   }

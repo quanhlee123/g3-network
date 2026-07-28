@@ -23,9 +23,40 @@ Kiểm tra nhanh sau khi chạy:
 | Địa chỉ | Là gì |
 |---|---|
 | http://localhost:3000/health | API trả `{"status":"ok",...}` |
-| http://localhost:3000/docs | Tài liệu OpenAPI (tự sinh) |
+| http://localhost:3000/docs | Tài liệu OpenAPI (tự sinh) — bấm **Authorize** để dán token |
 | http://localhost:3100 | Portal đội xe (trang chào) |
 | http://localhost:18083 | Dashboard EMQX (user `admin`, mật khẩu trong `infra/.env`) |
+
+## Đăng nhập API (F-F1)
+
+Mọi endpoint nghiệp vụ đều cần token; **mặc định là TỪ CHỐI** (quy tắc 6). Phase 1 đăng nhập
+bằng OTP qua SĐT — mã **in ra console của `apps/api`**, không gửi SMS thật.
+
+```bash
+curl -X POST http://localhost:3000/auth/otp/request -H 'content-type: application/json' -d '{"phone":"0900000010"}'
+```
+
+Xem console `apps/api` để lấy mã 6 chữ số, rồi đổi lấy token:
+
+```bash
+curl -X POST http://localhost:3000/auth/otp/verify -H 'content-type: application/json' -d '{"phone":"0900000010","code":"123456"}'
+```
+
+SĐT GIẢ có sẵn sau `npm run db:seed` (mỗi số là một vai trò trong sheet 9):
+
+| SĐT | Vai trò | Thấy được gì |
+|---|---|---|
+| `0900000010` | Admin G3 Network | tất cả |
+| `0900000001` | Tài xế | chỉ xe được gán |
+| `0900000002` | Chủ xe / QL đội | chỉ xe đội Sao Mai |
+| `0900000003` | Vận hành G3 Energy | trạm, phiên sạc, đối soát — **không** xem được vị trí xe |
+| `0900000004` | Bảo hành G3 Mobility | xe, vị trí, phiên sạc |
+| `0900000005` | CSKH Holding | vị trí xe **chỉ khi** có ticket đang mở |
+| `0900000006` | Sale Holding | xe, vị trí |
+
+Ma trận quyền đầy đủ + các điểm cần review: [docs/architecture/rbac-matrix.md](docs/architecture/rbac-matrix.md).
+Mọi lần truy cập `GET /vehicles/{id}/location` (kể cả bị từ chối) đều ghi `audit_logs`
+— quy tắc 5, NF-06, Nghị định 13/2023.
 
 ## Sơ đồ thư mục
 
@@ -91,6 +122,10 @@ g3-network/
 | `CSMS_WS_PORT` | Cổng WebSocket CSMS cho OCPP 1.6J (trụ kết nối `ws://…/ocpp/{mãTrạm}`) |
 | `CSMS_HTTP_PORT` | Cổng HTTP nội bộ CSMS: RemoteStart/RemoteStop (chuẩn bị F-H1, mặc định 9221) |
 | `INGEST_METRICS_PORT` | Cổng HTTP `/metrics` Prometheus của service ingest (NF-01/NF-14, mặc định 9464) |
+| `JWT_SECRET` | Khóa ký token API. **Để trống trong `.env.example`** — `npm install` sinh khóa ngẫu nhiên vào `infra/.env` |
+| `JWT_EXPIRES_IN` | Hạn dùng token (mặc định `12h`) |
+| `OTP_TTL_SECONDS` / `OTP_MAX_ATTEMPTS` | Hạn dùng mã OTP (300s) và số lần nhập sai tối đa (5) |
+| `TELEMETRY_HISTORY_MAX_ROWS` | Trần bản ghi mỗi lần gọi lịch sử telemetry (mặc định 1000) |
 
 Quy tắc: **không hardcode secret** — biến mới phải thêm vào `infra/.env.example`
 (không kèm giá trị thật) và ghi chú vào bảng trên. `infra/.env` không được commit.

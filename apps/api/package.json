@@ -11,11 +11,18 @@
     "openapi:generate": "tsx src/generate-openapi.ts"
   },
   "dependencies": {
+    "@fastify/jwt": "^9.1.0",
     "@fastify/swagger": "^9.5.0",
     "@fastify/swagger-ui": "^5.2.0",
     "@fastify/type-provider-typebox": "^5.1.0",
+    "@g3/contracts": "*",
+    "@g3/db": "*",
     "@g3/shared": "*",
     "@sinclair/typebox": "^0.34.0",
-    "fastify": "^5.3.0"
+    "fastify": "^5.3.0",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.0"
   }
 }
