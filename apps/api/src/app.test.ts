@@ -49,10 +49,11 @@ describe('@g3/api — khung app', () => {
     }
   });
 
-  it('/docs mở được mà không cần token (tài liệu là public)', async () => {
-    const res = await h.app.inject({ method: 'GET', url: '/docs/json' });
-
-    expect(res.statusCode).toBe(200);
+  it('/docs mở được mà không cần token (tài liệu là public), kể cả khi có query string', async () => {
+    for (const url of ['/docs/json', '/docs/json?v=1']) {
+      const res = await h.app.inject({ method: 'GET', url });
+      expect(res.statusCode, url).toBe(200);
+    }
   });
 });
 

@@ -334,7 +334,7 @@ async function main(): Promise<void> {
 
   // ---- BƯỚC 10 — Tóm tắt ---------------------------------------------------------------
   tieuDe(10, 'Tóm tắt kết quả');
-  await inTomTat(pool, batDauDemo, config.reconcile.nguongPct);
+  await inTomTat(pool, batDauDemo, config.reconcile.nguongPct, lanMot, lanHai);
 
   khung([
     'DEMO GATE 0 HOÀN TẤT.',
@@ -548,7 +548,13 @@ async function demoRbac(
   );
 }
 
-async function inTomTat(db: pg.Pool, tuLuc: Date, nguongPct: number): Promise<void> {
+async function inTomTat(
+  db: pg.Pool,
+  tuLuc: Date,
+  nguongPct: number,
+  lanMot: TomTatDoiSoat,
+  lanHai: TomTatDoiSoat,
+): Promise<void> {
   const q = async (sql: string, params: unknown[] = []): Promise<number> => {
     const res = await db.query<{ n: string }>(sql, params);
     return Number(res.rows[0]!.n);
@@ -578,13 +584,6 @@ async function inTomTat(db: pg.Pool, tuLuc: Date, nguongPct: number): Promise<vo
   const soAudit = await q(`SELECT count(*) AS n FROM audit_logs WHERE occurred_at >= $1`, [
     tuLuc.toISOString(),
   ]);
-  const doiSoat = await db.query<{ status: string; n: string }>(
-    `SELECT status::text AS status, count(*) AS n FROM reconciliation_results
-     WHERE checked_at >= $1 GROUP BY status`,
-    [tuLuc.toISOString()],
-  );
-  const dem = (s: string): number => Number(doiSoat.rows.find((r) => r.status === s)?.n ?? 0);
-
   const giay = Math.round((Date.now() - tuLuc.getTime()) / 1000);
   bang(
     [
@@ -600,9 +599,15 @@ async function inTomTat(db: pg.Pool, tuLuc: Date, nguongPct: number): Promise<vo
       ['Cảnh báo pin phân cấp đã bắn (F-A2)', String(soCanhBaoPin)],
       ['Phiên sạc ghi nhận qua OCPP (F-B2, NF-11)', String(soPhien)],
       ['Trụ sạc đang trống (F-C2)', String(soTruAvailable)],
-      [`Đối soát 3 chiều KHỚP (ngưỡng ${nguongPct}% — NF-10)`, String(dem('khop'))],
-      ['Đối soát 3 chiều LỆCH → đã cảnh báo', String(dem('lech'))],
-      ['Đối soát thiếu dữ liệu (chưa kết luận)', String(dem('thieu_du_lieu'))],
+      [
+        `Đối soát lượt 1 — dữ liệu nguyên vẹn (ngưỡng ${nguongPct}%)`,
+        `${lanMot.khop} khớp / ${lanMot.lech} lệch`,
+      ],
+      [
+        `Đối soát lượt 2 — sau khi bơm sai ${CAU_HINH.bomLechPct}%`,
+        `${lanHai.khop} khớp / ${lanHai.lech} lệch`,
+      ],
+      ['Đối soát chưa kết luận vì thiếu dữ liệu', String(lanHai.thieu_du_lieu)],
       ['Dòng audit log truy cập vị trí (quy tắc 5)', String(soAudit)],
     ],
   );

@@ -272,6 +272,25 @@ describe('sheet 9 — phạm vi dữ liệu (V\\*)', () => {
     expect((await goi(w.users.driver.phone)).statusCode).toBe(403);
   });
 
+  it('đối soát kWh: Vận hành Energy chạy được, QL đội chỉ XEM, tài xế không thấy gì', async () => {
+    const goi = async (phone: string, method: 'GET' | 'POST') => {
+      const token = await loginAs(h.app, phone);
+      return h.app.inject({
+        method,
+        url: method === 'GET' ? '/reconciliation/results' : '/reconciliation/run',
+        headers: { authorization: token },
+        ...(method === 'POST' ? { payload: {} } : {}),
+      });
+    };
+
+    expect((await goi(w.users.energy_ops.phone, 'GET')).statusCode).toBe(200);
+    expect((await goi(w.users.energy_ops.phone, 'POST')).statusCode).toBe(200);
+    // QL đội có "V\*" ở dòng "Sản lượng điện / đối soát kWh" — xem được, KHÔNG chạy được job
+    expect((await goi(w.users.fleet_manager.phone, 'GET')).statusCode).toBe(200);
+    expect((await goi(w.users.fleet_manager.phone, 'POST')).statusCode).toBe(403);
+    expect((await goi(w.users.driver.phone, 'GET')).statusCode).toBe(403);
+  });
+
   it('tài khoản bị khóa giữa chừng → token cũ hết tác dụng ngay', async () => {
     const token = await loginAs(h.app, w.users.sale.phone);
     const truoc = await h.app.inject({

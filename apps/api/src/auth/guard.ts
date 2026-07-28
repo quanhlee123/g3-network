@@ -54,7 +54,8 @@ export function registerAuthGuard(app: FastifyInstance, db: Queryable): void {
   app.addHook('onRequest', async (request, reply) => {
     // Request không khớp route nào → để notFoundHandler trả 404, không biến thành 403.
     if (request.routeOptions.url === undefined) return;
-    if (PUBLIC_URL_PREFIXES.some((p) => request.url === p || request.url.startsWith(`${p}/`))) {
+    const duongDan = request.url.split('?')[0] ?? request.url; // bỏ query string
+    if (PUBLIC_URL_PREFIXES.some((p) => duongDan === p || duongDan.startsWith(`${p}/`))) {
       return;
     }
 

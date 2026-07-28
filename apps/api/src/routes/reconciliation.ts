@@ -7,7 +7,7 @@ import { requireScopedAuth } from '../auth/guard';
 import { vehicleScopeClause } from '../auth/scope';
 import type { ApiConfig } from '../config';
 import type { Queryable } from '../db';
-import { AUTH_ERROR_RESPONSES } from '../errors';
+import { AUTH_ERROR_RESPONSES, sendError } from '../errors';
 import { chayDoiSoat } from '../modules/reconciliation/reconcile';
 
 export interface ReconciliationRoutesDeps {
@@ -179,7 +179,18 @@ export async function reconciliationRoutes(
         },
       },
     },
-    async (request) => {
+    async (request, reply) => {
+      // Job chạy trên TOÀN BỘ phiên sạc, không lọc theo đội. Nếu sau này ai đó cấp quyền
+      // này cho vai trò phạm vi hẹp thì phải chặn ở đây — chứ không âm thầm chạy toàn hệ.
+      const auth = requireScopedAuth(request);
+      if (auth.grant.scope !== 'all') {
+        return sendError(
+          reply,
+          403,
+          'khong_du_quyen',
+          'Chạy job đối soát cần quyền phạm vi toàn hệ thống.',
+        );
+      }
       const body = (request.body ?? {}) as {
         from?: string;
         to?: string;
