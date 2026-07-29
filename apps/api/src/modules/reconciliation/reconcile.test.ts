@@ -33,14 +33,34 @@ const OPTS: ReconcileOptions = {
   cuaSoSocGiay: RECONCILE_DEFAULTS.cuaSoSocGiay,
 };
 
-/** Telemetry "thật" của phiên: SOC tăng đều 30% → 50% đúng trong khoảng phiên. */
-async function bomTelemetryChuan(vehicleId = w.vehicleA1): Promise<void> {
-  await insertTelemetry(db, vehicleId, {
-    startMs: BAT_DAU - 30_000,
-    endMs: KET_THUC + 30_000,
-    steps: 62, // ~30s/bản ghi
-    socStart: SOC_DAU - (30 / 1800) * (SOC_CUOI - SOC_DAU),
-    socEnd: SOC_CUOI + (30 / 1800) * (SOC_CUOI - SOC_DAU),
+/**
+ * Telemetry "thật" của một phiên: SOC tăng tuyến tính sao cho tại ĐÚNG mốc bắt đầu là
+ * socDau và tại ĐÚNG mốc kết thúc là socCuoi. Đệm thêm 30s mỗi đầu (ngoại suy tuyến tính)
+ * để có điểm kẹp hai phía cho phép nội suy.
+ */
+async function bomTelemetryChuan(
+  opts: {
+    vehicleId?: string;
+    batDauMs?: number;
+    ketThucMs?: number;
+    socDau?: number;
+    socCuoi?: number;
+  } = {},
+): Promise<void> {
+  const batDau = opts.batDauMs ?? BAT_DAU;
+  const ketThuc = opts.ketThucMs ?? KET_THUC;
+  const socDau = opts.socDau ?? SOC_DAU;
+  const socCuoi = opts.socCuoi ?? SOC_CUOI;
+  const demGiay = (ketThuc - batDau) / 1000;
+  const buGiay = 30;
+  const doDoc = (socCuoi - socDau) / demGiay; // %SOC mỗi giây
+
+  await insertTelemetry(db, opts.vehicleId ?? w.vehicleA1, {
+    startMs: batDau - buGiay * 1000,
+    endMs: ketThuc + buGiay * 1000,
+    steps: Math.round((demGiay + 2 * buGiay) / 30), // ~30s/bản ghi
+    socStart: socDau - doDoc * buGiay,
+    socEnd: socCuoi + doDoc * buGiay,
   });
 }
 
@@ -275,13 +295,137 @@ describe('F-C6 — kịch bản xấu', () => {
       endMs: KET_THUC,
       energyKwh: KWH_THAT,
     });
-    await bomTelemetryChuan(w.vehicleA2);
+    await bomTelemetryChuan({ vehicleId: w.vehicleA2 });
     await taoThanhToan(db, sessionId, KWH_THAT * GIA);
 
     const tomTat = await chayDoiSoat(db, OPTS);
 
     expect(tomTat.thieu_du_lieu).toBe(1);
     expect(tomTat.ket_qua[0]!.ghi_chu).toContain('dung lượng pin');
+  });
+
+  it('SOC GIẢM trong lúc trụ báo đang sạc → phải kết luận lệch, KHÔNG được làm hỏng job', async () => {
+    // Tình huống thật: trụ tính tiền năng lượng mà pin không hề nhận (hoặc lệch giờ thiết bị).
+    // Đây đúng là loại bất thường NF-10 sinh ra để bắt — job tuyệt đối không được ném lỗi.
+    const sessionId = await taoPhienSac(db, w, {
+      startMs: BAT_DAU,
+      endMs: KET_THUC,
+      energyKwh: KWH_THAT,
+    });
+    await insertTelemetry(db, w.vehicleA1, {
+      startMs: BAT_DAU - 30_000,
+      endMs: KET_THUC + 30_000,
+      steps: 62,
+      socStart: 50,
+      socEnd: 45, // xe XẢ trong lúc trụ báo đang sạc
+    });
+    await taoThanhToan(db, sessionId, KWH_THAT * GIA);
+
+    const tomTat = await chayDoiSoat(db, OPTS);
+
+    expect(tomTat.lech).toBe(1);
+    expect(tomTat.ket_qua[0]!.kwh_xe).toBeLessThan(0);
+    expect(await demAlert()).toBe(1);
+  });
+
+  it('phiên kWh tí hon làm tỉ lệ lệch cực lớn → vẫn ghi được kết quả, không tràn cột', async () => {
+    // Phiên 0,001 kWh (trụ lỗi công tơ) mà xe báo nhận 21 kWh ⇒ lệch ~2.100.000%.
+    const sessionId = await taoPhienSac(db, w, {
+      startMs: BAT_DAU,
+      endMs: KET_THUC,
+      energyKwh: 0.001,
+    });
+    await bomTelemetryChuan();
+    await taoThanhToan(db, sessionId, 0.001 * GIA);
+
+    const tomTat = await chayDoiSoat(db, OPTS);
+
+    expect(tomTat.lech).toBe(1);
+    expect(tomTat.ket_qua[0]!.lech_max_pct).toBeGreaterThan(9999);
+    const luu = await db.query<{ lech_max_pct: string }>(
+      `SELECT lech_max_pct FROM reconciliation_results WHERE session_id = $1`,
+      [sessionId],
+    );
+    expect(luu.rows).toHaveLength(1);
+  });
+
+  it('thu thiếu rồi thu bù đủ → lượt sau kết luận khớp và ĐÓNG cảnh báo lệch cũ', async () => {
+    const sessionId = await taoPhienSac(db, w, {
+      startMs: BAT_DAU,
+      endMs: KET_THUC,
+      energyKwh: KWH_THAT,
+    });
+    await bomTelemetryChuan();
+    await taoThanhToan(db, sessionId, KWH_THAT * 0.95 * GIA); // thu thiếu 5%
+
+    expect((await chayDoiSoat(db, OPTS)).lech).toBe(1);
+    const alertMo = await db.query<{ status: string }>(
+      `SELECT status FROM alerts WHERE type = 'reconciliation_mismatch'`,
+    );
+    expect(alertMo.rows[0]!.status).toBe('open');
+
+    // Tài xế trả nốt phần còn thiếu
+    await taoThanhToan(db, sessionId, KWH_THAT * 0.05 * GIA);
+    const lai = await chayDoiSoat(db, { ...OPTS, lamLaiTatCa: true });
+
+    expect(lai.khop).toBe(1);
+    const alertSau = await db.query<{ status: string; resolved_at: Date | null }>(
+      `SELECT status, resolved_at FROM alerts WHERE type = 'reconciliation_mismatch'`,
+    );
+    expect(alertSau.rows).toHaveLength(1); // không sinh cảnh báo mới
+    expect(alertSau.rows[0]!.status).toBe('resolved');
+    expect(alertSau.rows[0]!.resolved_at).not.toBeNull();
+  });
+
+  it('một phiên hỏng KHÔNG chặn các phiên còn lại của lượt chạy', async () => {
+    // Phiên 1 hỏng có chủ ý: xoá bản ghi pin giữa chừng thì truy vấn vẫn chạy, nên ở đây
+    // ép lỗi bằng cách cho đơn giá điện = 0 chỉ riêng phiên đầu là không được — thay vào đó
+    // dùng một Queryable bọc ngoài, ném lỗi đúng 1 lần ở câu ghi kết quả của phiên đầu.
+    const s1 = await taoPhienSac(db, w, {
+      startMs: BAT_DAU,
+      endMs: KET_THUC,
+      energyKwh: KWH_THAT,
+      ocppTxId: 'TEST-LOI-1',
+    });
+    // Phiên 2 cách phiên 1 đủ xa để hai dải telemetry không chồng mốc thời gian
+    const BAT_DAU_2 = KET_THUC + 300_000;
+    const KET_THUC_2 = BAT_DAU_2 + (KET_THUC - BAT_DAU);
+    const s2 = await taoPhienSac(db, w, {
+      startMs: BAT_DAU_2,
+      endMs: KET_THUC_2,
+      energyKwh: KWH_THAT,
+      ocppTxId: 'TEST-LOI-2',
+    });
+    await bomTelemetryChuan();
+    await bomTelemetryChuan({
+      batDauMs: BAT_DAU_2,
+      ketThucMs: KET_THUC_2,
+      socDau: SOC_CUOI,
+      socCuoi: SOC_CUOI + (SOC_CUOI - SOC_DAU),
+    });
+    await taoThanhToan(db, s1, KWH_THAT * GIA);
+    await taoThanhToan(db, s2, KWH_THAT * GIA);
+
+    let daNem = false;
+    const dbHong = {
+      query: (text: string, values?: unknown[]) => {
+        if (!daNem && text.includes('INSERT INTO reconciliation_results')) {
+          daNem = true;
+          return Promise.reject(new Error('lỗi ghi giả lập'));
+        }
+        return db.query(text, values as never[]);
+      },
+    };
+
+    const tomTat = await chayDoiSoat(dbHong, OPTS);
+
+    expect(tomTat.da_xet).toBe(2);
+    expect(tomTat.loi).toBe(1);
+    expect(tomTat.khop).toBe(1); // phiên thứ hai VẪN được đối soát
+    const luu = await db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM reconciliation_results`,
+    );
+    expect(luu.rows[0]!.n).toBe(1);
   });
 
   it('hiệu suất sạc < 1 làm kWh phía xe tăng lên — ADR-007 phải được hiệu chuẩn', async () => {

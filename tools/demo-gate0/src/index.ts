@@ -170,6 +170,9 @@ async function main(): Promise<void> {
   await xeTutPin.start();
   await xeTutPin.tick(Date.now());
   xeTutPin.startLoop();
+  // Phải đăng ký dọn dẹp NGAY: nếu demo hỏng hoặc bị Ctrl+C ở bước 4 thì simulator này
+  // vẫn còn chạy và giữ kết nối MQTT, tiến trình không thoát được.
+  donDep.push({ ten: 'xe-tut-pin', dung: () => xeTutPin.stop() });
   ok(`xe ${VIN_CHINH} bắt đầu tụt pin 100% → 5% trong ${CAU_HINH.phutTutPin} phút`);
 
   const xeChinhId = await layIdXe(pool, VIN_CHINH);
@@ -608,6 +611,7 @@ async function inTomTat(
         `${lanHai.khop} khớp / ${lanHai.lech} lệch`,
       ],
       ['Đối soát chưa kết luận vì thiếu dữ liệu', String(lanHai.thieu_du_lieu)],
+      ['Phiên KHÔNG đối soát được vì lỗi kỹ thuật', String(lanMot.loi + lanHai.loi)],
       ['Dòng audit log truy cập vị trí (quy tắc 5)', String(soAudit)],
     ],
   );

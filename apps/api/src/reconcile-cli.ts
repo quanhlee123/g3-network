@@ -30,9 +30,12 @@ try {
   );
   console.log(
     `Đối soát ${tomTat.da_xet} phiên (ngưỡng ${config.reconcile.nguongPct}%): ` +
-      `${tomTat.khop} khớp · ${tomTat.lech} lệch · ${tomTat.thieu_du_lieu} thiếu dữ liệu`,
+      `${tomTat.khop} khớp · ${tomTat.lech} lệch · ${tomTat.thieu_du_lieu} thiếu dữ liệu` +
+      (tomTat.loi > 0 ? ` · ${tomTat.loi} LỖI KỸ THUẬT` : ''),
   );
-  if (tomTat.lech > 0) process.exitCode = 1; // để CI/script demo bắt được bằng mã thoát
+  // Mã thoát ≠ 0 CHỈ khi có lỗi kỹ thuật. Tìm ra phiên lệch là job làm ĐÚNG việc của nó,
+  // không phải sự cố — báo bằng mã lỗi sẽ khiến cron/CI kêu nhầm chỗ.
+  if (tomTat.loi > 0) process.exitCode = 1;
 } finally {
   await pool.end();
 }

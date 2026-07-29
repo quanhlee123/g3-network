@@ -55,6 +55,8 @@ export interface TomTatDoiSoat {
   khop: number;
   lech: number;
   thieu_du_lieu: number;
+  /** Số phiên KHÔNG đối soát được vì lỗi kỹ thuật — phải bằng 0 khi hệ khỏe mạnh. */
+  loi: number;
   ket_qua: KetQuaDoiSoat[];
 }
 
@@ -117,9 +119,30 @@ export async function chayDoiSoat(
     params,
   );
 
-  const tomTat: TomTatDoiSoat = { da_xet: 0, khop: 0, lech: 0, thieu_du_lieu: 0, ket_qua: [] };
+  const tomTat: TomTatDoiSoat = {
+    da_xet: 0,
+    khop: 0,
+    lech: 0,
+    thieu_du_lieu: 0,
+    loi: 0,
+    ket_qua: [],
+  };
   for (const row of phienRes.rows) {
-    const kq = await doiSoatMotPhien(db, row as unknown as PhienCanXet, opts);
+    const phien = row as unknown as PhienCanXet;
+    let kq: KetQuaDoiSoat;
+    try {
+      kq = await doiSoatMotPhien(db, phien, opts);
+    } catch (err) {
+      // MỘT phiên hỏng KHÔNG được chặn các phiên còn lại: đối soát là hàng rào phát hiện
+      // gian lận/hỏng hóc, dừng cả lượt vì một bản ghi xấu là mất luôn hàng rào đó.
+      tomTat.loi += 1;
+      tomTat.da_xet += 1;
+      log(
+        `[F-C6] KHÔNG đối soát được phiên ${phien.id} (xe ${phien.vin}): ` +
+          `${err instanceof Error ? err.message : String(err)} — bỏ qua, tiếp tục phiên sau`,
+      );
+      continue;
+    }
     tomTat.da_xet += 1;
     tomTat[kq.status] += 1;
     tomTat.ket_qua.push(kq);
@@ -160,7 +183,15 @@ async function doiSoatMotPhien(
   });
 
   const luuVaTra = async (kq: KetQuaDoiSoat): Promise<KetQuaDoiSoat> => {
-    const alertId = kq.status === 'lech' ? await taoAlertLech(db, phien, kq, opts) : null;
+    let alertId: string | null = null;
+    if (kq.status === 'lech') {
+      alertId = await taoAlertLech(db, phien, kq, opts);
+    } else if (kq.status === 'khop') {
+      // Kết luận có thể ĐỔI từ 'lech' sang 'khop' (vd giao dịch thanh toán còn thiếu về
+      // muộn rồi đối soát lại). Cảnh báo cũ phải được đóng, nếu không CSKH cứ thấy mãi
+      // một cảnh báo đã hết vấn đề — cùng nguyên tắc vòng đời với cảnh báo pin (ADR-006).
+      await dongAlertLech(db, phien.id);
+    }
     await luuKetQua(db, phien, kq, opts, alertId);
     return kq;
   };
@@ -250,11 +281,28 @@ async function doiSoatMotPhien(
         lech_tien_pct: lam3(lechTien),
         lech_max_pct: lam3(lechMax),
       },
-      status === 'lech'
-        ? `Lệch ${lechMax.toFixed(2)}% vượt ngưỡng ${opts.nguongPct}% (NF-10)`
-        : null,
+      ghiChuKetLuan(status, lechMax, kwhXe, opts.nguongPct),
     ),
   );
+}
+
+/**
+ * Diễn giải kết luận. SOC GIẢM trong lúc trụ báo đang sạc là tín hiệu riêng, nặng hơn
+ * "lệch số": trụ tính tiền năng lượng mà pin không hề nhận (hoặc giờ thiết bị lệch).
+ * Ghi rõ ra để người đọc báo cáo không phải tự suy từ con số âm.
+ */
+function ghiChuKetLuan(
+  status: TrangThaiDoiSoat,
+  lechMax: number,
+  kwhXe: number,
+  nguongPct: number,
+): string | null {
+  if (status !== 'lech') return null;
+  const co_ban = `Lệch ${lechMax.toFixed(2)}% vượt ngưỡng ${nguongPct}% (NF-10)`;
+  if (kwhXe < 0) {
+    return `${co_ban}. SOC xe GIẢM trong khoảng thời gian trụ báo đang sạc — kiểm tra công tơ trụ và giờ thiết bị.`;
+  }
+  return co_ban;
 }
 
 /** Alert cho phiên lệch. Dedup theo phiên: chạy job 10 lần vẫn chỉ 1 cảnh báo. */
@@ -289,6 +337,15 @@ async function taoAlertLech(
   if (res.rows[0]) return res.rows[0].id as string;
   const cu = await db.query(`SELECT id FROM alerts WHERE dedup_key = $1`, [key]);
   return (cu.rows[0]?.id as string | undefined) ?? null;
+}
+
+/** Đóng cảnh báo lệch của một phiên khi lượt đối soát sau kết luận là khớp. */
+async function dongAlertLech(db: Queryable, sessionId: string): Promise<void> {
+  await db.query(
+    `UPDATE alerts SET status = 'resolved', resolved_at = now()
+     WHERE dedup_key = $1 AND status <> 'resolved'`,
+    [`F-C6:reconcile:${sessionId}`],
+  );
 }
 
 async function luuKetQua(

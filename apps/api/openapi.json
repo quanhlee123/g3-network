@@ -2676,6 +2676,7 @@
                     "khop",
                     "lech",
                     "thieu_du_lieu",
+                    "loi",
                     "nguong_pct"
                   ],
                   "properties": {
@@ -2689,6 +2690,10 @@
                       "type": "integer"
                     },
                     "thieu_du_lieu": {
+                      "type": "integer"
+                    },
+                    "loi": {
+                      "description": "Số phiên không đối soát được vì lỗi kỹ thuật — phải là 0 khi hệ khỏe",
                       "type": "integer"
                     },
                     "nguong_pct": {
