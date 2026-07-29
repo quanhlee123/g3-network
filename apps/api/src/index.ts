@@ -1,13 +1,32 @@
-// Khung khởi tạo (Prompt 01, chưa gắn F-xx) — điểm khởi động API.
-// Cổng đọc từ biến môi trường API_PORT (xem infra/.env.example).
+// F-F1 — Điểm khởi động API. Cấu hình & secret đọc từ biến môi trường (quy tắc 3),
+// xem infra/.env.example.
 import { buildApp } from './app';
+import { loadConfigFromEnvFile } from './config';
+import { createPool } from './db';
+import { batLichDoiSoat } from './modules/reconciliation/scheduler';
 
-const port = Number(process.env.API_PORT ?? 3000);
-const app = await buildApp();
+const config = loadConfigFromEnvFile();
+const pool = createPool();
+const app = await buildApp({ config, db: pool });
+
+// F-C6: job đối soát 3 chiều chạy định kỳ ngay trong tiến trình API (modular monolith).
+const lichDoiSoat = batLichDoiSoat(pool, config, (m) => app.log.info(m));
+
+const shutdown = async (signal: string): Promise<void> => {
+  app.log.info(`nhận ${signal} — tắt sạch…`);
+  lichDoiSoat.dung();
+  await app.close();
+  await pool.end();
+  process.exit(0);
+};
+process.on('SIGINT', () => void shutdown('SIGINT'));
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 try {
-  await app.listen({ port, host: '0.0.0.0' });
+  await app.listen({ port: config.port, host: '0.0.0.0' });
+  app.log.info(`Tài liệu OpenAPI: http://localhost:${config.port}/docs`);
 } catch (err) {
   app.log.error(err);
+  await pool.end();
   process.exit(1);
 }

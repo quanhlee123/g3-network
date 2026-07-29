@@ -1,7 +1,7 @@
 # Mô hình dữ liệu Phase 1 (F-G4)
 
 > Nguồn yêu cầu: `docs/prd/08-du-lieu-tich-hop.md` (sheet 8, PRD v2.0).
-> Schema nằm ở `packages/db/migrations/` (đánh số 0001–0009, quy tắc 9).
+> Schema nằm ở `packages/db/migrations/` (đánh số 0001–0012, quy tắc 9).
 > Types TypeScript sinh từ schema: `npm run db:types` → `packages/shared/src/db-types.ts`.
 
 ## Nguyên tắc thiết kế
@@ -42,6 +42,8 @@
 | Cảnh báo (Alert) | `alerts` | loại phân cấp (F-A2/A4/J1/J3), `dedup_key` chống spam |
 | Ticket | `tickets` | kênh (in-app/hotline/Zalo/SOS), SLA, ngữ cảnh xe jsonb |
 | Audit log vị trí | `audit_logs` | NF-06 — không có trong sheet 8 nhưng bắt buộc theo sheet 9/quy tắc 5 |
+| Bản tin telemetry hỏng | `telemetry_quarantine` | F-G1 — bản tin sai schema/VIN lạ cách ly kèm lý do, KHÔNG drop lặng lẽ (ADR-004); alert `data_quality` dedup 1 lần/giờ |
+| Phiên OCPP đang mở | `ocpp_transactions` | F-G2 — bảng MUTABLE của CSMS (ADR-005): meter/SoC cập nhật theo MeterValues; StopTransaction mới tổng hợp thành 1 dòng `charging_sessions` bất biến |
 | (P2) Lô hàng · Ghép nối · Đơn · Cước | — | ngoài phạm vi Phase 1, chưa dựng bảng |
 
 ## Sơ đồ ERD

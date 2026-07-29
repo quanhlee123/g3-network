@@ -1,0 +1,71 @@
+# Ánh xạ endpoint API ↔ ma trận phân quyền sheet 9
+
+> Nguồn quyền là [docs/prd/09-rbac.md](../prd/09-rbac.md) — file đó là bản chuyển đổi trung
+> thực từ PRD v2.0 và **không được sửa** ở đây. Tài liệu này chỉ ghi lại *endpoint nào ứng với
+> dòng nào* và **những chỗ tôi phải suy luận** — các mục `[CẦN REVIEW]` cần người duyệt.
+>
+> Cài đặt: [apps/api/src/auth/permissions.ts](../../apps/api/src/auth/permissions.ts).
+> Nguyên tắc: **mặc định TỪ CHỐI** (quy tắc 6, CLAUDE.md) — vai trò nào không được liệt kê
+> tường minh thì không có quyền; route nào quên khai báo quyền cũng bị chặn.
+
+## Quyền và dòng sheet 9 tương ứng
+
+| Quyền (`permission`) | Endpoint | Dòng sheet 9 |
+|---|---|---|
+| `vehicle.read` | `GET /vehicles`, `GET /vehicles/{id}/telemetry/latest`, `.../history` | Xem trạng thái & vị trí xe |
+| `vehicle.location.read` | `GET /vehicles/{id}/location` | Xem trạng thái & vị trí xe |
+| `station.read` | `GET /stations`, `GET /stations/{id}` | Tìm & điều hướng trạm sạc ∪ Quản lý danh mục & trạng thái trạm |
+| `charging_session.read` | `GET /charging-sessions` | Sản lượng điện / đối soát kWh ∪ Xem trạng thái / báo cáo bảo hành |
+| `device_health.read` | `GET /devices/health` | Sức khỏe thiết bị telematics |
+| `reconciliation.read` / `.run` | `GET /reconciliation/results`, `POST /reconciliation/run` | Sản lượng điện / đối soát kWh |
+
+## Bảng quyền đã cài đặt
+
+`own` = chỉ xe được gán · `fleet` = chỉ đội mình · `all` = toàn bộ · trống = TỪ CHỐI
+
+| Quyền | Tài xế | QL đội | Vận hành Energy | Bảo hành | CSKH | Admin | Sale |
+|---|---|---|---|---|---|---|---|
+| `vehicle.read` | own | fleet | — | all | all | all | all |
+| `vehicle.location.read` | own | fleet | **—** | all | all *(cần ticket mở)* | all | all |
+| `station.read` | all | all | all | — | — | all | — |
+| `charging_session.read` | own | fleet | all | all | all | all | — |
+| `device_health.read` | — | fleet | — | — | all | all | — |
+| `reconciliation.read` | — | fleet | all | — | — | all | — |
+| `reconciliation.run` | — | — | all | — | — | all | — |
+
+## Quyết định tách `vehicle.read` khỏi `vehicle.location.read`
+
+Sheet 9 gộp "trạng thái **&** vị trí xe" thành một dòng. API tách làm hai vì:
+
+1. **Quy tắc 5 chỉ có đúng một chỗ để thực thi.** Toạ độ chỉ ra khỏi hệ thống qua
+   `GET /vehicles/{id}/location`, nơi bắt buộc có `reason` và luôn ghi `audit_logs`.
+   Nếu toạ độ đi kèm mọi endpoint xe thì mỗi endpoint đều phải nhớ ghi audit — sớm muộn sẽ quên.
+2. **Nghị định 13/2023 — thu thập tối thiểu.** Màn hình chỉ cần SOC/quãng đường (dashboard đội,
+   cảnh báo pin) không kéo theo dữ liệu vị trí của tài xế.
+
+Hệ quả: vai trò nào có "V" ở dòng đó thì có **cả hai** quyền — bảng trên không nới rộng quyền
+so với sheet 9, chỉ chia nhỏ đường ra của dữ liệu.
+
+## [CẦN REVIEW] — các điểm cần người duyệt xác nhận
+
+| # | Vấn đề | Đã làm gì | Cần ai quyết |
+|---|---|---|---|
+| R-01 | **Sale được xem vị trí xe.** Sheet 9 ghi "V" cho Sale ở dòng "Xem trạng thái & vị trí xe". Vai trò bán hàng cần toạ độ realtime của tài xế để làm gì thì PRD không nói. Theo nguyên tắc "thu thập tối thiểu" (NF-08, Nghị định 13/2023) đây là quyền khó biện minh, và mọi lần xem đều để lại dấu vết có tên người xem. | Giữ **đúng sheet 9** (không tự siết), đã ghi chú trong `permissions.ts` | PM + Legal |
+| R-02 | **Danh sách phiên sạc cho Sale.** Sheet 9 cho Sale "V" ở dòng *Xem trạng thái / báo cáo bảo hành* — nhưng đó là **báo cáo** bảo hành, không phải danh sách phiên sạc thô. | Chọn phương án chặt hơn: Sale **không** có `charging_session.read`. Khi có F-E3 (báo cáo bảo hành) sẽ mở quyền trên đúng endpoint báo cáo. | PM |
+| R-03 | **Tài xế xem danh sách trạm.** Dòng "Tìm & điều hướng trạm sạc" = ✓ nhưng dòng "Quản lý danh mục & trạng thái trạm" = —. | Cho `station.read` (chỉ đọc); các thao tác ghi/CRUD trạm sẽ là quyền riêng `station.manage` khi xây F-C1 phần ghi. | — (đã rõ) |
+| R-04 | **`reconciliation.read` phạm vi `fleet` cho QL đội.** Sheet 9 ghi "V\*" ở dòng "Sản lượng điện / đối soát kWh". Ký hiệu \* nghĩa là "chỉ trong đội mình" → lọc theo `customer_id` của xe trong phiên sạc. | Đã cài đặt theo cách đó | PM xác nhận |
+| R-05 | **Bảo hành & CSKH không thấy trạm sạc.** Sheet 9 để "—" ở cả hai dòng về trạm cho hai vai trò này, dù CSKH hỗ trợ tài xế hết pin thì cần biết trạm nào còn trống. | Giữ đúng sheet 9 (từ chối). Nếu vận hành thực tế cần, mở qua ADR. | CSKH Holding |
+
+## Ghi audit — hành vi chính xác
+
+| Tình huống | HTTP | Dòng `audit_logs` |
+|---|---|---|
+| Xem vị trí thành công | 200 | `vehicle_location.read` — user, xe, lý do, ticket (nếu có) |
+| Vai trò không có quyền (vd Vận hành Energy) | 403 | `vehicle_location.denied` — chặn ngay ở guard, mã xe nằm trong `metadata` |
+| Xe ngoài phạm vi | 404 | `vehicle_location.denied` |
+| CSKH thiếu ticket đang mở | 403 | `vehicle_location.denied` |
+| Thiếu tham số `reason` | 400 | **không có** — request bị chặn ở tầng schema, chưa chạm tới dữ liệu xe |
+| Xe chưa có bản ghi vị trí | 404 | `vehicle_location.read` với `metadata.ket_qua = chua_co_du_lieu_vi_tri` |
+
+Lý do ghi cả lần **bị từ chối**: hồ sơ "ai đã *cố* xem vị trí tài xế" có giá trị điều tra không
+kém "ai đã xem" — đây là yêu cầu của quyền chủ thể dữ liệu trong Nghị định 13/2023.

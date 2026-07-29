@@ -28,14 +28,14 @@
 | App tài xế | `apps/mobile` (React Native + Expo) | F-D1..D5, F-H1 (UI), F-I2 (nút SOS), NF-12, NF-13 |
 | Portal đội xe & quản trị | `apps/portal` (Next.js) | F-E1..E4, F-B4 (dashboard bảo hành), F-C1 (CRUD trạm) |
 | EMQX MQTT broker | `infra/docker-compose.yml` (service `emqx`) | NF-01, NF-04 |
-| Telemetry ingest | `services/ingest` | F-G1, F-A1, NF-01 |
+| Telemetry ingest + đánh giá ngưỡng pin | `services/ingest` | F-G1, F-A1, **F-A2**, NF-01 |
 | CSMS / OCPP Gateway | `services/csms` (OCPP 1.6J WebSocket, tham chiếu SteVe) | F-G2, F-C2, NF-02 |
 | API REST + OpenAPI | `apps/api` (Fastify — D-04 đã chốt) | Tất cả module A–K, NF-18 |
-| Module Telematics & Cảnh báo pin | `apps/api` (module A) | F-A1..A6 |
+| Module Telematics (đọc & phục vụ API) | `apps/api` (module A) — *sinh* cảnh báo pin nằm ở `services/ingest` để đạt "≤30s khi chạm ngưỡng" mà không cần job quét | F-A1..A6 |
 | Policy & Warranty engine | `apps/api` (module B) | F-B1..B6, NF-11 |
 | Module Quản lý trạm sạc | `apps/api` (module C) | F-C1..C6 |
 | Module Phiên sạc & Billing | `apps/api` | F-B2, F-C6, F-H1..H4 |
-| Module Đối soát 3 chiều | `apps/api` | NF-10, F-C6 |
+| Module Đối soát 3 chiều | `apps/api` (`src/modules/reconciliation`, chạy định kỳ trong tiến trình API + chạy tay) | NF-10, F-C6 |
 | Tài khoản & RBAC + audit log | `apps/api` | F-F1, F-F2, NF-06 (audit vị trí — xem [09-rbac.md](../prd/09-rbac.md)) |
 | Notification (FCM/SMS mock) | `apps/api` + adapter trong `packages/contracts` | F-F3, F-F4 |
 | Device management | `apps/api` (module F-J) | F-J1..J3 |

@@ -2,10 +2,17 @@
   "openapi": "3.0.3",
   "info": {
     "title": "G3 Network API",
-    "description": "API nền tảng vận hành xe tải điện — Phase 1 (simulator, dữ liệu giả 100%).",
-    "version": "0.1.0"
+    "description": "API nền tảng vận hành xe tải điện — Phase 1 (simulator, dữ liệu giả 100%).\n\nĐăng nhập: POST /auth/otp/request → mã in ra console → POST /auth/otp/verify → gắn header `Authorization: Bearer <token>`.\n\nPhân quyền theo docs/prd/09-rbac.md, mặc định TỪ CHỐI. Truy cập vị trí xe luôn ghi audit log (NF-06, Nghị định 13/2023).",
+    "version": "0.2.0"
   },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
     "schemas": {}
   },
   "paths": {
@@ -52,6 +59,2717 @@
           }
         }
       }
+    },
+    "/auth/otp/request": {
+      "post": {
+        "summary": "Xin mã OTP đăng nhập (F-F1)",
+        "tags": [
+          "xac-thuc"
+        ],
+        "description": "Luôn trả 202 dù SĐT có tồn tại hay không — người ngoài không dò được danh sách tài khoản. Phase 1: mã in ra console của apps/api, không gửi SMS thật.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "minLength": 8,
+                    "maxLength": 20,
+                    "description": "SĐT đăng nhập. Phase 1 dùng số GIẢ, xem npm run db:seed (vd 0900000003).",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/otp/verify": {
+      "post": {
+        "summary": "Đổi mã OTP lấy token đăng nhập (F-F1)",
+        "tags": [
+          "xac-thuc"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "code"
+                ],
+                "properties": {
+                  "phone": {
+                    "minLength": 8,
+                    "maxLength": 20,
+                    "description": "SĐT đăng nhập. Phase 1 dùng số GIẢ, xem npm run db:seed (vd 0900000003).",
+                    "type": "string"
+                  },
+                  "code": {
+                    "minLength": 4,
+                    "maxLength": 10,
+                    "description": "Mã OTP 6 chữ số",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "access_token",
+                    "token_type",
+                    "expires_in",
+                    "user"
+                  ],
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "token_type": {
+                      "type": "string",
+                      "enum": [
+                        "Bearer"
+                      ]
+                    },
+                    "expires_in": {
+                      "description": "Số giây còn hiệu lực",
+                      "type": "integer"
+                    },
+                    "user": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "full_name",
+                        "role"
+                      ],
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "full_name": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Thông tin tài khoản đang đăng nhập & danh sách quyền (F-F1)",
+        "tags": [
+          "xac-thuc"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "full_name",
+                    "role",
+                    "customer_id",
+                    "permissions"
+                  ],
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "full_name": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "customer_id": {
+                      "anyOf": [
+                        {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "permissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "permission",
+                          "scope",
+                          "require_open_ticket"
+                        ],
+                        "properties": {
+                          "permission": {
+                            "type": "string"
+                          },
+                          "scope": {
+                            "description": "own | fleet | all",
+                            "type": "string"
+                          },
+                          "require_open_ticket": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vehicles": {
+      "get": {
+        "summary": "Danh sách xe theo quyền (F-E1)",
+        "tags": [
+          "xe"
+        ],
+        "description": "Phạm vi tự động theo vai trò: tài xế chỉ thấy xe được gán, quản lý đội chỉ thấy đội mình (sheet 9). KHÔNG kèm toạ độ — dùng GET /vehicles/{id}/location.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Tìm theo VIN (khớp một phần)"
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "EVT-262"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "EVT-400"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "EVT-825"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "model",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "total",
+                    "limit",
+                    "offset",
+                    "items"
+                  ],
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "vin",
+                          "model",
+                          "warranty_state",
+                          "customer_name",
+                          "capacity_kwh",
+                          "soh_pct",
+                          "last_reading_at",
+                          "soc_pct",
+                          "odometer_km",
+                          "device_last_seen_at",
+                          "device_power_status"
+                        ],
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "model": {
+                            "type": "string"
+                          },
+                          "warranty_state": {
+                            "type": "string"
+                          },
+                          "customer_name": {
+                            "type": "string"
+                          },
+                          "capacity_kwh": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "soh_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "last_reading_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "soc_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "odometer_km": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "device_last_seen_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "device_power_status": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vehicles/{id}/telemetry/latest": {
+      "get": {
+        "summary": "Dữ liệu telemetry mới nhất của 1 xe (F-A1)",
+        "tags": [
+          "xe"
+        ],
+        "description": "Không kèm toạ độ (xem GET /vehicles/{id}/location).",
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "time",
+                    "schema_version",
+                    "soc_pct",
+                    "soh_pct",
+                    "battery_voltage_v",
+                    "battery_temp_c",
+                    "motor_temp_c",
+                    "speed_kmh",
+                    "odometer_km",
+                    "fault_codes"
+                  ],
+                  "properties": {
+                    "time": {
+                      "format": "date-time",
+                      "description": "Giờ THIẾT BỊ sinh bản ghi (NF-09)",
+                      "type": "string"
+                    },
+                    "schema_version": {
+                      "description": "NF-16",
+                      "type": "integer"
+                    },
+                    "soc_pct": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "soh_pct": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "battery_voltage_v": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "battery_temp_c": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "motor_temp_c": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "speed_kmh": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "odometer_km": {
+                      "anyOf": [
+                        {
+                          "description": "km (NF-17)",
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "fault_codes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vehicles/{id}/telemetry/history": {
+      "get": {
+        "summary": "Lịch sử telemetry 1 xe theo khoảng thời gian (F-A1)",
+        "tags": [
+          "xe"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 5000,
+              "default": 200,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "vehicle_id",
+                    "count",
+                    "items"
+                  ],
+                  "properties": {
+                    "vehicle_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "time",
+                          "schema_version",
+                          "soc_pct",
+                          "soh_pct",
+                          "battery_voltage_v",
+                          "battery_temp_c",
+                          "motor_temp_c",
+                          "speed_kmh",
+                          "odometer_km",
+                          "fault_codes"
+                        ],
+                        "properties": {
+                          "time": {
+                            "format": "date-time",
+                            "description": "Giờ THIẾT BỊ sinh bản ghi (NF-09)",
+                            "type": "string"
+                          },
+                          "schema_version": {
+                            "description": "NF-16",
+                            "type": "integer"
+                          },
+                          "soc_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "soh_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "battery_voltage_v": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "battery_temp_c": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "motor_temp_c": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "speed_kmh": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "odometer_km": {
+                            "anyOf": [
+                              {
+                                "description": "km (NF-17)",
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fault_codes": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vehicles/{id}/location": {
+      "get": {
+        "summary": "Vị trí mới nhất của 1 xe (F-A5) — có ghi audit log",
+        "tags": [
+          "xe"
+        ],
+        "description": "NF-06 & Nghị định 13/2023: mọi lần gọi (kể cả bị từ chối) đều ghi audit_logs gồm ai · lúc nào · xe nào · lý do. Vai trò CSKH bắt buộc kèm ticket_id đang mở. Vai trò Vận hành G3 Energy KHÔNG có quyền này (sheet 9).",
+        "parameters": [
+          {
+            "schema": {
+              "minLength": 5,
+              "maxLength": 200,
+              "type": "string"
+            },
+            "in": "query",
+            "name": "reason",
+            "required": true,
+            "description": "Lý do truy cập — bắt buộc, được lưu vào audit log"
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "ticket_id",
+            "required": false,
+            "description": "Ticket đang mở (bắt buộc với CSKH)"
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "vehicle_id",
+                    "time",
+                    "lat",
+                    "lng",
+                    "speed_kmh"
+                  ],
+                  "properties": {
+                    "vehicle_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "time": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "lat": {
+                      "type": "number"
+                    },
+                    "lng": {
+                      "type": "number"
+                    },
+                    "speed_kmh": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations": {
+      "get": {
+        "summary": "Danh sách trạm sạc kèm tổng hợp trạng thái trụ (F-C1, F-C2)",
+        "tags": [
+          "tram-sac"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "area",
+            "required": false,
+            "description": "Lọc theo khu vực (khớp một phần)"
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "co_tru_trong",
+            "required": false,
+            "description": "Chỉ trạm còn ít nhất 1 trụ Available"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "total",
+                    "items"
+                  ],
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "code",
+                          "name",
+                          "area",
+                          "status",
+                          "total_power_kw",
+                          "connector_standard",
+                          "operating_hours",
+                          "lat",
+                          "lng",
+                          "connectors_total",
+                          "connectors_available",
+                          "connectors_charging",
+                          "connectors_faulted",
+                          "connectors_unavailable"
+                        ],
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "area": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "total_power_kw": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "connector_standard": {
+                            "type": "string"
+                          },
+                          "operating_hours": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lat": {
+                            "type": "number"
+                          },
+                          "lng": {
+                            "type": "number"
+                          },
+                          "connectors_total": {
+                            "type": "integer"
+                          },
+                          "connectors_available": {
+                            "type": "integer"
+                          },
+                          "connectors_charging": {
+                            "type": "integer"
+                          },
+                          "connectors_faulted": {
+                            "type": "integer"
+                          },
+                          "connectors_unavailable": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/{id}": {
+      "get": {
+        "summary": "Chi tiết 1 trạm + trạng thái từng trụ (F-C2)",
+        "tags": [
+          "tram-sac"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "code",
+                        "name",
+                        "area",
+                        "status",
+                        "total_power_kw",
+                        "connector_standard",
+                        "operating_hours",
+                        "lat",
+                        "lng",
+                        "connectors_total",
+                        "connectors_available",
+                        "connectors_charging",
+                        "connectors_faulted",
+                        "connectors_unavailable"
+                      ],
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "area": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "total_power_kw": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "connector_standard": {
+                          "type": "string"
+                        },
+                        "operating_hours": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lat": {
+                          "type": "number"
+                        },
+                        "lng": {
+                          "type": "number"
+                        },
+                        "connectors_total": {
+                          "type": "integer"
+                        },
+                        "connectors_available": {
+                          "type": "integer"
+                        },
+                        "connectors_charging": {
+                          "type": "integer"
+                        },
+                        "connectors_faulted": {
+                          "type": "integer"
+                        },
+                        "connectors_unavailable": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "connectors"
+                      ],
+                      "properties": {
+                        "connectors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "ocpp_connector_id",
+                              "max_power_kw",
+                              "standard",
+                              "status",
+                              "updated_at"
+                            ],
+                            "properties": {
+                              "id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "ocpp_connector_id": {
+                                "type": "integer"
+                              },
+                              "max_power_kw": {
+                                "type": "number"
+                              },
+                              "standard": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "description": "Available | Charging | Faulted | Unavailable",
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "format": "date-time",
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/charging-sessions": {
+      "get": {
+        "summary": "Danh sách phiên sạc theo quyền (F-B2)",
+        "tags": [
+          "phien-sac"
+        ],
+        "description": "Phạm vi theo vai trò như danh sách xe. Cột đối soát (NF-10) nằm ở GET /reconciliation/results.",
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "vehicle_id",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "station_id",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "total",
+                    "limit",
+                    "offset",
+                    "items"
+                  ],
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "offset": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "vehicle_id",
+                          "vin",
+                          "station_id",
+                          "station_code",
+                          "ocpp_connector_id",
+                          "ocpp_transaction_id",
+                          "started_at",
+                          "ended_at",
+                          "duration_phut",
+                          "energy_kwh",
+                          "soc_start_pct",
+                          "soc_end_pct",
+                          "avg_power_kw",
+                          "max_power_kw",
+                          "cost_vnd"
+                        ],
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "vehicle_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "station_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "station_code": {
+                            "type": "string"
+                          },
+                          "ocpp_connector_id": {
+                            "type": "integer"
+                          },
+                          "ocpp_transaction_id": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "started_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "ended_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "duration_phut": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "energy_kwh": {
+                            "anyOf": [
+                              {
+                                "description": "kWh theo công tơ trụ (NF-17)",
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "soc_start_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "soc_end_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "avg_power_kw": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "max_power_kw": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "cost_vnd": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/devices/health": {
+      "get": {
+        "summary": "Sức khỏe thiết bị telematics (F-J1)",
+        "tags": [
+          "thiet-bi"
+        ],
+        "description": "im_lang_giay = số giây kể từ last_seen_at. power_status = \"lost\" nghĩa là thiết bị mất nguồn đột ngột (LWT) chứ không phải chỉ mất sóng (F-J3).",
+        "parameters": [
+          {
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "im_lang_qua_giay",
+            "required": false,
+            "description": "Chỉ trả thiết bị im lặng lâu hơn số giây này"
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "total",
+                    "items"
+                  ],
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "device_id",
+                          "device_serial",
+                          "vehicle_id",
+                          "vin",
+                          "firmware_version",
+                          "sim_iccid",
+                          "last_seen_at",
+                          "im_lang_giay",
+                          "power_status",
+                          "revoked_at"
+                        ],
+                        "properties": {
+                          "device_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "device_serial": {
+                            "type": "string"
+                          },
+                          "vehicle_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "firmware_version": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sim_iccid": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "last_seen_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "im_lang_giay": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "power_status": {
+                            "type": "string"
+                          },
+                          "revoked_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reconciliation/results": {
+      "get": {
+        "summary": "Kết quả đối soát 3 chiều theo phiên sạc (F-C6, NF-10)",
+        "tags": [
+          "doi-soat"
+        ],
+        "description": "kWh trụ (công tơ OCPP) ↔ kWh xe (ΔSOC × dung lượng pin, nội suy từ telematics) ↔ kWh quy từ số tiền giao dịch. Lệch > ngưỡng thì status = \"lech\" và có alert kèm theo. \"thieu_du_lieu\" KHÔNG phải là lệch — thường do xe mất sóng (NF-09), sẽ xét lại sau.",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "khop"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "lech"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "thieu_du_lieu"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "nguong_pct",
+                    "tong_hop",
+                    "items"
+                  ],
+                  "properties": {
+                    "nguong_pct": {
+                      "type": "number"
+                    },
+                    "tong_hop": {
+                      "type": "object",
+                      "required": [
+                        "khop",
+                        "lech",
+                        "thieu_du_lieu"
+                      ],
+                      "properties": {
+                        "khop": {
+                          "type": "integer"
+                        },
+                        "lech": {
+                          "type": "integer"
+                        },
+                        "thieu_du_lieu": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "session_id",
+                          "vin",
+                          "ma_tram",
+                          "started_at",
+                          "kwh_tru",
+                          "kwh_xe",
+                          "kwh_thanh_toan",
+                          "so_tien_vnd",
+                          "lech_xe_pct",
+                          "lech_tien_pct",
+                          "lech_max_pct",
+                          "status",
+                          "ghi_chu",
+                          "checked_at"
+                        ],
+                        "properties": {
+                          "session_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "ma_tram": {
+                            "type": "string"
+                          },
+                          "started_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "kwh_tru": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "kwh_xe": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "kwh_thanh_toan": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "so_tien_vnd": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lech_xe_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lech_tien_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lech_max_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "khop"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "lech"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "thieu_du_lieu"
+                                ]
+                              }
+                            ]
+                          },
+                          "ghi_chu": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "checked_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reconciliation/run": {
+      "post": {
+        "summary": "Chạy tay job đối soát 3 chiều (F-C6, NF-10)",
+        "tags": [
+          "doi-soat"
+        ],
+        "description": "Chạy lại được nhiều lần: kết quả ghi kiểu upsert theo phiên và alert có chống trùng nên không sinh cảnh báo lặp.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "to": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "lam_lai_tat_ca": {
+                    "default": false,
+                    "description": "Đối soát lại cả phiên đã có kết luận khớp/lệch",
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "da_xet",
+                    "khop",
+                    "lech",
+                    "thieu_du_lieu",
+                    "nguong_pct"
+                  ],
+                  "properties": {
+                    "da_xet": {
+                      "type": "integer"
+                    },
+                    "khop": {
+                      "type": "integer"
+                    },
+                    "lech": {
+                      "type": "integer"
+                    },
+                    "thieu_du_lieu": {
+                      "type": "integer"
+                    },
+                    "nguong_pct": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
-  }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
 }

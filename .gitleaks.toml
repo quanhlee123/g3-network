@@ -3,11 +3,17 @@
 useDefault = true
 
 [allowlist]
-description = "Thư mục sinh tự động / phụ thuộc — không chứa mã nguồn của dự án"
+description = "Thư mục sinh tự động / phụ thuộc + file secret local không bao giờ được commit"
 paths = [
   '''node_modules''',
   '''\.next''',
   '''\.expo''',
   '''dist''',
   '''package-lock\.json''',
+  # infra/.env là file secret LOCAL của từng máy: nằm trong .gitignore, không bao giờ vào git.
+  # `npm run gitleaks` quét theo thư mục nên vẫn nhìn thấy nó và báo động giả (vd JWT_SECRET
+  # ngẫu nhiên do scripts/setup-env.mjs sinh). CI quét theo LỊCH SỬ GIT (`gitleaks git .`) nên
+  # nếu ai đó lỡ commit infra/.env thì vẫn bị bắt ở đó — allowlist này không nới lỏng CI.
+  # File mẫu infra/.env.example KHÔNG nằm trong allowlist: cấm điền giá trị thật vào đó.
+  '''infra/\.env$''',
 ]

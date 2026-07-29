@@ -7,6 +7,8 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/health',
     {
+      // Công khai: probe hạ tầng phải gọi được khi chưa có tài khoản (NF-14).
+      config: { public: true },
       schema: {
         tags: ['he-thong'],
         summary: 'Kiểm tra sức khỏe hệ thống',

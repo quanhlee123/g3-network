@@ -23,7 +23,7 @@ flowchart TB
   subgraph server["Hệ thống máy chủ — modular monolith trong 1 monorepo (không Kafka/RabbitMQ)"]
     subgraph gateway["Lớp cổng giao tiếp"]
       emqx["EMQX MQTT broker<br/>(infra/docker-compose.yml)"]
-      ingest["Telemetry ingest<br/>(services/ingest — F-G1, F-A1)"]
+      ingest["Telemetry ingest + đánh giá ngưỡng pin<br/>(services/ingest — F-G1, F-A1, F-A2)"]
       csms["CSMS / OCPP Gateway<br/>WebSocket, tham chiếu SteVe<br/>(services/csms — F-G2)"]
       api["API REST + OpenAPI<br/>Fastify (apps/api)"]
     end
@@ -71,7 +71,8 @@ flowchart TB
   api --> cskh
   api --> device
 
-  telem -- "ngưỡng 30/20/10%" --> notify
+  ingest -- "cảnh báo pin 30/20/10% ngay trên dòng dữ liệu (F-A2)" --> notify
+  identity -- "OTP đăng nhập qua SĐT (F-F1)" --> push
   policy -- "gắn cờ vi phạm" --> notify
   device -- "thiết bị offline/tamper" --> notify
   session --> doisoat
