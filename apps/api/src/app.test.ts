@@ -50,9 +50,11 @@ describe('@g3/api — khung app', () => {
   });
 
   it('/docs mở được mà không cần token (tài liệu là public), kể cả khi có query string', async () => {
-    for (const url of ['/docs/json', '/docs/json?v=1']) {
+    // '/docs?v=1' là ca DUY NHẤT thật sự kiểm tra việc guard cắt query string trước khi so
+    // tiền tố — '/docs/json?v=1' vẫn qua kể cả khi không cắt, nên một mình nó vô dụng.
+    for (const url of ['/docs/json', '/docs/json?v=1', '/docs', '/docs?v=1']) {
       const res = await h.app.inject({ method: 'GET', url });
-      expect(res.statusCode, url).toBe(200);
+      expect(res.statusCode, `${url} phải mở được không cần token`).toBeLessThan(400);
     }
   });
 });
