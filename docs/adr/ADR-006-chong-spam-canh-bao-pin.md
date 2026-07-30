@@ -1,6 +1,13 @@
-# ADR-006: Quy tắc TẠM chống spam cảnh báo pin khi D-03 còn MỞ
+# ADR-006: Chống spam cảnh báo pin theo vòng đời cảnh báo (không dùng khái niệm "chuyến")
 
-Ngày: 2026-07-28 · Người đề xuất: Claude Code (Prompt 06, F-A2) · Người duyệt: (chờ duyệt) · Trạng thái: NHÁP
+Ngày: 2026-07-28 · Người đề xuất: Claude Code (Prompt 06, F-A2)
+Người duyệt: **PM** · Ngày duyệt: **2026-07-29** · Trạng thái: **ĐÃ DUYỆT**
+
+> **Cập nhật 2026-07-29 — D-03 ĐÃ CHỐT.** PM quyết định lấy chính quy tắc dưới đây làm
+> quyết định **chính thức**, tức là F-A2 **bỏ hẳn** khái niệm "chuyến": chống spam dựa trên
+> SOC hồi phục, không dựa trên ranh giới chuyến đi. Vì vậy **không có thay đổi code nào**
+> phát sinh từ việc chốt D-03 — phần "khi D-03 được chốt" ở mục Hệ quả không còn phải làm.
+> Tiêu đề ADR đã bỏ chữ "TẠM".
 
 ## Bối cảnh
 
@@ -56,15 +63,19 @@ Cài đặt: `services/ingest/src/battery-alerts.ts`, chạy ngay trong pipeline
   Khác biệt chỉ xuất hiện ở chuyến rất dài không sạc giữa chừng (bắn 1 lần, đúng mong muốn)
   và ở trường hợp sạc *rất ít* rồi đi tiếp (quy tắc này sẽ không bắn lại — cần D-03 xác nhận
   đây có phải hành vi mong muốn không).
-- **Khi D-03 được chốt**: sửa `dedup_key` sang dạng có mã chuyến và thêm điều kiện "chuyến
-  mới" vào `quyetDinhCanhBao`. Hàm này là hàm thuần, có test riêng — phạm vi sửa nhỏ và rõ.
+- ~~**Khi D-03 được chốt**: sửa `dedup_key` sang dạng có mã chuyến…~~ — **không còn áp dụng**:
+  D-03 chốt ngày 2026-07-29 là giữ nguyên quy tắc này, `dedup_key` không đổi.
 - Biên trễ 5% là con số kỹ thuật chống rung, không phải con số nghiệp vụ; đổi được qua hằng
   `BIEN_TRE_PCT` mà không ảnh hưởng ngưỡng 30/20/10 của PRD.
 - Cảnh báo được `resolved` tự động cho `alerts.status` một ý nghĩa vận hành thật (đang nguy
   hiểm / đã qua), có ích cho dashboard CSKH sau này.
 
-## Cần người duyệt xác nhận
+## Người duyệt đã xác nhận (2026-07-29, PM)
 
-- [ ] Chấp nhận quy tắc tạm này cho tới khi D-03 chốt?
-- [ ] D-03: định nghĩa "chuyến" là gì? (đầu vào cho bản sửa sau)
-- [ ] Sạc ít rồi đi tiếp (SOC không vượt ngưỡng + 5%) thì có nên cảnh báo lại không?
+- [x] Chấp nhận quy tắc này — và lấy làm quyết định **chính thức**, không chỉ tạm thời.
+- [x] D-03: **không định nghĩa "chuyến"** cho mục đích chống spam cảnh báo pin. Nếu sau này
+      module khác (vd F-A6 hiệu suất vận hành, F-K1 chấm điểm lái xe) cần khái niệm "chuyến"
+      thì đó là quyết định riêng của module đó, không kéo F-A2 đi theo.
+- [x] Sạc ít rồi đi tiếp mà SOC không vượt ngưỡng + 5%: **không** cảnh báo lại. Lý do: xe vẫn
+      đang ở vùng SOC nguy hiểm, cảnh báo cũ vẫn đang mở nên tài xế vẫn đang thấy — bắn thêm
+      là spam chứ không thêm thông tin.
