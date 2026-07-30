@@ -1,6 +1,7 @@
 // F-A1/F-A2/F-A4/F-J3 — Đọc cấu hình simulator từ tham số CLI (parseArgs của node:util).
 // Mọi thời lượng là flag để nghiệm thu nhanh (không phải chờ 2h thật); mặc định đúng đề bài.
 import { parseArgs } from 'node:util';
+import { TEN_TUYEN, type TenTuyen } from './route';
 
 export const SCENARIOS = ['normal', 'drain', 'offline', 'temp', 'power-loss', 'charge'] as const;
 export type Scenario = (typeof SCENARIOS)[number];
@@ -8,6 +9,11 @@ export type Scenario = (typeof SCENARIOS)[number];
 export interface SimConfig {
   count: number;
   scenario: Scenario;
+  /**
+   * Tuyến chạy: `bac` = Hà Nội – Lạng Sơn (mặc định), `nam` = TP.HCM – Tân An.
+   * Cả hai đều đi sát các trạm sạc trong seed (D-10 — xem docs/DECISION-LOG.md).
+   */
+  route: TenTuyen;
   vinPrefix: string;
   /**
    * Số thứ tự VIN đầu tiên (mặc định 1 → VIN ...-0001).
@@ -60,6 +66,7 @@ export function parseSimArgs(argv: string[], env: NodeJS.ProcessEnv = process.en
     options: {
       count: { type: 'string', default: '1' },
       scenario: { type: 'string', default: 'normal' },
+      route: { type: 'string', default: 'bac' },
       'vin-prefix': { type: 'string', default: 'G3-SIM' },
       'vin-start': { type: 'string' },
       'interval-ms': { type: 'string' },
@@ -86,6 +93,11 @@ export function parseSimArgs(argv: string[], env: NodeJS.ProcessEnv = process.en
     throw new Error(`--scenario không hợp lệ: "${scenario}" (chỉ nhận: ${SCENARIOS.join(' | ')})`);
   }
 
+  const route = values.route as string;
+  if (!(TEN_TUYEN as readonly string[]).includes(route)) {
+    throw new Error(`--route không hợp lệ: "${route}" (chỉ nhận: ${TEN_TUYEN.join(' | ')})`);
+  }
+
   const vinPrefix = values['vin-prefix'] as string;
   if (vinPrefix === '' || /[/+#\s]/.test(vinPrefix)) {
     throw new Error(
@@ -96,6 +108,7 @@ export function parseSimArgs(argv: string[], env: NodeJS.ProcessEnv = process.en
   return {
     count,
     scenario: scenario as Scenario,
+    route: route as TenTuyen,
     vinPrefix,
     vinStart: parseIntFlag('vin-start', values['vin-start'], 1, 1),
     intervalMs: parseIntFlag('interval-ms', values['interval-ms'], 10_000, 100),

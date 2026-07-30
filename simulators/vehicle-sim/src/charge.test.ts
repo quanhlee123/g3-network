@@ -2,7 +2,7 @@
 // Đây là chiều XE của đối soát 3 chiều (NF-10) — sai ở đây là đối soát báo lệch oan.
 import { describe, expect, it } from 'vitest';
 import { parseSimArgs } from './cli';
-import { buildRoute } from './route';
+import { buildRoute, buildRouteByName, positionAtKm } from './route';
 import { mulberry32 } from './rng';
 import { createVehicle, tickVehicle } from './vehicle';
 
@@ -47,6 +47,35 @@ describe('kịch bản charge', () => {
     const kq = tickVehicle(state, T0 + 5 * 3_600_000, cfg, route, rand);
 
     expect(kq.state.socPct).toBe(100);
+  });
+});
+
+describe('--route (D-10: hai hành lang có trạm sạc)', () => {
+  it('mặc định là tuyến miền Bắc Hà Nội – Lạng Sơn', () => {
+    const cfg = parseSimArgs(['--count', '1'], {});
+    expect(cfg.route).toBe('bac');
+  });
+
+  it('--route nam cho tuyến TP.HCM – Tân An, xe khởi hành đúng vùng', () => {
+    const cfg = parseSimArgs(['--count', '1', '--route', 'nam'], {});
+    expect(cfg.route).toBe('nam');
+
+    const tuyenNam = buildRouteByName('nam');
+    const [lat, lng] = positionAtKm(tuyenNam, 0);
+    expect(lat).toBeCloseTo(10.85, 2); // Thủ Đức, không phải Hà Nội
+    expect(lng).toBeCloseTo(106.75, 2);
+  });
+
+  it('hai tuyến có chiều dài hợp lý và khác nhau', () => {
+    const bac = buildRouteByName('bac');
+    const nam = buildRouteByName('nam');
+    expect(bac.lengthKm).toBeGreaterThan(100);
+    expect(nam.lengthKm).toBeGreaterThan(40);
+    expect(Math.abs(bac.lengthKm - nam.lengthKm)).toBeGreaterThan(10);
+  });
+
+  it('kịch bản xấu — tên tuyến lạ bị từ chối kèm gợi ý', () => {
+    expect(() => parseSimArgs(['--route', 'tay'], {})).toThrow(/--route không hợp lệ.*bac.*nam/s);
   });
 });
 

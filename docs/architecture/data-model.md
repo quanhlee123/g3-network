@@ -207,6 +207,6 @@ erDiagram
 | Việc | Lệnh |
 |---|---|
 | Chạy migration (+ áp retention từ env) | `npm run db:migrate` |
-| Seed dữ liệu giả (20 xe, 3 trạm × 4 trụ, 5 tài khoản, 2 chính sách) | `npm run db:seed` |
+| Seed dữ liệu giả (20 xe, 6 trạm × 4 trụ, 7 tài khoản, 2 chính sách) | `npm run db:seed` |
 | Sinh lại types sau migration mới | `npm run db:types` |
 | Test DB (tự tạo database `g3_test` riêng) | `npm test -w packages/db` |

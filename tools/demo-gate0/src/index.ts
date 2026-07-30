@@ -24,7 +24,9 @@ const CAU_HINH = {
   soXeDoi: 19, // 19 xe chạy bình thường (VIN 0002…0020)
   vinPrefix: 'G3-SIM-VIN', // khớp seed (docs/simulators.md)
   vinXeTutPin: 1, // xe VIN 0001 là nhân vật chính
-  maTram: 'G3-ST-001',
+  // Đội xe chạy tuyến miền Bắc (mặc định) nên phải sạc ở trạm miền Bắc — D-10.
+  // Trước khi chốt D-10, demo sạc ở trạm TP.HCM trong khi xe đang ở Hà Nội.
+  maTram: 'G3-ST-004', // Gia Lâm, ~7 km từ đầu tuyến Hà Nội – Lạng Sơn
   nhipXeGiay: 2, // chu kỳ telemetry của đội xe
   nhipXeChinhGiay: 1, // xe chính gửi dày hơn cho mượt
   phutTutPin: 1, // SOC 100% → 5% trong 1 phút
@@ -87,7 +89,7 @@ async function main(): Promise<void> {
   const daAp = await runMigrations(admin);
   ok(`migration: ${daAp.length > 0 ? `vừa áp ${daAp.length} file` : 'đã ở bản mới nhất'}`);
   await seed(admin);
-  ok('seed: 20 xe · 3 trạm × 4 trụ · 7 tài khoản (dữ liệu GIẢ)');
+  ok('seed: 20 xe · 6 trạm × 4 trụ (2 hành lang Bắc–Nam) · 7 tài khoản (dữ liệu GIẢ)');
   await donDepDuLieuDemoCu(admin);
 
   const pool = new pg.Pool({ connectionString: databaseUrl(), max: 10 });

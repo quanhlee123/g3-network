@@ -1,7 +1,8 @@
 // F-G4 · Seed dữ liệu GIẢ 100% (quy tắc 12 — không VIN/SĐT thật): npm run db:seed.
 // Idempotent: chạy lại không tạo bản ghi trùng (upsert theo khóa tự nhiên).
-// Nội dung theo Prompt 03: 20 xe (EVT-262/400/825), 3 trạm × 4 trụ,
-// 5 tài khoản các vai trò sheet 9, 2 chính sách sạc mẫu (SOC 20–90%, ToU).
+// Nội dung: 20 xe (EVT-262/400/825), 6 trạm × 4 trụ (Prompt 03 là 3 trạm; D-10 chốt
+// 2026-07-29 bổ sung 3 trạm hành lang miền Bắc), 7 tài khoản đủ 7 vai trò sheet 9,
+// 2 chính sách sạc mẫu (SOC 20–90%, ToU).
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
 import { databaseUrl } from './env';
@@ -13,8 +14,13 @@ const MODELS = [
   { model: 'EVT-825', count: 5, capacityKwh: 420 },
 ] as const;
 
-const STATIONS = [
-  // tọa độ GIẢ quanh TP.HCM (lon, lat)
+// D-10 (ĐÃ CHỐT 2026-07-29): mạng trạm phủ CẢ HAI hành lang mà vehicle-sim chạy
+// (`--route nam` = TP.HCM–Tân An, `--route bac` = Hà Nội–Lạng Sơn). Trước đây trạm chỉ ở
+// miền Nam trong khi simulator chỉ chạy miền Bắc, nên "trạm gần nhất" của cảnh báo pin F-A2
+// ra hơn 1.000 km. Toạ độ đặt SÁT waypoint của tuyến tương ứng trong
+// simulators/vehicle-sim/src/route.ts — có test khoá lại (tools/demo-gate0/src/dia-ly.test.ts).
+export const SEED_STATIONS = [
+  // --- Hành lang miền Nam: TP.HCM → Tân An (tọa độ GIẢ, lon/lat) ---
   {
     code: 'G3-ST-001',
     name: 'Trạm sạc G3 Thủ Đức (GIẢ)',
@@ -35,6 +41,28 @@ const STATIONS = [
     area: 'Long An — Bến Lức',
     lon: 106.48,
     lat: 10.63,
+  },
+  // --- Hành lang miền Bắc: Hà Nội → Lạng Sơn dọc QL1A ---
+  {
+    code: 'G3-ST-004',
+    name: 'Trạm sạc G3 Gia Lâm (GIẢ)',
+    area: 'Hà Nội — Gia Lâm',
+    lon: 105.9199,
+    lat: 21.0421,
+  },
+  {
+    code: 'G3-ST-005',
+    name: 'Trạm sạc G3 Bắc Giang (GIẢ)',
+    area: 'Bắc Giang — TP Bắc Giang',
+    lon: 106.1946,
+    lat: 21.2731,
+  },
+  {
+    code: 'G3-ST-006',
+    name: 'Trạm sạc G3 Lạng Sơn (GIẢ)',
+    area: 'Lạng Sơn — TP Lạng Sơn',
+    lon: 106.7615,
+    lat: 21.8537,
   },
 ] as const;
 
@@ -165,8 +193,8 @@ export async function seed(client: pg.Client): Promise<void> {
     }
   }
 
-  // --- 3 trạm × 4 trụ (CCS2, 120 kW mỗi trụ) ---
-  for (const s of STATIONS) {
+  // --- 6 trạm × 4 trụ (CCS2, 120 kW mỗi trụ) — 3 miền Nam + 3 miền Bắc, xem D-10 ---
+  for (const s of SEED_STATIONS) {
     const station = await client.query<{ id: string }>(
       `INSERT INTO charging_stations (code, name, location, area, total_power_kw, operating_hours)
        VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5, 480, '24/7')
