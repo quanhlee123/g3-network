@@ -8,7 +8,11 @@ let h: Harness;
 let w: TestWorld;
 
 beforeAll(async () => {
-  h = await createHarness({ OTP_MAX_ATTEMPTS: '3', OTP_TTL_SECONDS: '300' });
+  h = await createHarness({
+    OTP_MAX_ATTEMPTS: '3',
+    OTP_TTL_SECONDS: '300',
+    OTP_MAX_REQUESTS_PER_WINDOW: '3',
+  });
   w = await seedWorld(h.db);
 });
 afterAll(async () => {
@@ -131,6 +135,50 @@ describe('F-F1 — kịch bản xấu', () => {
     const res = await xinMa('khong-phai-so');
     expect(res.statusCode).toBe(400);
     expect(res.json().error.code).toBe('sdt_khong_hop_le');
+  });
+
+  it('CHỐNG DÒ MÃ: xin mã quá số lần cho phép thì thôi tạo mã (vẫn trả 202)', async () => {
+    // Không có chốt này thì OTP_MAX_ATTEMPTS vô nghĩa: cứ xin mã mới là có thêm lượt đoán.
+    const phone = w.users.driver.phone;
+    const truoc = h.sms.sent.length;
+
+    for (let i = 0; i < 8; i++) {
+      expect((await xinMa(phone)).statusCode).toBe(202); // luôn 202, không lộ việc bị chặn
+    }
+
+    const soThachThuc = await h.db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM auth_otp_challenges WHERE phone = $1`,
+      [phone],
+    );
+    expect(soThachThuc.rows[0]!.n).toBe(3); // harness đặt OTP_MAX_REQUESTS_PER_WINDOW = 3
+    expect(h.sms.sent.length - truoc).toBe(3); // và chỉ gửi đúng 3 tin
+  });
+
+  it('CHỐNG DÒ MÃ: đăng nhập thành công không bị tính vào hạn mức', async () => {
+    // Người dùng thật đăng nhập đi lại nhiều lần trong 15 phút không được bị chặn —
+    // và `npm run demo:gate0` chạy liên tiếp cũng không tự chặn chính nó.
+    const phone = w.users.sale.phone;
+
+    for (let lan = 0; lan < 6; lan++) {
+      await xinMa(phone);
+      const res = await doiMa(phone, TEST_OTP_CODE);
+      expect(res.statusCode, `lần đăng nhập thứ ${lan + 1}`).toBe(200);
+    }
+  });
+
+  it('CHỐNG DÒ MÃ: hết khung thời gian thì xin mã lại được', async () => {
+    const phone = w.users.cskh.phone;
+    for (let i = 0; i < 3; i++) await xinMa(phone);
+
+    // Đẩy các thách thức cũ ra ngoài cửa sổ
+    await h.db.query(
+      `UPDATE auth_otp_challenges SET created_at = now() - interval '2 hours' WHERE phone = $1`,
+      [phone],
+    );
+    await xinMa(phone);
+
+    const res = await doiMa(phone, TEST_OTP_CODE);
+    expect(res.statusCode).toBe(200);
   });
 
   it('tài khoản bị khóa sau khi xin mã → không đổi được token', async () => {

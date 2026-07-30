@@ -1,7 +1,7 @@
 // Test tiện ích hiển thị của demo Gate 0 — bảng lệch cột trong video báo cáo Ban lãnh đạo
 // là lỗi thật, dù không phải lỗi nghiệp vụ.
 import { describe, expect, it, vi } from 'vitest';
-import { bang, choDen, soVn, tienVn } from './ui';
+import { bang, choDen, moTaLoi, soVn, tienVn } from './ui';
 
 describe('định dạng số theo chuẩn Việt Nam (NF-17)', () => {
   it('kWh dùng dấu phẩy thập phân, 3 chữ số', () => {
@@ -43,6 +43,37 @@ describe('bảng console', () => {
 
     const doRong = new Set(dong.map((d) => d.length));
     expect(doRong.size, `các dòng lệch nhau: ${[...doRong].join(', ')}`).toBe(1);
+  });
+});
+
+describe('moTaLoi', () => {
+  it('AggregateError rỗng message (DB/MQTT không chạy) vẫn ra chuỗi đọc được', () => {
+    // Đây chính là ca đã in ra "()" khi Docker tắt — thông báo quan trọng nhất bị rỗng.
+    const loi = new AggregateError(
+      [
+        Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:5432'), { code: 'ECONNREFUSED' }),
+        Object.assign(new Error('connect ECONNREFUSED ::1:5432'), { code: 'ECONNREFUSED' }),
+      ],
+      '',
+    );
+
+    const s = moTaLoi(loi);
+    expect(s).toContain('ECONNREFUSED');
+    expect(s).not.toBe('');
+  });
+
+  it('Error có message thì dùng nguyên message', () => {
+    expect(moTaLoi(new Error('thiếu DATABASE_URL'))).toBe('thiếu DATABASE_URL');
+  });
+
+  it('Error rỗng message nhưng có code thì dùng tên + code', () => {
+    const loi = Object.assign(new Error(''), { code: 'ETIMEDOUT' });
+    expect(moTaLoi(loi)).toBe('Error (ETIMEDOUT)');
+  });
+
+  it('giá trị không phải Error cũng không ra chuỗi rỗng', () => {
+    expect(moTaLoi('')).toBe('không rõ nguyên nhân');
+    expect(moTaLoi(undefined)).toBe('undefined');
   });
 });
 

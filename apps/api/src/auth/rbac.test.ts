@@ -29,6 +29,9 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await h.db.query('TRUNCATE audit_logs RESTART IDENTITY');
+  // Mỗi test bắt đầu sạch: nhiều test đăng nhập lại cùng một SĐT, để dồn lại sẽ chạm
+  // hạn mức chống dò mã OTP (xem otp.ts) và làm test đỏ vì lý do không liên quan.
+  await h.db.query('TRUNCATE auth_otp_challenges RESTART IDENTITY');
 });
 
 const url = (vehicleId: string, extra = '') =>

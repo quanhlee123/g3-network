@@ -86,8 +86,11 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   const otp = new OtpService(db, sms, {
     ttlSeconds: config.otpTtlS,
     maxAttempts: config.otpMaxAttempts,
+    maxRequestsPerWindow: config.otpMaxRequestsPerWindow,
+    requestWindowSeconds: config.otpRequestWindowS,
     jwtSecret: config.jwtSecret,
     codeFactory: options.otpCodeFactory,
+    log: (m) => app.log.warn(m),
   });
 
   await app.register(healthRoutes);

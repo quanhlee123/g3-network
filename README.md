@@ -160,6 +160,7 @@ g3-network/
 | `JWT_SECRET` | Khóa ký token API. **Để trống trong `.env.example`** — `npm install` sinh khóa ngẫu nhiên vào `infra/.env` |
 | `JWT_EXPIRES_IN` | Hạn dùng token (mặc định `12h`) |
 | `OTP_TTL_SECONDS` / `OTP_MAX_ATTEMPTS` | Hạn dùng mã OTP (300s) và số lần nhập sai tối đa (5) |
+| `OTP_MAX_REQUESTS_PER_WINDOW` / `OTP_REQUEST_WINDOW_S` | Chống dò mã: tối đa 5 lần xin mã cho 1 SĐT mỗi 900s |
 | `TELEMETRY_HISTORY_MAX_ROWS` | Trần bản ghi mỗi lần gọi lịch sử telemetry (mặc định 1000) |
 | `RECONCILE_INTERVAL_MS` | Chu kỳ job đối soát 3 chiều trong tiến trình API (mặc định 300000; `0` = chỉ chạy tay) |
 | `RECONCILE_NGUONG_PCT` | Ngưỡng NF-10 — lệch hơn mức này (%) thì sinh cảnh báo (mặc định 1) |

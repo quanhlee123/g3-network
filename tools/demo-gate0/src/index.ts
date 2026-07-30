@@ -17,7 +17,7 @@ import { ChargePointSim } from '@g3/ocpp-sim';
 import { connectWsTransport } from '@g3/ocpp-sim/src/ws-transport';
 import { FleetSimulator, MqttTelemetryPublisher, parseSimArgs } from '@g3/vehicle-sim';
 import type { FastifyInstance } from 'fastify';
-import { bang, buoc, canhBao, choDen, khung, nghi, ok, soVn, tieuDe, tienVn } from './ui';
+import { bang, buoc, canhBao, choDen, khung, moTaLoi, nghi, ok, soVn, tieuDe, tienVn } from './ui';
 
 // ---- Thông số kịch bản demo (đổi ở đây nếu muốn video ngắn/dài hơn) --------------------
 const CAU_HINH = {
@@ -79,8 +79,8 @@ async function main(): Promise<void> {
     await admin.connect();
   } catch (err) {
     console.error(
-      `\n  ✖ Không kết nối được PostgreSQL (${err instanceof Error ? err.message : String(err)}).\n` +
-        '    → Chạy: docker compose -f infra/docker-compose.yml up -d\n',
+      `\n  ✖ Không kết nối được PostgreSQL: ${moTaLoi(err)}\n` +
+        '    → Kiểm tra Docker Desktop đang chạy, rồi: docker compose -f infra/docker-compose.yml up -d\n',
     );
     process.exit(1);
   }
@@ -111,8 +111,8 @@ async function main(): Promise<void> {
     await nguon.connect();
   } catch (err) {
     console.error(
-      `\n  ✖ Không kết nối được MQTT (${err instanceof Error ? err.message : String(err)}).\n` +
-        '    → Chạy: docker compose -f infra/docker-compose.yml up -d\n',
+      `\n  ✖ Không kết nối được MQTT: ${moTaLoi(err)}\n` +
+        '    → Kiểm tra Docker Desktop đang chạy, rồi: docker compose -f infra/docker-compose.yml up -d\n',
     );
     await tatSach(1);
   }
@@ -618,6 +618,7 @@ async function inTomTat(
 }
 
 main().catch(async (err: unknown) => {
-  console.error(`\n  ✖ Demo lỗi: ${err instanceof Error ? err.stack : String(err)}`);
+  console.error(`\n  ✖ Demo lỗi: ${moTaLoi(err)}`);
+  if (err instanceof Error && err.stack) console.error(err.stack);
   await tatSach(1);
 });

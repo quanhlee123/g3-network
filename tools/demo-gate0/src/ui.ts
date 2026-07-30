@@ -79,6 +79,27 @@ export function tienVn(v: number | null | undefined): string {
 export const nghi = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * Mô tả lỗi thành chuỗi ĐỌC ĐƯỢC.
+ * Vì sao cần hàm riêng: khi PostgreSQL/MQTT không chạy, Node ném AggregateError
+ * (ECONNREFUSED trên cả IPv4 và IPv6) mà `.message` là chuỗi RỖNG. Dùng thẳng
+ * `err.message` sẽ in ra "()" — đúng lúc người chạy demo trên máy sạch cần thông tin nhất.
+ */
+export function moTaLoi(err: unknown): string {
+  if (err instanceof AggregateError && err.errors.length > 0) {
+    const ben_trong = err.errors.map((e) => moTaLoi(e)).filter((s) => s.length > 0);
+    if (ben_trong.length > 0) return [...new Set(ben_trong)].join('; ');
+  }
+  if (err instanceof Error) {
+    if (err.message) return err.message;
+    const ma = (err as { code?: string }).code;
+    if (ma) return `${err.name} (${ma})`;
+    return err.name;
+  }
+  const s = String(err);
+  return s === '' ? 'không rõ nguyên nhân' : s;
+}
+
+/**
  * Chờ tới khi điều kiện đúng, hoặc hết hạn. Trả về false nếu hết hạn —
  * demo KHÔNG được treo vô hạn khi quay video.
  */

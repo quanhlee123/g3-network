@@ -67,15 +67,28 @@ function hashesEqual(a: string, b: string): boolean {
 export interface OtpServiceOptions {
   ttlSeconds: number;
   maxAttempts: number;
+  /**
+   * Số lần XIN mã tối đa cho một SĐT trong `requestWindowSeconds`.
+   *
+   * VÌ SAO BẮT BUỘC CÓ: `maxAttempts` chỉ giới hạn số lần đoán trên MỘT mã. Không chặn
+   * việc xin mã thì kẻ tấn công cứ xin mã mới để có thêm lượt đoán — mã 6 chữ số có 10^6
+   * tổ hợp, chia 5 lượt đoán mỗi mã là ~200.000 vòng xin+đoán, ở 10 request/giây chỉ mất
+   * khoảng 5,5 giờ. Chặn ở đây đưa con số đó lên hàng năm.
+   */
+  maxRequestsPerWindow: number;
+  requestWindowSeconds: number;
   jwtSecret: string;
   clock?: () => number;
   /** Tiêm mã cố định trong test; mặc định sinh ngẫu nhiên. */
   codeFactory?: () => string;
+  /** Ghi log phía server khi một SĐT bị chặn vì xin mã quá nhiều (NF-14). */
+  log?: (msg: string) => void;
 }
 
 export class OtpService {
   #clock: () => number;
   #codeFactory: () => string;
+  #log: (msg: string) => void;
 
   constructor(
     private readonly db: Queryable,
@@ -84,6 +97,7 @@ export class OtpService {
   ) {
     this.#clock = opts.clock ?? (() => Date.now());
     this.#codeFactory = opts.codeFactory ?? (() => generateOtpCode());
+    this.#log = opts.log ?? (() => undefined);
   }
 
   /**
@@ -92,6 +106,27 @@ export class OtpService {
    */
   async request(phoneRaw: string): Promise<void> {
     const phone = normalizePhone(phoneRaw);
+
+    // Chặn dò mã bằng cách xin mã liên tục. Bị chặn thì KHÔNG tạo thách thức, KHÔNG gửi tin,
+    // nhưng phía ngoài vẫn thấy 202 — không tiết lộ SĐT nào tồn tại, cũng không cho biết
+    // mình đang bị chặn.
+    // Chỉ đếm mã CHƯA DÙNG: đăng nhập thành công chứng tỏ đúng người, không nên bị tính vào
+    // hạn mức. Kẻ tấn công thì không consume được mã nào nên vẫn bị chặn như thường.
+    // (Cũng nhờ vậy chạy `npm run demo:gate0` nhiều lần liên tiếp không tự chặn chính nó.)
+    const tuLuc = new Date(this.#clock() - this.opts.requestWindowSeconds * 1000);
+    const dem = await this.db.query(
+      `SELECT count(*)::int AS n FROM auth_otp_challenges
+       WHERE phone = $1 AND created_at > $2 AND consumed_at IS NULL`,
+      [phone, tuLuc],
+    );
+    if ((dem.rows[0]!.n as number) >= this.opts.maxRequestsPerWindow) {
+      this.#log(
+        `[F-F1] chặn xin OTP: SĐT ${phone} đã xin ${this.opts.maxRequestsPerWindow} lần trong ` +
+          `${this.opts.requestWindowSeconds}s`,
+      );
+      return;
+    }
+
     const found = await this.db.query(
       `SELECT id, full_name FROM users WHERE phone = $1 AND is_active`,
       [phone],
