@@ -41,6 +41,9 @@ export async function resetWorld(db: pg.Client): Promise<void> {
   await db.query(`ALTER TABLE charging_sessions ENABLE TRIGGER charging_sessions_append_only`);
   await db.query(`DELETE FROM ocpp_transactions`);
   await db.query(`DELETE FROM telematics_readings`);
+  // notifications tham chiếu users/alerts/tickets → phải xóa trước cả ba (F-F3)
+  await db.query(`DELETE FROM notifications`);
+  await db.query(`DELETE FROM push_tokens`);
   await db.query(`DELETE FROM alerts`);
   await db.query(`DELETE FROM tickets`);
   await db.query(`DELETE FROM devices`);

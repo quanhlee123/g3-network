@@ -13,6 +13,9 @@ export * from './ocpp';
 export { MockChargePointTransport, createMockTransportPair } from './mocks/ocpp';
 export * from './sms';
 export { ConsoleSmsSender } from './mocks/sms';
+export * from './notifier';
+export { ConsolePushSender } from './mocks/push';
+export { MockNotifier } from './mocks/notifier';
 
 /** Loại adapter — chọn qua biến môi trường, mặc định 'mock' ở Phase 1 (dữ liệu giả 100%). */
 export type ProviderKind = 'mock' | 'real';

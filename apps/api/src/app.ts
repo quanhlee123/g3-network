@@ -14,6 +14,7 @@ import type { Queryable } from './db';
 import { authRoutes } from './routes/auth';
 import { deviceRoutes } from './routes/devices';
 import { healthRoutes } from './routes/health';
+import { notificationRoutes } from './routes/notifications';
 import { reconciliationRoutes } from './routes/reconciliation';
 import { sessionRoutes } from './routes/sessions';
 import { stationRoutes } from './routes/stations';
@@ -102,6 +103,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(stationRoutes, { db });
   await app.register(sessionRoutes, { db });
   await app.register(deviceRoutes, { db });
+  await app.register(notificationRoutes, { db });
   await app.register(reconciliationRoutes, { db, config });
 
   return app;

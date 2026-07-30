@@ -10,12 +10,18 @@ export type AlertType =
   | 'device_offline'
   | 'device_tamper'
   | 'geofence'
-  | 'maintenance';
+  | 'maintenance'
+  | 'data_quality'
+  | 'reconciliation_mismatch';
 export type ConnectorStatus = 'Available' | 'Charging' | 'Faulted' | 'Unavailable';
 export type DevicePowerStatus = 'normal' | 'low' | 'lost';
+export type NotificationChannel = 'push' | 'in_app' | 'sms';
+export type NotificationStatus = 'sent' | 'failed' | 'suppressed';
+export type OcppTransactionStatus = 'open' | 'closed';
 export type PaymentMethod = 'vnpay' | 'momo' | 'wallet';
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded';
 export type PolicyScope = 'vehicle' | 'fleet' | 'model';
+export type ReconciliationStatus = 'khop' | 'lech' | 'thieu_du_lieu';
 export type RiskLevel = 'low' | 'medium' | 'high';
 export type ServicePlan = 'basic' | 'standard';
 export type StationStatus = 'active' | 'maintenance' | 'inactive';
@@ -55,6 +61,17 @@ export interface AuditLogsRow {
   ticket_id: string | null;
   metadata: unknown | null;
   occurred_at: Date;
+}
+
+export interface AuthOtpChallengesRow {
+  id: string;
+  phone: string;
+  code_hash: string;
+  user_id: string | null;
+  attempts: number;
+  expires_at: Date;
+  consumed_at: Date | null;
+  created_at: Date;
 }
 
 export interface BatteriesRow {
@@ -159,6 +176,49 @@ export interface DriversRow {
   created_at: Date;
 }
 
+export interface NotificationPrefsRow {
+  id: string;
+  alert_type: AlertType;
+  role: UserRole;
+  channels: NotificationChannel[];
+  min_severity: number;
+  updated_at: Date;
+}
+
+export interface NotificationsRow {
+  id: string;
+  user_id: string;
+  channel: NotificationChannel;
+  status: NotificationStatus;
+  alert_id: string | null;
+  ticket_id: string | null;
+  alert_type: AlertType;
+  severity: number;
+  title: string;
+  body: string;
+  data: unknown | null;
+  error: string | null;
+  read_at: Date | null;
+  created_at: Date;
+}
+
+export interface OcppTransactionsRow {
+  transaction_id: number;
+  station_id: string;
+  connector_id: string;
+  vehicle_id: string;
+  id_tag: string;
+  meter_start_wh: number;
+  soc_start_pct: string | null;
+  started_at: Date;
+  last_meter_wh: number | null;
+  last_soc_pct: string | null;
+  max_power_kw: string | null;
+  status: OcppTransactionStatus;
+  created_at: Date;
+  closed_at: Date | null;
+}
+
 export interface PaymentTransactionsRow {
   id: string;
   session_id: string | null;
@@ -170,6 +230,34 @@ export interface PaymentTransactionsRow {
   gateway_webhook_id: string | null;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface PushTokensRow {
+  id: string;
+  user_id: string;
+  token: string;
+  platform: string;
+  revoked_at: Date | null;
+  created_at: Date;
+}
+
+export interface ReconciliationResultsRow {
+  id: string;
+  session_id: string;
+  vehicle_id: string;
+  station_id: string;
+  kwh_tru: string | null;
+  kwh_xe: string | null;
+  kwh_thanh_toan: string | null;
+  so_tien_vnd: string | null;
+  lech_xe_pct: string | null;
+  lech_tien_pct: string | null;
+  lech_max_pct: string | null;
+  nguong_pct: string;
+  status: ReconciliationStatus;
+  ghi_chu: string | null;
+  alert_id: string | null;
+  checked_at: Date;
 }
 
 export interface TelematicsReadingsRow {
@@ -187,6 +275,16 @@ export interface TelematicsReadingsRow {
   odometer_km: string | null;
   position: string | null;
   fault_codes: unknown | null;
+}
+
+export interface TelemetryQuarantineRow {
+  id: string;
+  received_at: Date;
+  topic: string;
+  raw_payload: string;
+  schema_version: number | null;
+  reason: string;
+  created_at: Date;
 }
 
 export interface TicketsRow {
@@ -212,6 +310,7 @@ export interface UsersRow {
   customer_id: string | null;
   is_active: boolean;
   created_at: Date;
+  phone: string | null;
 }
 
 export interface VehiclesRow {
@@ -240,6 +339,7 @@ export interface ViolationsRow {
 export interface DbSchema {
   alerts: AlertsRow;
   audit_logs: AuditLogsRow;
+  auth_otp_challenges: AuthOtpChallengesRow;
   batteries: BatteriesRow;
   charging_policies: ChargingPoliciesRow;
   charging_sessions: ChargingSessionsRow;
@@ -248,8 +348,14 @@ export interface DbSchema {
   customers: CustomersRow;
   devices: DevicesRow;
   drivers: DriversRow;
+  notification_prefs: NotificationPrefsRow;
+  notifications: NotificationsRow;
+  ocpp_transactions: OcppTransactionsRow;
   payment_transactions: PaymentTransactionsRow;
+  push_tokens: PushTokensRow;
+  reconciliation_results: ReconciliationResultsRow;
   telematics_readings: TelematicsReadingsRow;
+  telemetry_quarantine: TelemetryQuarantineRow;
   tickets: TicketsRow;
   users: UsersRow;
   vehicles: VehiclesRow;

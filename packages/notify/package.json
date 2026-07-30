@@ -1,0 +1,21 @@
+{
+  "name": "@g3/notify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@g3/contracts": "*",
+    "@g3/db": "*",
+    "@g3/shared": "*"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.0",
+    "pg": "^8.16.0"
+  }
+}

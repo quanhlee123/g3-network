@@ -33,6 +33,11 @@ function pascalCase(snake: string): string {
 function tsType(udtName: string, enumNames: Map<string, string>): string {
   const enumType = enumNames.get(udtName);
   if (enumType) return enumType;
+  // Kiểu MẢNG: information_schema đặt tên là '_' + kiểu phần tử (vd notification_channel[]
+  // thành '_notification_channel'). Đệ quy để mảng của enum ra 'NotificationChannel[]'.
+  if (udtName.startsWith('_')) {
+    return `${tsType(udtName.slice(1), enumNames)}[]`;
+  }
   switch (udtName) {
     case 'uuid':
     case 'text':

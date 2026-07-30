@@ -2312,6 +2312,354 @@
         }
       }
     },
+    "/notifications": {
+      "get": {
+        "summary": "Hộp thư in-app & lịch sử gửi của tôi (F-F3)",
+        "tags": [
+          "thong-bao"
+        ],
+        "description": "Chỉ trả thông báo của chính người đăng nhập. status: sent = đã gửi · failed = kênh lỗi · suppressed = bị chặn do giới hạn tần suất (kênh in-app không bao giờ bị chặn nên thông tin không mất).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "chua_doc",
+            "required": false,
+            "description": "Chỉ lấy thông báo chưa đọc"
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "push"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "in_app"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "sms"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "kenh",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "tong_chua_doc",
+                    "items"
+                  ],
+                  "properties": {
+                    "tong_chua_doc": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "alert_type",
+                          "severity",
+                          "channel",
+                          "status",
+                          "title",
+                          "body",
+                          "data",
+                          "error",
+                          "read_at",
+                          "created_at"
+                        ],
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "alert_type": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "integer"
+                          },
+                          "channel": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "body": {
+                            "type": "string"
+                          },
+                          "data": {},
+                          "error": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "read_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/{id}/da-doc": {
+      "post": {
+        "summary": "Đánh dấu một thông báo là đã đọc (F-F3)",
+        "tags": [
+          "thong-bao"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "read_at"
+                  ],
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "read_at": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reconciliation/results": {
       "get": {
         "summary": "Kết quả đối soát 3 chiều theo phiên sạc (F-C6, NF-10)",
