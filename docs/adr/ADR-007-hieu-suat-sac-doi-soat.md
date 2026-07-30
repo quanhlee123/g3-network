@@ -1,6 +1,15 @@
 # ADR-007: Hiệu suất sạc trong công thức đối soát 3 chiều (NF-10)
 
-Ngày: 2026-07-28 · Người đề xuất: Claude Code (Prompt 06, F-C6) · Người duyệt: (chờ duyệt) · Trạng thái: NHÁP
+Ngày: 2026-07-28 · Người đề xuất: Claude Code (Prompt 06, F-C6)
+Người duyệt: **PM** · Ngày duyệt: **2026-07-29** · Trạng thái: **ĐÃ DUYỆT**
+
+> **Cập nhật 2026-07-29 — D-11 ĐÃ CHỐT:** PM chọn phương án **một hệ số toàn hệ**
+> (`CHARGE_EFFICIENCY`), giữ `1.0` ở Phase 1 vì simulator sinh dữ liệu lý tưởng, và
+> **hiệu chuẩn bằng dữ liệu pilot trước Gate 1**. Không chia hệ số theo dòng xe hay theo
+> trạm ở giai đoạn này. Không có thay đổi code phát sinh — công thức đã đúng như vậy.
+>
+> ⚠️ **Việc còn phải làm là của con người, không phải của code:** đưa bước hiệu chuẩn hệ số
+> vào checklist Gate 1. Xem mục "Hệ quả" bên dưới để biết cách đo.
 
 ## Bối cảnh
 
@@ -68,9 +77,12 @@ sạc nhanh DC cho xe tải điện, hiệu suất thực tế thường **92–
 - `simulators/vehicle-sim` dùng bảng dung lượng pin phải KHỚP `packages/db/src/seed.ts`
   (EVT-262 = 105 kWh, EVT-400 = 210, EVT-825 = 420); lệch bảng này là lệch kết quả đối soát.
 
-## Cần người duyệt xác nhận
+## Người duyệt đã xác nhận (2026-07-29, PM)
 
-- [ ] Đồng ý để `CHARGE_EFFICIENCY = 1.0` ở Phase 1 (simulator)?
-- [ ] Ai chịu trách nhiệm hiệu chuẩn hệ số trong pilot, và đưa vào checklist Gate 1?
-- [ ] Đơn giá điện `CHARGING_PRICE_VND_PER_KWH` (hiện là 3.500 ₫/kWh GIẢ) lấy từ đâu khi
-      vận hành thật — cấu hình theo trạm hay theo khung giờ ToU?
+- [x] Đồng ý để `CHARGE_EFFICIENCY = 1.0` ở Phase 1 (simulator).
+- [x] Một hệ số **toàn hệ**, không chia theo dòng xe hay theo trạm ở Phase 1. Nếu độ tán sai
+      lệch sau hiệu chuẩn pilot vẫn > 1% thì mở ADR mới, **không** sửa ADR này.
+- [ ] **CÒN MỞ — ai hiệu chuẩn hệ số trong pilot và đưa vào checklist Gate 1?** Đây là việc
+      quy trình/nhân sự, chưa được chỉ định. Vẫn là điều kiện cứng của Gate 1.
+- [ ] **CÒN MỞ — đơn giá điện** `CHARGING_PRICE_VND_PER_KWH` (hiện 3.500 ₫/kWh GIẢ) lấy từ
+      đâu khi vận hành thật: theo trạm hay theo khung giờ ToU? Liên quan Q3/Q9 DECISION-LOG.

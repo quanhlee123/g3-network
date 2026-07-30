@@ -12,7 +12,18 @@ export { parseCount, parseSimArgs, SCENARIOS, type Scenario, type SimConfig } fr
 export { FleetSimulator, type PublisherFactory, type FleetStats } from './scheduler';
 export { createVehicle, tickVehicle, type VehicleState, type TickResult } from './vehicle';
 export { StoreAndForwardBuffer } from './buffer';
-export { buildRoute, positionAtKm, haversineKm, HANOI_LANG_SON_ROUTE, type Route } from './route';
+export {
+  buildRoute,
+  buildRouteByName,
+  positionAtKm,
+  haversineKm,
+  HANOI_LANG_SON_ROUTE,
+  HCM_TAN_AN_ROUTE,
+  TUYEN,
+  TEN_TUYEN,
+  type Route,
+  type TenTuyen,
+} from './route';
 export { mulberry32 } from './rng';
 export { MqttTelemetryPublisher } from './mqtt-publisher';
 

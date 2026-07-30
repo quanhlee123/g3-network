@@ -17,14 +17,16 @@ import { ChargePointSim } from '@g3/ocpp-sim';
 import { connectWsTransport } from '@g3/ocpp-sim/src/ws-transport';
 import { FleetSimulator, MqttTelemetryPublisher, parseSimArgs } from '@g3/vehicle-sim';
 import type { FastifyInstance } from 'fastify';
-import { bang, buoc, canhBao, choDen, khung, nghi, ok, soVn, tieuDe, tienVn } from './ui';
+import { bang, buoc, canhBao, choDen, khung, moTaLoi, nghi, ok, soVn, tieuDe, tienVn } from './ui';
 
 // ---- Thông số kịch bản demo (đổi ở đây nếu muốn video ngắn/dài hơn) --------------------
 const CAU_HINH = {
   soXeDoi: 19, // 19 xe chạy bình thường (VIN 0002…0020)
   vinPrefix: 'G3-SIM-VIN', // khớp seed (docs/simulators.md)
   vinXeTutPin: 1, // xe VIN 0001 là nhân vật chính
-  maTram: 'G3-ST-001',
+  // Đội xe chạy tuyến miền Bắc (mặc định) nên phải sạc ở trạm miền Bắc — D-10.
+  // Trước khi chốt D-10, demo sạc ở trạm TP.HCM trong khi xe đang ở Hà Nội.
+  maTram: 'G3-ST-004', // Gia Lâm, ~7 km từ đầu tuyến Hà Nội – Lạng Sơn
   nhipXeGiay: 2, // chu kỳ telemetry của đội xe
   nhipXeChinhGiay: 1, // xe chính gửi dày hơn cho mượt
   phutTutPin: 1, // SOC 100% → 5% trong 1 phút
@@ -79,15 +81,15 @@ async function main(): Promise<void> {
     await admin.connect();
   } catch (err) {
     console.error(
-      `\n  ✖ Không kết nối được PostgreSQL (${err instanceof Error ? err.message : String(err)}).\n` +
-        '    → Chạy: docker compose -f infra/docker-compose.yml up -d\n',
+      `\n  ✖ Không kết nối được PostgreSQL: ${moTaLoi(err)}\n` +
+        '    → Kiểm tra Docker Desktop đang chạy, rồi: docker compose -f infra/docker-compose.yml up -d\n',
     );
     process.exit(1);
   }
   const daAp = await runMigrations(admin);
   ok(`migration: ${daAp.length > 0 ? `vừa áp ${daAp.length} file` : 'đã ở bản mới nhất'}`);
   await seed(admin);
-  ok('seed: 20 xe · 3 trạm × 4 trụ · 7 tài khoản (dữ liệu GIẢ)');
+  ok('seed: 20 xe · 6 trạm × 4 trụ (2 hành lang Bắc–Nam) · 7 tài khoản (dữ liệu GIẢ)');
   await donDepDuLieuDemoCu(admin);
 
   const pool = new pg.Pool({ connectionString: databaseUrl(), max: 10 });
@@ -111,8 +113,8 @@ async function main(): Promise<void> {
     await nguon.connect();
   } catch (err) {
     console.error(
-      `\n  ✖ Không kết nối được MQTT (${err instanceof Error ? err.message : String(err)}).\n` +
-        '    → Chạy: docker compose -f infra/docker-compose.yml up -d\n',
+      `\n  ✖ Không kết nối được MQTT: ${moTaLoi(err)}\n` +
+        '    → Kiểm tra Docker Desktop đang chạy, rồi: docker compose -f infra/docker-compose.yml up -d\n',
     );
     await tatSach(1);
   }
@@ -170,6 +172,9 @@ async function main(): Promise<void> {
   await xeTutPin.start();
   await xeTutPin.tick(Date.now());
   xeTutPin.startLoop();
+  // Phải đăng ký dọn dẹp NGAY: nếu demo hỏng hoặc bị Ctrl+C ở bước 4 thì simulator này
+  // vẫn còn chạy và giữ kết nối MQTT, tiến trình không thoát được.
+  donDep.push({ ten: 'xe-tut-pin', dung: () => xeTutPin.stop() });
   ok(`xe ${VIN_CHINH} bắt đầu tụt pin 100% → 5% trong ${CAU_HINH.phutTutPin} phút`);
 
   const xeChinhId = await layIdXe(pool, VIN_CHINH);
@@ -608,12 +613,14 @@ async function inTomTat(
         `${lanHai.khop} khớp / ${lanHai.lech} lệch`,
       ],
       ['Đối soát chưa kết luận vì thiếu dữ liệu', String(lanHai.thieu_du_lieu)],
+      ['Phiên KHÔNG đối soát được vì lỗi kỹ thuật', String(lanMot.loi + lanHai.loi)],
       ['Dòng audit log truy cập vị trí (quy tắc 5)', String(soAudit)],
     ],
   );
 }
 
 main().catch(async (err: unknown) => {
-  console.error(`\n  ✖ Demo lỗi: ${err instanceof Error ? err.stack : String(err)}`);
+  console.error(`\n  ✖ Demo lỗi: ${moTaLoi(err)}`);
+  if (err instanceof Error && err.stack) console.error(err.stack);
   await tatSach(1);
 });

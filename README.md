@@ -130,7 +130,7 @@ g3-network/
 |---|---|
 | `docker compose -f infra/docker-compose.yml up -d` + `npm run dev` | Khởi động toàn hệ |
 | `npm run db:migrate` | Chạy migration DB (packages/db/migrations) + áp retention NF-16 |
-| `npm run db:seed` | Seed dữ liệu GIẢ: 20 xe, 3 trạm × 4 trụ, 5 tài khoản, 2 chính sách |
+| `npm run db:seed` | Seed dữ liệu GIẢ: 20 xe, **6 trạm × 4 trụ** (3 miền Nam + 3 miền Bắc — D-10), 7 tài khoản đủ 7 vai trò, 2 chính sách |
 | `npm run db:types` | Sinh lại types TypeScript từ schema DB (packages/shared/src/db-types.ts) |
 | `npm test` | Toàn bộ test |
 | `npm test -w apps/api` | Test 1 workspace |
@@ -160,6 +160,7 @@ g3-network/
 | `JWT_SECRET` | Khóa ký token API. **Để trống trong `.env.example`** — `npm install` sinh khóa ngẫu nhiên vào `infra/.env` |
 | `JWT_EXPIRES_IN` | Hạn dùng token (mặc định `12h`) |
 | `OTP_TTL_SECONDS` / `OTP_MAX_ATTEMPTS` | Hạn dùng mã OTP (300s) và số lần nhập sai tối đa (5) |
+| `OTP_MAX_REQUESTS_PER_WINDOW` / `OTP_REQUEST_WINDOW_S` | Chống dò mã: tối đa 5 lần xin mã cho 1 SĐT mỗi 900s |
 | `TELEMETRY_HISTORY_MAX_ROWS` | Trần bản ghi mỗi lần gọi lịch sử telemetry (mặc định 1000) |
 | `RECONCILE_INTERVAL_MS` | Chu kỳ job đối soát 3 chiều trong tiến trình API (mặc định 300000; `0` = chỉ chạy tay) |
 | `RECONCILE_NGUONG_PCT` | Ngưỡng NF-10 — lệch hơn mức này (%) thì sinh cảnh báo (mặc định 1) |

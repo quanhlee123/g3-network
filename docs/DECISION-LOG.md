@@ -5,15 +5,15 @@ Trạng thái: MỞ / ĐÃ CHỐT / HOÃN · Quyết định hợp lệ phải �
 |---|---|---|---|---|---|---|---|
 | D-01 | Có app tài xế ở P1 không? (thiết kế đề xuất cân nhắc bỏ; PRD để Must; Đức cũng ghi chú "cân nhắc app tài xế ở p1" tại F-D4, F-H1..H4, F-K1) | — | — | BLĐ | — | F-D1..D5, F-H1..H4, F-K1, F-I2, NSM | MỞ ⚠️ chặn Prompt 09 |
 | D-02 | Dùng thẻ RFID ở trụ sạc? (có trong bản vẽ thiết kế, không có trong PRD) | — | — | BLĐ + G3 Energy | — | F-H1, F-F1, phần cứng trụ | MỞ |
-| D-03 | Định nghĩa "chuyến" cho chống spam cảnh báo | — | — | PM + Vận hành | — | F-A2 | MỞ (ADR nháp khi build) |
+| D-03 | Định nghĩa "chuyến" cho chống spam cảnh báo | KHÔNG dùng khái niệm "chuyến": chống spam theo vòng đời cảnh báo — mỗi ngưỡng bắn 1 lần cho tới khi SOC hồi lên trên ngưỡng + 5% — xem ADR-006 | Trùng hành vi "1 lần/ngưỡng/chuyến" trong thực tế (giữa 2 lần tụt pin qua cùng ngưỡng luôn có 1 lần sạc), lại không phải định nghĩa thêm khái niệm mới; trạng thái nằm trong bảng alerts nên sống sót khi ingest restart | PM | 2026-07-29 | F-A2 | ĐÃ CHỐT |
 | D-04 | Backend framework: Fastify hay NestJS | Fastify 5 + TypeBox | Nhẹ, OpenAPI tự sinh từ schema, hợp modular monolith — xem ADR-001 | PM (duyệt kế hoạch Prompt 01) | 2026-07-17 | apps/api | ĐÃ CHỐT |
 | D-05 | F-A6 Hiệu suất vận hành: actor là ai? (ghi chú review của Đức: "Chưa rõ Actor") | — | — | PM | — | F-A6 | MỞ |
 | D-06 | F-E3 Báo cáo sạc & bảo hành: cho đội xe hay cho admin tổng? (ghi chú review của Đức) | — | — | PM | — | F-E3 | MỞ |
 | D-07 | F-E4 Quản lý tài xế & phân công: thống nhất mô hình quản lý (ghi chú review của Đức) | — | — | PM + BLĐ | — | F-E4, F-F1, 09-rbac | MỞ |
 | D-08 | F-F2 Provisioning & F-J2 OTA config: làm rõ chức năng với người review (ghi chú của Đức: "Chưa hiểu chức năng") | — | — | PM + Dev | — | F-F2, F-J2 | MỞ |
 | D-09 | Module I (CSKH & Dịch vụ): định hướng nghiệp vụ (ghi chú của Đức: "Chưa có ý tưởng" cho F-I1..I3; lưu ý F-I2 SOS là Must P1.0) | — | — | PM + CSKH Holding | — | F-I1, F-I2, F-I3 | MỞ |
-| D-10 | Vùng địa lý của dữ liệu mô phỏng: seed đặt 3 trạm sạc quanh TP.HCM/Long An, còn vehicle-sim chạy tuyến Hà Nội – Lạng Sơn → "trạm gần nhất" trong cảnh báo pin ra 1.130 km (đúng về mặt tính toán, vô nghĩa về mặt vận hành) | — | — | PM + G3 Energy | — | F-A2, F-D1, F-D2, F-C1, seed & simulator | MỞ ⚠️ ảnh hưởng demo Gate 0 |
-| D-11 | Hiệu suất sạc dùng cho đối soát 3 chiều — hệ số toàn hệ hay theo dòng xe/trạm, và ai hiệu chuẩn trong pilot | Phase 1: hệ số toàn hệ `CHARGE_EFFICIENCY=1.0` (simulator lý tưởng) — xem ADR-007 | Không có hệ số thì phần cứng thật sẽ báo lệch 5–8% ở 100% số phiên | PM + G3 Energy | Trước Gate 1 | F-C6, NF-10 | MỞ ⚠️ chặn Gate 1 |
+| D-10 | Vùng địa lý của dữ liệu mô phỏng: seed đặt 3 trạm sạc quanh TP.HCM/Long An, còn vehicle-sim chạy tuyến Hà Nội – Lạng Sơn → "trạm gần nhất" trong cảnh báo pin ra 1.130 km (đúng về mặt tính toán, vô nghĩa về mặt vận hành) | Làm CẢ HAI: (1) seed bổ sung 3 trạm trên hành lang Hà Nội – Lạng Sơn, và (2) vehicle-sim thêm tuyến miền Nam đi qua 3 trạm TP.HCM/Long An, chọn bằng cờ `--route bac\|nam` | Mạng trạm phủ cả hai miền là hình ảnh thật của một nhà vận hành toàn quốc; đội xe giả lập chạy tuyến nào cũng có trạm trong tầm vài km, nên gợi ý trạm của F-A2 và điều hướng F-D2 mới có nghĩa | PM | 2026-07-29 | F-A2, F-D1, F-D2, F-C1, seed & simulator | ĐÃ CHỐT |
+| D-11 | Hiệu suất sạc dùng cho đối soát 3 chiều — hệ số toàn hệ hay theo dòng xe/trạm, và ai hiệu chuẩn trong pilot | MỘT hệ số toàn hệ `CHARGE_EFFICIENCY`, giữ `1.0` ở Phase 1 (simulator lý tưởng), hiệu chuẩn bằng dữ liệu pilot trước Gate 1 — xem ADR-007 | Không có hệ số thì phần cứng thật sẽ báo lệch 5–8% ở 100% số phiên; chia theo dòng xe/trạm là phức tạp chưa có dữ liệu để biện minh | PM | 2026-07-29 | F-C6, NF-10 | ĐÃ CHỐT (⚠️ việc hiệu chuẩn vẫn là điều kiện Gate 1) |
 
 ## Q1–Q12 — chép nguyên trạng từ PRD sheet 14 ([docs/prd/14-decisions.md](prd/14-decisions.md))
 
@@ -40,3 +40,8 @@ Trạng thái: MỞ / ĐÃ CHỐT / HOÃN · Quyết định hợp lệ phải �
 - 2026-07-18 · Claude Code (Prompt 02) · Chép Q1–Q12 nguyên trạng từ PRD sheet 14 (trạng thái MỞ); thêm D-05..D-09 từ ghi chú review của Đức (docs/prd/review-notes-duc.md); bổ sung F-H2..H4, F-K1 vào phạm vi ảnh hưởng D-01 theo ghi chú của Đức.
 - 2026-07-28 · Claude Code (Prompt 06) · D-03 vẫn MỞ nhưng Gate 0 ③ bắt buộc có cảnh báo pin: PM duyệt kế hoạch dùng **quy tắc tạm** không đụng định nghĩa "chuyến" (chống spam theo vòng đời cảnh báo + biên trễ 5% SOC) — chi tiết và các câu hỏi cần chốt ở [ADR-006](adr/ADR-006-chong-spam-canh-bao-pin.md). Khi D-03 chốt thì sửa `dedup_key` và hàm `quyetDinhCanhBao`.
 - 2026-07-28 · Claude Code (Prompt 06) · Thêm D-10 (vùng địa lý dữ liệu mô phỏng) và D-11 (hiệu suất sạc trong đối soát) — cả hai phát hiện khi chạy thật demo Gate 0. D-11 có ADR nháp [ADR-007](adr/ADR-007-hieu-suat-sac-doi-soat.md) và là điều kiện của Gate 1.
+- **2026-07-29 · PM · CHỐT D-03, D-10, D-11 và DUYỆT [ADR-006](adr/ADR-006-chong-spam-canh-bao-pin.md) + [ADR-007](adr/ADR-007-hieu-suat-sac-doi-soat.md)** (cả hai chuyển NHÁP → ĐÃ DUYỆT):
+  - **D-03**: bỏ hẳn khái niệm "chuyến" cho F-A2 — quy tắc trong ADR-006 thành quyết định chính thức. Không phát sinh thay đổi code.
+  - **D-10**: làm cả hai hướng — seed thêm trạm phía Bắc *và* vehicle-sim thêm tuyến miền Nam.
+  - **D-11**: một hệ số hiệu suất sạc toàn hệ, giữ 1.0 ở Phase 1. Không phát sinh thay đổi code.
+  - Còn MỞ trong ADR-007 (không chặn Prompt 06): ai hiệu chuẩn hệ số trong pilot, và nguồn đơn giá điện thật (liên quan Q3/Q9).

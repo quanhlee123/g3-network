@@ -173,6 +173,9 @@ export async function reconciliationRoutes(
             khop: Type.Integer(),
             lech: Type.Integer(),
             thieu_du_lieu: Type.Integer(),
+            loi: Type.Integer({
+              description: 'Số phiên không đối soát được vì lỗi kỹ thuật — phải là 0 khi hệ khỏe',
+            }),
             nguong_pct: Type.Number(),
           }),
           ...AUTH_ERROR_RESPONSES,
@@ -211,6 +214,7 @@ export async function reconciliationRoutes(
         khop: tomTat.khop,
         lech: tomTat.lech,
         thieu_du_lieu: tomTat.thieu_du_lieu,
+        loi: tomTat.loi,
         nguong_pct: config.reconcile.nguongPct,
       };
     },

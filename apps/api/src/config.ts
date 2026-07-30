@@ -11,6 +11,9 @@ export interface ApiConfig {
   jwtExpiresIn: string;
   otpTtlS: number;
   otpMaxAttempts: number;
+  /** Chống dò mã: số lần XIN mã tối đa cho 1 SĐT trong otpRequestWindowS. */
+  otpMaxRequestsPerWindow: number;
+  otpRequestWindowS: number;
   /** Trần số bản ghi 1 lần gọi lịch sử telemetry — chặn truy vấn quét cả hypertable. */
   telemetryHistoryMaxRows: number;
   /** Cấu hình job đối soát 3 chiều (F-C6, NF-10). */
@@ -70,6 +73,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     jwtExpiresIn: env.JWT_EXPIRES_IN ?? '12h',
     otpTtlS: intEnv(env, 'OTP_TTL_SECONDS', 300, 30),
     otpMaxAttempts: intEnv(env, 'OTP_MAX_ATTEMPTS', 5, 1),
+    otpMaxRequestsPerWindow: intEnv(env, 'OTP_MAX_REQUESTS_PER_WINDOW', 5, 1),
+    otpRequestWindowS: intEnv(env, 'OTP_REQUEST_WINDOW_S', 900, 1),
     telemetryHistoryMaxRows: intEnv(env, 'TELEMETRY_HISTORY_MAX_ROWS', 1000, 1),
     reconcile: {
       intervalMs: intEnv(env, 'RECONCILE_INTERVAL_MS', 300_000, 0),

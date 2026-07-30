@@ -10,7 +10,7 @@ import {
 } from '@g3/contracts';
 import type { SimConfig } from './cli';
 import { StoreAndForwardBuffer } from './buffer';
-import { buildRoute, type Route } from './route';
+import { buildRouteByName, type Route } from './route';
 import { mulberry32 } from './rng';
 import { createVehicle, tickVehicle, type VehicleState } from './vehicle';
 
@@ -55,7 +55,8 @@ export class FleetSimulator {
     private readonly cfg: SimConfig,
     private readonly publisherFor: PublisherFactory,
     private readonly clock: () => number = () => Date.now(),
-    route: Route = buildRoute(),
+    // Mặc định lấy tuyến theo cfg.route (--route bac|nam, D-10) — test vẫn bơm tuyến riêng được.
+    route: Route = buildRouteByName(cfg.route),
   ) {
     this.#route = route;
   }
