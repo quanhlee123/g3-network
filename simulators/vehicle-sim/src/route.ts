@@ -1,5 +1,9 @@
-// F-A1 — Tuyến GPS thật: Hà Nội → Lạng Sơn dọc QL1A (~150 km), tọa độ xấp xỉ
-// các mốc dân cư chính. Xe chạy khứ hồi (đến Lạng Sơn thì quay đầu) để chạy dài không bị teleport.
+// F-A1 — Tuyến GPS xấp xỉ theo các mốc dân cư chính. Xe chạy khứ hồi (đến cuối tuyến thì
+// quay đầu) để chạy dài không bị teleport.
+//
+// D-10 (ĐÃ CHỐT 2026-07-29): có HAI tuyến để đội xe giả lập luôn chạy gần trạm sạc thật
+// trong seed — trước đây tuyến chỉ ở miền Bắc còn trạm chỉ ở miền Nam, nên "trạm gần nhất"
+// trong cảnh báo pin (F-A2) ra hơn 1.000 km, vô nghĩa về vận hành.
 
 /** Waypoint [lat, lng] xấp xỉ dọc QL1A Hà Nội → Lạng Sơn. */
 export const HANOI_LANG_SON_ROUTE: ReadonlyArray<readonly [number, number]> = [
@@ -19,6 +23,30 @@ export const HANOI_LANG_SON_ROUTE: ReadonlyArray<readonly [number, number]> = [
   [21.7902, 106.7146], // Bắc Thủy
   [21.8537, 106.7615], // TP Lạng Sơn
 ];
+
+/**
+ * Waypoint [lat, lng] xấp xỉ trục TP.HCM (Thủ Đức) → Long An (Tân An) qua QL1A/QL22,
+ * đi sát 3 trạm seed miền Nam: G3-ST-001 Thủ Đức · G3-ST-002 Bình Chánh · G3-ST-003 Bến Lức.
+ */
+export const HCM_TAN_AN_ROUTE: ReadonlyArray<readonly [number, number]> = [
+  [10.85, 106.75], // Thủ Đức (sát trạm G3-ST-001)
+  [10.8142, 106.7215], // Cầu Sài Gòn
+  [10.7769, 106.7009], // Quận 1 (Bến Thành)
+  [10.7488, 106.6626], // Quận 8 (cầu Chà Và)
+  [10.72, 106.6], // Bình Chánh (sát trạm G3-ST-002)
+  [10.6871, 106.5423], // Tân Túc
+  [10.63, 106.48], // Bến Lức (sát trạm G3-ST-003)
+  [10.5352, 106.4131], // TP Tân An (Long An)
+];
+
+/** Tên tuyến dùng cho cờ `--route`. */
+export const TUYEN = {
+  bac: HANOI_LANG_SON_ROUTE,
+  nam: HCM_TAN_AN_ROUTE,
+} as const;
+
+export type TenTuyen = keyof typeof TUYEN;
+export const TEN_TUYEN = Object.keys(TUYEN) as TenTuyen[];
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -50,6 +78,11 @@ export function buildRoute(
     cumulativeKm.push(cumulativeKm[i - 1]! + haversineKm(points[i - 1]!, points[i]!));
   }
   return { points, cumulativeKm, lengthKm: cumulativeKm[cumulativeKm.length - 1]! };
+}
+
+/** Dựng tuyến theo tên (`--route bac|nam`). */
+export function buildRouteByName(ten: TenTuyen): Route {
+  return buildRoute(TUYEN[ten]);
 }
 
 /**

@@ -130,7 +130,7 @@ g3-network/
 |---|---|
 | `docker compose -f infra/docker-compose.yml up -d` + `npm run dev` | Khởi động toàn hệ |
 | `npm run db:migrate` | Chạy migration DB (packages/db/migrations) + áp retention NF-16 |
-| `npm run db:seed` | Seed dữ liệu GIẢ: 20 xe, 3 trạm × 4 trụ, 5 tài khoản, 2 chính sách |
+| `npm run db:seed` | Seed dữ liệu GIẢ: 20 xe, **6 trạm × 4 trụ** (3 miền Nam + 3 miền Bắc — D-10), 7 tài khoản đủ 7 vai trò, 2 chính sách |
 | `npm run db:types` | Sinh lại types TypeScript từ schema DB (packages/shared/src/db-types.ts) |
 | `npm test` | Toàn bộ test |
 | `npm test -w apps/api` | Test 1 workspace |

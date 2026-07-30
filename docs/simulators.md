@@ -48,6 +48,7 @@ Chạy qua script gốc: `npm run sim:vehicles -- <flags>`
 |---|---|---|
 | `--count` | `1` | Số xe giả lập (VIN đánh số `{prefix}-0001`…) |
 | `--scenario` | `normal` | `normal` \| `drain` \| `offline` \| `temp` \| `power-loss` \| `charge` |
+| `--route` | `bac` | `bac` = Hà Nội – Lạng Sơn (~150 km) · `nam` = TP.HCM – Tân An (~55 km). Cả hai đều đi sát trạm sạc trong seed (D-10) |
 | `--vin-prefix` | `G3-SIM` | Tiền tố VIN giả (cấm `/ + #` và khoảng trắng) |
 | `--vin-start` | `1` | Số thứ tự VIN đầu tiên — chạy nhiều tiến trình song song mà không trùng VIN |
 | `--interval-ms` | `10000` | Chu kỳ gửi mỗi xe (ms), tối thiểu 100 |
@@ -65,10 +66,13 @@ Chạy qua script gốc: `npm run sim:vehicles -- <flags>`
 > `0009–0015` EVT-400 (210 kWh), `0016–0020` EVT-825 (420 kWh). Dung lượng pin phải khớp
 > vì đối soát 3 chiều (NF-10) quy đổi ΔSOC × dung lượng pin.
 
-> **Lưu ý vùng địa lý (D-10, đang MỞ):** tuyến mô phỏng là Hà Nội – Lạng Sơn trong khi
-> seed đặt 3 trạm sạc quanh TP.HCM/Long An, nên "trạm gần nhất" trong cảnh báo pin ra
-> hơn 1.000 km. Đúng về tính toán nhưng vô nghĩa về vận hành — chờ quyết định dời tuyến
-> hoặc bổ sung trạm phía Bắc.
+> **Vùng địa lý (D-10 — ĐÃ CHỐT 2026-07-29):** seed có **6 trạm × 4 trụ** phủ cả hai hành lang:
+> `G3-ST-001…003` miền Nam (TP.HCM – Tân An) và `G3-ST-004…006` miền Bắc (Hà Nội – Lạng Sơn).
+> Chạy tuyến nào thì `--route` tuyến đó để xe luôn có trạm trong tầm vài chục km — nhờ vậy
+> gợi ý trạm của cảnh báo pin (F-A2) và điều hướng (F-D2) mới có nghĩa.
+> Trước khi chốt D-10, tuyến chỉ ở miền Bắc còn trạm chỉ ở miền Nam nên cảnh báo pin gợi ý
+> "trạm gần nhất cách 1.130 km". Có test khoá lại: `tools/demo-gate0/src/dia-ly.test.ts`
+> quét dọc mỗi tuyến 5 km một điểm và bắt lỗi nếu điểm nào cách trạm gần nhất quá 60 km.
 
 ## Cách quan sát dữ liệu
 
@@ -184,7 +188,7 @@ Lệnh: `npm run sim:vehicles -- --count 300 --scenario normal`
 > và đối soát 3 chiều (ngưỡng 1%) sẽ báo động giả. Test: `dong-ho-ao.test.ts`.
 
 Trụ ảo kết nối `ws://localhost:9220/ocpp/{mãTrạm}` (subprotocol `ocpp1.6`), mã trạm và
-idTag khớp seed: trạm `G3-ST-001…003`, idTag = VIN GIẢ `G3-SIM-VIN-0001…` (ADR-005 —
+idTag khớp seed: trạm `G3-ST-001…006`, idTag = VIN GIẢ `G3-SIM-VIN-0001…` (ADR-005 —
 idTag lạ bị CSMS từ chối). Message hỗ trợ: BootNotification, Heartbeat, StatusNotification,
 StartTransaction, MeterValues (Energy/SoC/Power), StopTransaction,
 RemoteStartTransaction/RemoteStopTransaction.
