@@ -374,6 +374,156 @@ export async function vehicleRoutes(app: FastifyInstance, deps: VehicleRoutesDep
       };
     },
   );
+
+  // ---- F-A5 · QUY TẮC 5: LỘ TRÌNH — cũng là dữ liệu vị trí, cũng LUÔN ghi audit ------
+  app.get(
+    '/vehicles/:id/route',
+    {
+      config: { permission: 'vehicle.location.read' },
+      schema: {
+        tags: ['xe'],
+        summary: 'Lịch sử lộ trình 1 xe theo khoảng thời gian (F-A5) — có ghi audit log',
+        description:
+          'Trả chuỗi toạ độ theo thời gian. Đoạn dài được DOWNSAMPLE đều để không kéo về ' +
+          'hàng chục nghìn điểm: giữ nguyên điểm đầu, điểm cuối và lấy đều ở giữa; ' +
+          '`da_downsample` cho biết có rút gọn hay không, `tong_diem_goc` là số điểm thật. ' +
+          'Cùng ràng buộc quyền như GET /vehicles/{id}/location: bắt buộc `reason`, ' +
+          'CSKH phải kèm ticket đang mở, và mọi lần gọi đều vào audit_logs.',
+        params: VehicleIdParams,
+        querystring: Type.Object({
+          from: Type.String({ format: 'date-time' }),
+          to: Type.String({ format: 'date-time' }),
+          reason: Type.String({ minLength: 5, maxLength: 200 }),
+          ticket_id: Type.Optional(Type.String({ format: 'uuid' })),
+          max_diem: Type.Optional(
+            Type.Integer({
+              minimum: 2,
+              maximum: 5000,
+              default: 500,
+              description: 'Số điểm tối đa trả về; vượt quá thì downsample đều',
+            }),
+          ),
+        }),
+        response: {
+          200: Type.Object({
+            vehicle_id: Type.String({ format: 'uuid' }),
+            tong_diem_goc: Type.Integer(),
+            da_downsample: Type.Boolean(),
+            items: Type.Array(
+              Type.Object({
+                time: Type.String({ format: 'date-time' }),
+                lat: Type.Number(),
+                lng: Type.Number(),
+                speed_kmh: NullableNumber,
+              }),
+            ),
+          }),
+          404: ErrorSchema,
+          ...AUTH_ERROR_RESPONSES,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = requireScopedAuth(request);
+      const { id } = request.params as { id: string };
+      const q = request.query as {
+        from: string;
+        to: string;
+        reason: string;
+        ticket_id?: string;
+        max_diem?: number;
+      };
+      const maxDiem = q.max_diem ?? 500;
+
+      if (!(await vehicleInScope(db, auth, id))) {
+        await writeAuditLog(db, {
+          userId: auth.userId,
+          action: ACTION_VEHICLE_LOCATION_DENIED,
+          vehicleId: null,
+          reason: `ngoài phạm vi (${auth.grant.scope}): ${q.reason}`,
+          metadata: { vehicle_id_yeu_cau: id, endpoint: 'route' },
+        });
+        return notFoundVehicle(reply);
+      }
+
+      // Sheet 9: CSKH chỉ xem vị trí khi có ticket/SOS đang mở — lộ trình cũng là vị trí,
+      // thậm chí nhạy cảm hơn (biết cả nơi tài xế đã đi qua).
+      if (auth.grant.requireOpenTicket) {
+        const ok = q.ticket_id !== undefined && (await hasOpenTicket(db, q.ticket_id, id));
+        if (!ok) {
+          await writeAuditLog(db, {
+            userId: auth.userId,
+            action: ACTION_VEHICLE_LOCATION_DENIED,
+            vehicleId: id,
+            reason: `thiếu ticket đang mở: ${q.reason}`,
+            ticketId: null,
+            metadata: { ticket_id_yeu_cau: q.ticket_id ?? null, endpoint: 'route' },
+          });
+          return sendError(
+            reply,
+            403,
+            'can_ticket_dang_mo',
+            'Vai trò CSKH chỉ được xem lộ trình khi có ticket/SOS đang mở — truyền ticket_id hợp lệ.',
+          );
+        }
+      }
+
+      // Downsample ngay trong SQL: lấy đều theo THỨ TỰ điểm, luôn giữ điểm đầu và điểm cuối.
+      // Đây là rút gọn đều, KHÔNG phải Douglas–Peucker (thuật toán giữ hình dạng tuyến).
+      // Đủ cho việc vẽ lại lộ trình ở Phase 1; nếu portal cần đường mượt theo hình học thì
+      // đó là việc của tầng bản đồ (Q5 — nhà cung cấp bản đồ — đang MỞ).
+      const res = await db.query(
+        `WITH diem AS (
+           SELECT time,
+                  ST_Y(position::geometry)::float8 AS lat,
+                  ST_X(position::geometry)::float8 AS lng,
+                  speed_kmh::float8 AS speed_kmh,
+                  row_number() OVER (ORDER BY time) AS rn,
+                  count(*) OVER () AS tong
+           FROM telematics_readings
+           WHERE vehicle_id = $1 AND position IS NOT NULL
+             AND time >= $2::timestamptz AND time <= $3::timestamptz
+         )
+         SELECT time, lat, lng, speed_kmh, tong
+         FROM diem
+         WHERE tong <= $4
+            OR rn = 1 OR rn = tong
+            OR rn % ceil(tong::numeric / $4) = 0
+         ORDER BY time`,
+        [id, q.from, q.to, maxDiem],
+      );
+
+      const tongGoc = res.rows.length > 0 ? Number(res.rows[0]!.tong) : 0;
+
+      // Ghi audit TRƯỚC khi trả dữ liệu (cùng lý do như endpoint /location).
+      await writeAuditLog(db, {
+        userId: auth.userId,
+        action: ACTION_VEHICLE_LOCATION_READ,
+        vehicleId: id,
+        reason: q.reason,
+        ticketId: q.ticket_id ?? null,
+        metadata: {
+          vai_tro: auth.role,
+          endpoint: 'route',
+          tu: q.from,
+          den: q.to,
+          so_diem_tra_ve: res.rows.length,
+        },
+      });
+
+      return {
+        vehicle_id: id,
+        tong_diem_goc: tongGoc,
+        da_downsample: tongGoc > maxDiem,
+        items: res.rows.map((r) => ({
+          time: toIso(r.time),
+          lat: r.lat as number,
+          lng: r.lng as number,
+          speed_kmh: (r.speed_kmh as number | null) ?? null,
+        })),
+      };
+    },
+  );
 }
 
 function notFoundVehicle(reply: Parameters<typeof sendError>[0]) {

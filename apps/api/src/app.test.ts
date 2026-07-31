@@ -106,4 +106,19 @@ describe('quy tắc 6 — mặc định TỪ CHỐI', () => {
     expect(res.statusCode).toBe(401);
     expect(res.json().error.message).not.toContain('jwt');
   });
+
+  // Phát hiện khi làm F-A5: route nào khai `400: ErrorSchema` mà gặp lỗi validate của
+  // Fastify thì body mặc định không khớp schema → serialize hỏng → 400 biến thành 500,
+  // tức lỗi nhập liệu của người gọi bị báo thành lỗi hệ thống. POST /auth/otp/request
+  // (khai 400 từ Prompt 06) đang dính đúng lỗi này. setErrorHandler ở app.ts sửa gốc.
+  it('lỗi validate trên route có khai 400 → đúng 400 theo định dạng lỗi chung, KHÔNG phải 500', async () => {
+    const res = await h.app.inject({
+      method: 'POST',
+      url: '/auth/otp/request',
+      payload: { phone: 123 }, // sai kiểu: schema yêu cầu chuỗi
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.code).toBe('du_lieu_khong_hop_le');
+  });
 });

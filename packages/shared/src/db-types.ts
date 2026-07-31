@@ -201,6 +201,26 @@ export interface DriversRow {
   created_at: Date;
 }
 
+export interface GeofenceStatesRow {
+  geofence_id: string;
+  vehicle_id: string;
+  ben_trong: boolean;
+  cap_nhat_luc: Date;
+}
+
+export interface GeofencesRow {
+  id: string;
+  code: string;
+  name: string;
+  customer_id: string | null;
+  vehicle_id: string | null;
+  vung: string;
+  canh_bao_vao: boolean;
+  canh_bao_ra: boolean;
+  enabled: boolean;
+  created_at: Date;
+}
+
 export interface NotificationPrefsRow {
   id: string;
   alert_type: AlertType;
@@ -375,6 +395,8 @@ export interface DbSchema {
   customers: CustomersRow;
   devices: DevicesRow;
   drivers: DriversRow;
+  geofence_states: GeofenceStatesRow;
+  geofences: GeofencesRow;
   notification_prefs: NotificationPrefsRow;
   notifications: NotificationsRow;
   ocpp_transactions: OcppTransactionsRow;
