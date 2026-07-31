@@ -5,6 +5,7 @@
 import {
   STATUS_TOPIC_PREFIX,
   TELEMETRY_TOPIC_PREFIX,
+  type INotifier,
   type TelematicsEnvelope,
   type TelemetryStatus,
 } from '@g3/contracts';
@@ -36,8 +37,10 @@ export class IngestPipeline {
     log: (msg: string) => void = () => {
       /* mặc định im lặng — index.ts truyền console.log vào */
     },
+    /** F-F3: cổng thông báo. Không truyền = chỉ ghi bảng alerts, không báo cho người. */
+    notifier?: INotifier,
   ) {
-    this.#canhBaoPin = new BatteryAlertEvaluator(db, log);
+    this.#canhBaoPin = new BatteryAlertEvaluator(db, log, notifier);
   }
 
   async handle(msg: TelematicsEnvelope): Promise<void> {

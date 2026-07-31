@@ -2,7 +2,7 @@
 // (CLAUDE.md Definition of Done: mất sóng/bản ghi trễ, dữ liệu trùng/gửi bù).
 import pg from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { MockTelematicsSource, statusTopic, telemetryTopic } from '@g3/contracts';
+import { MockNotifier, MockTelematicsSource, statusTopic, telemetryTopic } from '@g3/contracts';
 import { testDatabaseUrl } from '@g3/db';
 import { IngestMetrics } from './metrics';
 import { IngestPipeline } from './pipeline';
@@ -68,9 +68,9 @@ describe('IngestPipeline (DB g3_test)', () => {
     );
   });
 
-  function build() {
+  function build(notifier?: MockNotifier) {
     const metrics = new IngestMetrics(() => NOW_MS);
-    const pipeline = new IngestPipeline(db, metrics, () => NOW_MS);
+    const pipeline = new IngestPipeline(db, metrics, () => NOW_MS, undefined, notifier);
     const source = new MockTelematicsSource(() => NOW_MS);
     source.subscribe((msg) => pipeline.handle(msg));
     return { metrics, source };
@@ -195,5 +195,42 @@ describe('IngestPipeline (DB g3_test)', () => {
     ]);
     expect(dev.rows[0]!.power_status).toBe('normal');
     expect(new Date(dev.rows[0]!.last_seen_at as string).getTime()).toBe(NOW_MS);
+  });
+
+  // F-A2 tiêu chí chấp nhận: "Cảnh báo ≤30s khi chạm ngưỡng" (NF-01).
+  // Cách bảo vệ: cảnh báo phải có NGAY khi handle() của bản tin chạm ngưỡng trả về —
+  // KHÔNG được đẩy sang job quét định kỳ. Test này sẽ đỏ nếu ai đó tách cảnh báo pin ra
+  // khỏi đường đi của bản tin (job 1 phút/lần thì lúc handle() xong vẫn chưa có alert).
+  it('F-A2/NF-01 — chạm ngưỡng: cảnh báo có mặt ngay khi xử lý xong bản tin, ≤30s', async () => {
+    const notifier = new MockNotifier();
+    const { source } = build(notifier);
+    await source.connect();
+
+    const batDauMs = Date.now();
+    await source.emit(telemetryTopic(VIN), validPayload({ soc_pct: 9.5 }));
+    const treMs = Date.now() - batDauMs;
+
+    // KHÔNG chờ, KHÔNG poll: đọc ngay sau khi bản tin được xử lý xong
+    const alerts = await db.query<{ severity: number }>(
+      `SELECT severity FROM alerts WHERE type IN ('battery_low', 'battery_critical')
+       ORDER BY severity`,
+    );
+    expect(alerts.rows.map((r) => r.severity)).toEqual([1, 2, 3]);
+    expect(treMs, `độ trễ thực đo ${treMs}ms`).toBeLessThan(30_000);
+    // Người cũng phải được báo trong cùng nhịp đó, không chỉ ghi vào bảng
+    expect(notifier.events).toHaveLength(3);
+  });
+
+  it('F-A2 — dữ liệu gửi bù sau mất sóng KHÔNG bắn lại cảnh báo cũ (NF-09)', async () => {
+    const notifier = new MockNotifier();
+    const { source } = build(notifier);
+    await source.connect();
+
+    await source.emit(telemetryTopic(VIN), validPayload({ soc_pct: 9.5 }));
+    expect(notifier.events).toHaveLength(3);
+    // Thiết bị gửi lại đúng bản ghi đó (trùng khoá (vehicle_id, time)) sau khi có sóng
+    await source.emit(telemetryTopic(VIN), validPayload({ soc_pct: 9.5 }));
+
+    expect(notifier.events).toHaveLength(3);
   });
 });

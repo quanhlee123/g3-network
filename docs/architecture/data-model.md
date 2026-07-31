@@ -44,6 +44,10 @@
 | Audit log vị trí | `audit_logs` | NF-06 — không có trong sheet 8 nhưng bắt buộc theo sheet 9/quy tắc 5 |
 | Bản tin telemetry hỏng | `telemetry_quarantine` | F-G1 — bản tin sai schema/VIN lạ cách ly kèm lý do, KHÔNG drop lặng lẽ (ADR-004); alert `data_quality` dedup 1 lần/giờ |
 | Phiên OCPP đang mở | `ocpp_transactions` | F-G2 — bảng MUTABLE của CSMS (ADR-005): meter/SoC cập nhật theo MeterValues; StopTransaction mới tổng hợp thành 1 dòng `charging_sessions` bất biến |
+| Thông báo đã gửi | `notifications` | F-F3 — vừa là hộp thư in-app vừa là lịch sử gửi mọi kênh; `status` gồm `suppressed` (bị rate-limit chặn, xem ADR-008) |
+| Cấu hình kênh thông báo | `notification_prefs` | F-F3 — (loại alert × vai trò) → kênh + `min_severity`; chép từ sheet 9, có dòng mặc định cài sẵn trong migration |
+| Token đẩy thiết bị | `push_tokens` | F-F3 — token FCM GIẢ ở Phase 1, thu hồi bằng `revoked_at` |
+| Ngưỡng cảnh báo pin | `battery_alert_thresholds` | F-A2 — ngưỡng 30/20/10 cấu hình theo XE > ĐỘI > mặc định toàn hệ; kèm biên trễ chống rung (ADR-006) |
 | (P2) Lô hàng · Ghép nối · Đơn · Cước | — | ngoài phạm vi Phase 1, chưa dựng bảng |
 
 ## Sơ đồ ERD

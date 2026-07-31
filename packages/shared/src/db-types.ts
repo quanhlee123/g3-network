@@ -85,6 +85,16 @@ export interface BatteriesRow {
   created_at: Date;
 }
 
+export interface BatteryAlertThresholdsRow {
+  id: string;
+  customer_id: string | null;
+  vehicle_id: string | null;
+  muc: string;
+  nguong_pct: string;
+  bien_tre_pct: string;
+  updated_at: Date;
+}
+
 export interface ChargingPoliciesRow {
   id: string;
   code: string;
@@ -341,6 +351,7 @@ export interface DbSchema {
   audit_logs: AuditLogsRow;
   auth_otp_challenges: AuthOtpChallengesRow;
   batteries: BatteriesRow;
+  battery_alert_thresholds: BatteryAlertThresholdsRow;
   charging_policies: ChargingPoliciesRow;
   charging_sessions: ChargingSessionsRow;
   charging_stations: ChargingStationsRow;
