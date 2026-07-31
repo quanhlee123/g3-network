@@ -26,6 +26,8 @@ export interface ApiConfig {
     giaVndMoiKwh: number;
     cuaSoSocGiay: number;
   };
+  /** Chu kỳ quét đồng hồ SLA ticket (F-I2, ms); 0 = tắt. */
+  slaScanIntervalMs: number;
   /** Job quét sức khoẻ & tamper thiết bị (F-J1, F-J3). */
   deviceScan: {
     /** Chu kỳ chạy tự động (ms); 0 = tắt. */
@@ -97,6 +99,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
       ),
       cuaSoSocGiay: intEnv(env, 'RECONCILE_SOC_WINDOW_S', RECONCILE_DEFAULTS.cuaSoSocGiay, 1),
     },
+    slaScanIntervalMs: intEnv(env, 'SLA_SCAN_INTERVAL_MS', 60_000, 0),
     deviceScan: {
       intervalMs: intEnv(env, 'DEVICE_SCAN_INTERVAL_MS', 600_000, 0),
       nguong: {
