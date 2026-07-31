@@ -218,7 +218,9 @@ describe('IngestPipeline (DB g3_test)', () => {
     expect(alerts.rows.map((r) => r.severity)).toEqual([1, 2, 3]);
     expect(treMs, `độ trễ thực đo ${treMs}ms`).toBeLessThan(30_000);
     // Người cũng phải được báo trong cùng nhịp đó, không chỉ ghi vào bảng
-    expect(notifier.events).toHaveLength(3);
+    expect(notifier.events.filter((e) => e.alert_type.startsWith('battery_'))).toHaveLength(4);
+    // 3 mức pin + 1 bất thường: payload mẫu mang fault_codes ['P0A80'] nên F-A4 cũng bắt
+    expect(notifier.theoLoai('battery_anomaly')).toHaveLength(1);
   });
 
   it('F-A2 — dữ liệu gửi bù sau mất sóng KHÔNG bắn lại cảnh báo cũ (NF-09)', async () => {
@@ -227,10 +229,11 @@ describe('IngestPipeline (DB g3_test)', () => {
     await source.connect();
 
     await source.emit(telemetryTopic(VIN), validPayload({ soc_pct: 9.5 }));
-    expect(notifier.events).toHaveLength(3);
+    const lanDau = notifier.events.length;
+    expect(lanDau).toBe(4); // 3 mức pin (F-A2) + 1 mã lỗi BMS (F-A4)
     // Thiết bị gửi lại đúng bản ghi đó (trùng khoá (vehicle_id, time)) sau khi có sóng
     await source.emit(telemetryTopic(VIN), validPayload({ soc_pct: 9.5 }));
 
-    expect(notifier.events).toHaveLength(3);
+    expect(notifier.events).toHaveLength(lanDau);
   });
 });

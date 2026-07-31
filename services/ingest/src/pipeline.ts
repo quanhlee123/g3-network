@@ -9,6 +9,7 @@ import {
   type TelematicsEnvelope,
   type TelemetryStatus,
 } from '@g3/contracts';
+import { AnomalyEvaluator } from './anomaly';
 import { BatteryAlertEvaluator } from './battery-alerts';
 import type { IngestMetrics } from './metrics';
 import { peekSchemaVersion, validateStatus, validateTelemetry } from './validate';
@@ -29,6 +30,7 @@ interface VehicleRef {
 export class IngestPipeline {
   #vinCache = new Map<string, VehicleRef>();
   #canhBaoPin: BatteryAlertEvaluator;
+  #batThuong: AnomalyEvaluator;
 
   constructor(
     private readonly db: Queryable,
@@ -41,6 +43,7 @@ export class IngestPipeline {
     notifier?: INotifier,
   ) {
     this.#canhBaoPin = new BatteryAlertEvaluator(db, log, notifier);
+    this.#batThuong = new AnomalyEvaluator(db, log, notifier);
   }
 
   async handle(msg: TelematicsEnvelope): Promise<void> {
@@ -110,6 +113,17 @@ export class IngestPipeline {
         ref.vehicleId,
         record.soc_pct,
         { lat: record.lat, lng: record.lng },
+        record.ts,
+      );
+      // F-A4: rule engine bất thường chạy trên cùng dòng dữ liệu — snapshot đọc từ
+      // telematics_readings nên PHẢI gọi SAU khi bản ghi hiện tại đã được ghi vào bảng.
+      await this.#batThuong.danhGia(
+        ref.vehicleId,
+        {
+          battery_temp_c: record.battery_temp_c,
+          battery_voltage_v: record.battery_voltage_v,
+          fault_codes: record.fault_codes,
+        },
         record.ts,
       );
     }

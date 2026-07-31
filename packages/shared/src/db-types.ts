@@ -13,6 +13,7 @@ export type AlertType =
   | 'maintenance'
   | 'data_quality'
   | 'reconciliation_mismatch';
+export type AnomalyKind = 'nhiet_do_cao' | 'sut_ap_dot_ngot' | 'ma_loi_bms';
 export type ConnectorStatus = 'Available' | 'Charging' | 'Faulted' | 'Unavailable';
 export type DevicePowerStatus = 'normal' | 'low' | 'lost';
 export type NotificationChannel = 'push' | 'in_app' | 'sms';
@@ -50,6 +51,20 @@ export interface AlertsRow {
   status: AlertStatus;
   triggered_at: Date;
   resolved_at: Date | null;
+}
+
+export interface AnomalyRulesRow {
+  id: string;
+  kind: AnomalyKind;
+  customer_id: string | null;
+  vehicle_id: string | null;
+  nguong_so: string | null;
+  bien_tre_so: string;
+  cua_so_giay: number | null;
+  ma_loi: string[] | null;
+  severity: number;
+  enabled: boolean;
+  updated_at: Date;
 }
 
 export interface AuditLogsRow {
@@ -348,6 +363,7 @@ export interface ViolationsRow {
 
 export interface DbSchema {
   alerts: AlertsRow;
+  anomaly_rules: AnomalyRulesRow;
   audit_logs: AuditLogsRow;
   auth_otp_challenges: AuthOtpChallengesRow;
   batteries: BatteriesRow;
