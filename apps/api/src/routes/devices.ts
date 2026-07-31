@@ -13,6 +13,7 @@ export interface DeviceRoutesDeps {
 }
 
 const NullableString = Type.Union([Type.String(), Type.Null()]);
+const NullableNumber = Type.Union([Type.Number(), Type.Null()]);
 
 export async function deviceRoutes(app: FastifyInstance, deps: DeviceRoutesDeps): Promise<void> {
   const { db } = deps;
@@ -51,6 +52,11 @@ export async function deviceRoutes(app: FastifyInstance, deps: DeviceRoutesDeps)
                 im_lang_giay: Type.Union([Type.Integer(), Type.Null()]),
                 power_status: Type.String(),
                 revoked_at: NullableString,
+                // F-J3: bằng chứng của bản tin cuối + kết luận của job quét gần nhất
+                supply_voltage_v: NullableNumber,
+                signal_dbm: Type.Union([Type.Integer(), Type.Null()]),
+                canh_bao_dang_mo: NullableString,
+                loai_im_lang: NullableString,
               }),
             ),
           }),
@@ -79,9 +85,26 @@ export async function deviceRoutes(app: FastifyInstance, deps: DeviceRoutesDeps)
                 d.firmware_version, d.sim_iccid, d.last_seen_at,
                 CASE WHEN d.last_seen_at IS NULL THEN NULL
                      ELSE floor(EXTRACT(EPOCH FROM (now() - d.last_seen_at)))::int END AS im_lang_giay,
-                d.power_status::text AS power_status, d.revoked_at
+                d.power_status::text AS power_status, d.revoked_at,
+                cuoi.supply_voltage_v, cuoi.signal_dbm,
+                canh_bao.type::text AS canh_bao_dang_mo,
+                canh_bao.payload ->> 'loai' AS loai_im_lang
          FROM devices d
          JOIN vehicles v ON v.id = d.vehicle_id
+         -- Bằng chứng của bản tin CUỐI CÙNG (F-J3) — điện áp nguồn nuôi & cường độ sóng
+         LEFT JOIN LATERAL (
+           SELECT t.supply_voltage_v::float8 AS supply_voltage_v, t.signal_dbm
+           FROM telematics_readings t
+           WHERE t.vehicle_id = v.id
+           ORDER BY t.time DESC LIMIT 1
+         ) cuoi ON true
+         -- Kết luận của job quét gần nhất, nếu cảnh báo còn đang mở
+         LEFT JOIN LATERAL (
+           SELECT a.type, a.payload FROM alerts a
+           WHERE a.device_id = d.id AND a.status <> 'resolved'
+             AND a.type IN ('device_offline', 'device_tamper')
+           ORDER BY a.triggered_at DESC LIMIT 1
+         ) canh_bao ON true
          WHERE ${filters.join(' AND ')}
          ORDER BY d.last_seen_at ASC NULLS FIRST
          LIMIT $${params.length + 1}`,

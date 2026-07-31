@@ -1,6 +1,7 @@
 // F-F1 — Cấu hình apps/api đọc TỪ BIẾN MÔI TRƯỜNG (quy tắc 3: cấm hardcode secret).
 // Mọi biến ở đây phải có mặt trong infra/.env.example và bảng biến môi trường của README.
 import { loadEnv } from '@g3/db';
+import { NGUONG_SUC_KHOE_MAC_DINH, type NguongSucKhoe } from './modules/devices/health-scan';
 import { RECONCILE_DEFAULTS } from './modules/reconciliation/reconcile';
 
 export interface ApiConfig {
@@ -24,6 +25,12 @@ export interface ApiConfig {
     hieuSuatSac: number;
     giaVndMoiKwh: number;
     cuaSoSocGiay: number;
+  };
+  /** Job quét sức khoẻ & tamper thiết bị (F-J1, F-J3). */
+  deviceScan: {
+    /** Chu kỳ chạy tự động (ms); 0 = tắt. */
+    intervalMs: number;
+    nguong: NguongSucKhoe;
   };
 }
 
@@ -89,6 +96,33 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
         1_000_000,
       ),
       cuaSoSocGiay: intEnv(env, 'RECONCILE_SOC_WINDOW_S', RECONCILE_DEFAULTS.cuaSoSocGiay, 1),
+    },
+    deviceScan: {
+      intervalMs: intEnv(env, 'DEVICE_SCAN_INTERVAL_MS', 600_000, 0),
+      nguong: {
+        imLangGio: floatEnv(
+          env,
+          'DEVICE_SILENCE_HOURS',
+          NGUONG_SUC_KHOE_MAC_DINH.imLangGio,
+          0.01,
+          720,
+        ),
+        dienApNguonThapV: floatEnv(
+          env,
+          'DEVICE_SUPPLY_VOLTAGE_LOW_V',
+          NGUONG_SUC_KHOE_MAC_DINH.dienApNguonThapV,
+          0,
+          60,
+        ),
+        // dBm luôn ÂM: khoảng hợp lệ -140..0, không phải 0..140.
+        songYeuDbm: floatEnv(
+          env,
+          'DEVICE_SIGNAL_WEAK_DBM',
+          NGUONG_SUC_KHOE_MAC_DINH.songYeuDbm,
+          -140,
+          0,
+        ),
+      },
     },
   };
 }

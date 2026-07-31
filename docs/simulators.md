@@ -129,6 +129,13 @@ Mỗi xe kết nối MQTT riêng, khai báo LWT trên `g3/status/{vin}`. Sau m�
 broker tự phát `{"status":"offline","reason":"lwt"}` sau ~1,5× keepalive (keepalive 15s ⇒
 trong vòng ~25s). Đối chứng: tắt bằng Ctrl+C sẽ ra `{"status":"offline","reason":"graceful"}` —
 đây chính là tín hiệu để phân biệt "mất nguồn/tháo thiết bị" với "tắt máy bình thường".
+
+**Bằng chứng thứ hai (từ Prompt 07, schema v2):** ở kịch bản này `supply_voltage_v` (điện áp
+nguồn nuôi hộp telematics) giữ **bình thường ~13.8V tới tận bản tin cuối** rồi im bặt — cố ý
+không cho tụt dần, vì thiết bị bị rút dây thì không kịp báo gì. Đối chứng với kịch bản `offline`:
+ở đó `signal_dbm` **yếu dần** từ -100 xuống dần trước khi mất. Job quét `F-J1/F-J3` dùng đúng
+hai dấu hiệu này để kết luận `nghi_thao_thiet_bi` hay `mat_song` khi không có LWT.
+
 Lưu ý: kịch bản này mở 1 kết nối/xe — dùng `--count` vừa phải (≤50); yêu cầu 300 xe (NF-04)
 áp cho các kịch bản dùng kết nối chung (`normal`, `drain`, `offline`, `temp`).
 

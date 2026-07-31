@@ -31,7 +31,7 @@
 | Xe (Vehicle) | `vehicles` | VIN giả, dòng `EVT-262/400/825`, chủ xe (`customer_id`), tài xế gán, bàn giao, bảo hành, gói |
 | Thiết bị (Device) | `devices` | firmware, SIM/ICCID, `last_seen_at`, trạng thái nguồn, `mtls_identity` + `revoked_at` (NF-06) |
 | Pin (Battery) | `batteries` | pack_id, hóa chất, dung lượng, SOH, chu kỳ (SOC/điện áp/nhiệt độ realtime nằm ở telematics) |
-| Bản ghi telematics | `telematics_readings` | hypertable; `schema_version`; SOC, GPS, tốc độ, odometer, nhiệt độ, mã lỗi |
+| Bản ghi telematics | `telematics_readings` | hypertable; `schema_version` (**v2** từ migration 0021); SOC, GPS, tốc độ, odometer, nhiệt độ, mã lỗi + `supply_voltage_v` (điện áp NGUỒN NUÔI thiết bị, khác điện áp pack) và `signal_dbm` — hai trường để F-J3 phân biệt mất nguồn với mất sóng |
 | Phiên sạc (ChargingSession) | `charging_sessions` | **append-only**; kWh, SOC đầu/cuối, công suất, chi phí VNĐ, `ocpp_transaction_id` |
 | Giao dịch thanh toán | `payment_transactions` | VNPay/Momo/ví (sandbox), trạng thái, mã đối soát cổng, idempotency webhook |
 | Trạm sạc (ChargingStation) | `charging_stations` | GPS PostGIS, khu vực, công suất, CCS2, giờ hoạt động, trạng thái |

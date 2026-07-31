@@ -165,6 +165,19 @@ export function tickVehicle(
   const [lat, lng] = positionAtKm(route, next.routeKm);
   const voltage = spec.vMin + ((spec.vMax - spec.vMin) * next.socPct) / 100 + (rand() - 0.5) * 4;
 
+  // --- Hai trường của schema v2, phục vụ F-J3 phân biệt mất nguồn với mất sóng ---
+  //
+  // Kịch bản (e) power-loss: điện áp nguồn nuôi giữ BÌNH THƯỜNG tới tận bản tin cuối rồi
+  // im bặt — đây chính là dấu hiệu "bị tháo/cắt nguồn đột ngột" mà F-J3 phải bắt được.
+  // Cố ý KHÔNG cho tụt dần: thiết bị bị rút dây thì không kịp báo gì.
+  const supplyVoltageV = 13.8 + (rand() - 0.5) * 0.4;
+  //
+  // Kịch bản (c) offline: sóng YẾU DẦN trước khi mất hẳn, và bản ghi thưa dần.
+  // Nhờ vậy hệ phân biệt được "đi vào vùng lõm sóng" với "bị tháo thiết bị".
+  const signalDbm = isOffline
+    ? -100 - Math.min(13, (elapsedMs - offlineStartMs) / 20_000)
+    : -65 - rand() * 20;
+
   const record: TelemetryRecord = {
     schema_version: TELEMETRY_SCHEMA_VERSION,
     vin: state.vin,
@@ -178,6 +191,8 @@ export function tickVehicle(
     lat: round(lat, 6),
     lng: round(lng, 6),
     fault_codes: faultCodes,
+    supply_voltage_v: round(supplyVoltageV, 2),
+    signal_dbm: Math.round(signalDbm),
   };
 
   return { state: next, record, action: isOffline ? 'buffer' : 'publish' };

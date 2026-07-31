@@ -155,12 +155,44 @@ describe('IngestPipeline (DB g3_test)', () => {
   it('schema_version tương lai (chưa hỗ trợ) → quarantine, không ghi bừa vào readings', async () => {
     const { source } = build();
     await source.connect();
-    await source.emit(telemetryTopic(VIN), validPayload({ schema_version: 2 }));
+    // v2 đã được hỗ trợ từ Prompt 07 (F-J3) → dùng v3 làm "version tương lai"
+    await source.emit(telemetryTopic(VIN), validPayload({ schema_version: 3 }));
 
     const q = await db.query('SELECT reason, schema_version FROM telemetry_quarantine');
     expect(q.rowCount).toBe(1);
     expect(q.rows[0]!.reason).toContain('schema_version_khong_ho_tro');
-    expect(q.rows[0]!.schema_version).toBe(2);
+    expect(q.rows[0]!.schema_version).toBe(3);
+  });
+
+  it('F-J3 — bản ghi v2 ghi được điện áp nguồn nuôi và cường độ sóng', async () => {
+    const { source } = build();
+    await source.connect();
+    await source.emit(
+      telemetryTopic(VIN),
+      validPayload({ schema_version: 2, supply_voltage_v: 13.7, signal_dbm: -72 }),
+    );
+
+    const res = await db.query(
+      `SELECT supply_voltage_v::float8 AS supply_voltage_v, signal_dbm
+       FROM telematics_readings WHERE vehicle_id = (SELECT id FROM vehicles WHERE vin = $1)`,
+      [VIN],
+    );
+    expect(res.rows[0]).toMatchObject({ supply_voltage_v: 13.7, signal_dbm: -72 });
+  });
+
+  it('F-J3 — bản ghi v1 (firmware cũ) VẪN nhận, hai trường mới để NULL chứ không phải 0', async () => {
+    const { source } = build();
+    await source.connect();
+    await source.emit(telemetryTopic(VIN), validPayload({ schema_version: 1 }));
+
+    const res = await db.query(
+      `SELECT supply_voltage_v, signal_dbm FROM telematics_readings
+       WHERE vehicle_id = (SELECT id FROM vehicles WHERE vin = $1)`,
+      [VIN],
+    );
+    expect(res.rows).toHaveLength(1);
+    expect(res.rows[0]!.supply_voltage_v).toBeNull();
+    expect(res.rows[0]!.signal_dbm).toBeNull();
   });
 
   it('VIN không tồn tại → quarantine (thiết bị lạ bơm dữ liệu — NF-06)', async () => {
