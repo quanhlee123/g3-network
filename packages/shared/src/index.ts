@@ -6,8 +6,12 @@ export * from './db-types';
 /**
  * Phiên bản schema bản ghi telematics (NF-16).
  * Đổi schema = migration mới + tăng số này. KHÔNG sửa migration cũ đã merge.
+ *
+ * v1 → v2 (migration 0021, F-J3): thêm `supply_voltage_v` (điện áp nguồn nuôi thiết bị)
+ * và `signal_dbm` (cường độ sóng) — hai trường để phân biệt mất nguồn với mất sóng.
+ * Ingest vẫn nhận bản ghi v1 (validator cũ giữ nguyên, xem services/ingest/src/validate.ts).
  */
-export const TELEMETRY_SCHEMA_VERSION = 1;
+export const TELEMETRY_SCHEMA_VERSION = 2;
 
 /** Đơn vị chuẩn toàn hệ (NF-17). */
 export const UNITS = {

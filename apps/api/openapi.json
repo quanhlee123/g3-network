@@ -2396,7 +2396,11 @@
                           "last_seen_at",
                           "im_lang_giay",
                           "power_status",
-                          "revoked_at"
+                          "revoked_at",
+                          "supply_voltage_v",
+                          "signal_dbm",
+                          "canh_bao_dang_mo",
+                          "loai_im_lang"
                         ],
                         "properties": {
                           "device_id": {
@@ -2457,6 +2461,46 @@
                             "type": "string"
                           },
                           "revoked_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "supply_voltage_v": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "signal_dbm": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "canh_bao_dang_mo": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "loai_im_lang": {
                             "anyOf": [
                               {
                                 "type": "string"

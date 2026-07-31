@@ -21,7 +21,8 @@ describe('@g3/api — khung app', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json().status).toBe('ok');
-    expect(res.json().telemetry_schema_version).toBe(1);
+    // v2 từ Prompt 07 (F-J3): thêm điện áp nguồn nuôi + cường độ sóng — migration 0021
+    expect(res.json().telemetry_schema_version).toBe(2);
   });
 
   it('kịch bản xấu: route không tồn tại trả 404 (không bị guard biến thành 403)', async () => {

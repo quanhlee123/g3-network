@@ -167,6 +167,9 @@ g3-network/
 | `CHARGE_EFFICIENCY` | Hiệu suất sạc lưới → pin. **1.0 chỉ đúng với simulator** — phải hiệu chuẩn trước Gate 1 ([ADR-007](docs/adr/ADR-007-hieu-suat-sac-doi-soat.md)) |
 | `CHARGING_PRICE_VND_PER_KWH` | Đơn giá điện GIẢ để quy tiền về kWh (mặc định 3500) |
 | `RECONCILE_SOC_WINDOW_S` | Telemetry xa mốc phiên quá số giây này → kết luận "thiếu dữ liệu" (mặc định 60) |
+| `DEVICE_SCAN_INTERVAL_MS` | F-J1 — chu kỳ job quét thiết bị im lặng trong tiến trình API (mặc định 600000; `0` = tắt) |
+| `DEVICE_SILENCE_HOURS` | F-J1 — im lặng quá số giờ này thì sinh cảnh báo (mặc định 6) |
+| `DEVICE_SUPPLY_VOLTAGE_LOW_V` / `DEVICE_SIGNAL_WEAK_DBM` | F-J3 — hai ngưỡng để phân biệt **bị tháo thiết bị** với **mất sóng**: nguồn nuôi dưới `..._LOW_V` = hết nguồn tự nhiên; sóng yếu hơn `..._WEAK_DBM` (dBm luôn âm) = mất sóng. Nguồn bình thường + sóng khoẻ rồi im bặt = nghi tháo |
 | `NOTIFY_RATE_LIMIT_MAX` / `NOTIFY_RATE_LIMIT_WINDOW_S` | F-F3 — chống spam thông báo: tối đa 3 tin mỗi 900s cho mỗi (người × loại alert × kênh). **Chỉ áp cho push/SMS**; in-app không bị chặn và cảnh báo nguy cấp (severity 3) không bao giờ bị chặn ([ADR-008](docs/adr/ADR-008-rate-limit-thong-bao.md)) |
 
 Quy tắc: **không hardcode secret** — biến mới phải thêm vào `infra/.env.example`

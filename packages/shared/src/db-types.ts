@@ -320,6 +320,8 @@ export interface TelematicsReadingsRow {
   odometer_km: string | null;
   position: string | null;
   fault_codes: unknown | null;
+  supply_voltage_v: string | null;
+  signal_dbm: number | null;
 }
 
 export interface TelemetryQuarantineRow {

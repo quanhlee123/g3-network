@@ -85,9 +85,10 @@ export class IngestPipeline {
     const inserted = await this.db.query(
       `INSERT INTO telematics_readings
          (time, vehicle_id, device_id, schema_version, soc_pct, battery_voltage_v,
-          battery_temp_c, speed_kmh, odometer_km, position, fault_codes)
+          battery_temp_c, speed_kmh, odometer_km, position, fault_codes,
+          supply_voltage_v, signal_dbm)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
-               ST_SetSRID(ST_MakePoint($10, $11), 4326)::geography, $12)
+               ST_SetSRID(ST_MakePoint($10, $11), 4326)::geography, $12, $13, $14)
        ON CONFLICT DO NOTHING`,
       [
         record.ts, // time = giờ THIẾT BỊ (NF-09), không phải giờ nhận
@@ -102,6 +103,10 @@ export class IngestPipeline {
         record.lng,
         record.lat,
         JSON.stringify(record.fault_codes),
+        // v2 (F-J3): bản ghi v1 không có hai trường này → ghi NULL, không phải 0.
+        // 0V là "mất nguồn hoàn toàn", rất khác với "thiết bị đời cũ không báo".
+        record.supply_voltage_v ?? null,
+        record.signal_dbm ?? null,
       ],
     );
 

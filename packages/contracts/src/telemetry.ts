@@ -53,6 +53,20 @@ export interface TelemetryRecord {
   lng: number;
   /** Mã lỗi BMS/motor đang hoạt động, ví dụ ["P0A80"]; rỗng nếu bình thường. */
   fault_codes: string[];
+
+  // --- Thêm ở schema v2 (F-J3, migration 0021). Tuỳ chọn vì bản ghi v1 không có. ---
+
+  /**
+   * Điện áp NGUỒN NUÔI hộp telematics (V) — acquy phụ 12V/24V, KHÔNG phải
+   * `battery_voltage_v` (điện áp pack kéo xe). Đây là trường cho biết thiết bị còn
+   * được cấp điện hay không: pack pin đầy mà dây nguồn hộp bị rút thì chỉ trường này thấy.
+   */
+  supply_voltage_v?: number;
+  /**
+   * Cường độ sóng di động (dBm, luôn âm): -60 khoẻ · -100 yếu · -113 gần như mất sóng.
+   * Dùng để phân biệt "mất sóng" (yếu dần rồi im) với "mất nguồn" (đang khoẻ thì im bặt).
+   */
+  signal_dbm?: number;
 }
 
 /** Payload đăng trên g3/status/{vin} (retained): trạng thái kết nối của thiết bị. */

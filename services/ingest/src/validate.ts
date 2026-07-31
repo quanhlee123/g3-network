@@ -24,6 +24,19 @@ const TelemetryV1 = Type.Object(
   { additionalProperties: true }, // trường lạ không làm hỏng bản ghi (tương thích tiến)
 );
 
+// v2 (F-J3, migration 0021): v1 + điện áp NGUỒN NUÔI thiết bị và cường độ sóng.
+// KHÔNG sửa TelemetryV1 ở trên — thiết bị chưa cập nhật firmware vẫn gửi v1 và vẫn phải nhận.
+const TelemetryV2 = Type.Object(
+  {
+    ...TelemetryV1.properties,
+    schema_version: Type.Literal(2),
+    supply_voltage_v: Type.Number({ minimum: 0 }),
+    // dBm luôn âm; chặn giá trị vô lý ngay ở cổng vào thay vì để rule engine đoán.
+    signal_dbm: Type.Number({ minimum: -140, maximum: 0 }),
+  },
+  { additionalProperties: true },
+);
+
 const StatusPayload = Type.Object(
   {
     vin: Type.String({ minLength: 1 }),
@@ -46,6 +59,17 @@ const TELEMETRY_VALIDATORS: Record<number, (raw: unknown) => ValidateResult<Tele
     const record = raw as Static<typeof TelemetryV1>;
     if (Number.isNaN(Date.parse(record.ts))) {
       return { ok: false, reason: `sai_schema_v1: /ts không phải ISO 8601 ("${record.ts}")` };
+    }
+    return { ok: true, record };
+  },
+  2: (raw) => {
+    if (!Value.Check(TelemetryV2, raw)) {
+      const first = Value.Errors(TelemetryV2, raw).First();
+      return { ok: false, reason: `sai_schema_v2: ${first?.path ?? '?'} ${first?.message ?? ''}` };
+    }
+    const record = raw as Static<typeof TelemetryV2>;
+    if (Number.isNaN(Date.parse(record.ts))) {
+      return { ok: false, reason: `sai_schema_v2: /ts không phải ISO 8601 ("${record.ts}")` };
     }
     return { ok: true, record };
   },
