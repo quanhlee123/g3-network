@@ -23,6 +23,13 @@ export const PERMISSIONS = [
   'reconciliation.read',
   /** Chạy tay job đối soát. */
   'reconciliation.run',
+  /**
+   * Đọc HỘP THƯ CỦA CHÍNH MÌNH (F-F3) — mọi vai trò đều có, phạm vi luôn là 'own'.
+   * [SUY LUẬN] Sheet 9 không có dòng nào cho "thông báo của tôi": ma trận đó nói về quyền
+   * xem DỮ LIỆU XE/TRẠM, còn đây là dữ liệu của chính người đăng nhập. Chặn người dùng đọc
+   * thông báo gửi cho họ thì cảnh báo an toàn vô nghĩa. Đã ghi vào rbac-matrix.md để review.
+   */
+  'notification.read',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -45,6 +52,15 @@ export interface Grant {
 }
 
 type RoleGrants = Partial<Record<Permission, Grant>>;
+
+/**
+ * Quyền mà MỌI vai trò đều có vì nó chỉ chạm dữ liệu của chính người đăng nhập.
+ * Danh sách này cố tình chỉ có 1 phần tử — thêm gì vào đây là nới quyền cho cả 7 vai trò,
+ * phải cân nhắc như sửa ma trận sheet 9.
+ */
+const QUYEN_CUA_MOI_VAI_TRO: RoleGrants = {
+  'notification.read': { scope: 'own' },
+};
 
 /**
  * Bảng quyền. Đọc theo cột vai trò của sheet 9:
@@ -109,5 +125,5 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
 
 /** Quyền của vai trò với một hành động; `undefined` = TỪ CHỐI. */
 export function grantFor(role: UserRole, permission: Permission): Grant | undefined {
-  return ROLE_PERMISSIONS[role][permission];
+  return ROLE_PERMISSIONS[role][permission] ?? QUYEN_CUA_MOI_VAI_TRO[permission];
 }
