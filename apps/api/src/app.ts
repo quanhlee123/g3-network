@@ -11,8 +11,10 @@ import { registerAuthGuard } from './auth/guard';
 import { OtpService } from './auth/otp';
 import type { ApiConfig } from './config';
 import type { Queryable } from './db';
+import { sendError } from './errors';
 import { authRoutes } from './routes/auth';
 import { deviceRoutes } from './routes/devices';
+import { geofenceRoutes } from './routes/geofences';
 import { healthRoutes } from './routes/health';
 import { notificationRoutes } from './routes/notifications';
 import { reconciliationRoutes } from './routes/reconciliation';
@@ -80,6 +82,28 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(swaggerUi, { routePrefix: '/docs' });
   await app.register(jwt, { secret: config.jwtSecret });
 
+  // Lỗi validate schema phải ra ĐÚNG định dạng lỗi chung của API.
+  //
+  // Không có chỗ này thì Fastify trả body mặc định {statusCode, error, message}; route nào
+  // khai `400: ErrorSchema` sẽ serialize hỏng và biến lỗi nhập liệu 400 thành 500 —
+  // lỗi của người gọi bị báo thành lỗi hệ thống. Phát hiện khi làm F-A5; POST /auth/otp/request
+  // (khai 400 từ Prompt 06) cũng đang dính đúng lỗi này.
+  app.setErrorHandler((error: unknown, request, reply) => {
+    const err = error as { validation?: unknown; message?: string; statusCode?: number };
+    if (err.validation) {
+      return sendError(
+        reply,
+        400,
+        'du_lieu_khong_hop_le',
+        `Dữ liệu gửi lên không hợp lệ: ${err.message ?? ''}`,
+      );
+    }
+    request.log.error({ err }, 'Lỗi không lường trước');
+    const status = err.statusCode !== undefined && err.statusCode < 500 ? err.statusCode : 500;
+    // KHÔNG lộ chi tiết nội bộ (tên bảng, SQL) ra ngoài — xem errors.ts.
+    return sendError(reply, status, 'loi_he_thong', 'Lỗi hệ thống. Vui lòng thử lại sau.');
+  });
+
   // Cổng chặn mặc định từ chối — đăng ký TRƯỚC mọi route (quy tắc 6).
   registerAuthGuard(app, db);
 
@@ -103,6 +127,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(stationRoutes, { db });
   await app.register(sessionRoutes, { db });
   await app.register(deviceRoutes, { db });
+  await app.register(geofenceRoutes, { db });
   await app.register(notificationRoutes, { db });
   await app.register(reconciliationRoutes, { db, config });
 

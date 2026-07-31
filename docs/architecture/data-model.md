@@ -47,6 +47,7 @@
 | Thông báo đã gửi | `notifications` | F-F3 — vừa là hộp thư in-app vừa là lịch sử gửi mọi kênh; `status` gồm `suppressed` (bị rate-limit chặn, xem ADR-008) |
 | Cấu hình kênh thông báo | `notification_prefs` | F-F3 — (loại alert × vai trò) → kênh + `min_severity`; chép từ sheet 9, có dòng mặc định cài sẵn trong migration |
 | Token đẩy thiết bị | `push_tokens` | F-F3 — token FCM GIẢ ở Phase 1, thu hồi bằng `revoked_at` |
+| Vùng geofence | `geofences` / `geofence_states` | F-A5 — đa giác `geography(Polygon,4326)` theo XE/ĐỘI/toàn hệ; bảng trạng thái giữ "đang trong hay ngoài" của từng (vùng, xe) để chỉ CHUYỂN TIẾP mới sinh cảnh báo, sống sót khi ingest restart |
 | Luật bất thường pin | `anomaly_rules` | F-A4 — nhiệt độ / sụt áp / mã lỗi BMS, phạm vi XE > ĐỘI > mặc định; ⚠️ ba con số mặc định CHƯA được nhà sản xuất pin thẩm định (ADR-009, Q1 MỞ) |
 | Ngưỡng cảnh báo pin | `battery_alert_thresholds` | F-A2 — ngưỡng 30/20/10 cấu hình theo XE > ĐỘI > mặc định toàn hệ; kèm biên trễ chống rung (ADR-006) |
 | (P2) Lô hàng · Ghép nối · Đơn · Cước | — | ngoài phạm vi Phase 1, chưa dựng bảng |

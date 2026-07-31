@@ -23,6 +23,10 @@ export const PERMISSIONS = [
   'reconciliation.read',
   /** Chạy tay job đối soát. */
   'reconciliation.run',
+  /** Xem vùng geofence áp dụng cho xe/đội (F-A5). */
+  'geofence.read',
+  /** Tạo/sửa vùng geofence (F-A5) — thao tác cấu hình giám sát, không phải đọc dữ liệu xe. */
+  'geofence.manage',
   /**
    * Đọc HỘP THƯ CỦA CHÍNH MÌNH (F-F3) — mọi vai trò đều có, phạm vi luôn là 'own'.
    * [SUY LUẬN] Sheet 9 không có dòng nào cho "thông báo của tôi": ma trận đó nói về quyền
@@ -82,6 +86,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_session.read': { scope: 'fleet' },
     'device_health.read': { scope: 'fleet' },
     'reconciliation.read': { scope: 'fleet' },
+    // [SUY LUẬN] Sheet 9 không có dòng cho geofence. Đặt cùng mức với quyền xem vị trí xe:
+    // ai giám sát được vị trí đội mình thì đặt được vùng cho đội mình (rbac-matrix R-07).
+    'geofence.read': { scope: 'fleet' },
+    'geofence.manage': { scope: 'fleet' },
   },
   // Vận hành G3 Energy: ✓ trạm & đối soát kWh, nhưng "—" ở dòng "Xem trạng thái & vị trí xe"
   // → KHÔNG có vehicle.read/vehicle.location.read (test bắt buộc của Prompt 06).
@@ -113,6 +121,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'device_health.read': { scope: 'all' },
     'reconciliation.read': { scope: 'all' },
     'reconciliation.run': { scope: 'all' },
+    'geofence.read': { scope: 'all' },
+    'geofence.manage': { scope: 'all' },
   },
   // Sale (Holding): sheet 9 cho V ở dòng "Xem trạng thái & vị trí xe".
   // [CẦN REVIEW] Quyền xem toạ độ tài xế cho vai trò bán hàng khó biện minh theo nguyên tắc

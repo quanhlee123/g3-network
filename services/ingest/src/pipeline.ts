@@ -11,6 +11,7 @@ import {
 } from '@g3/contracts';
 import { AnomalyEvaluator } from './anomaly';
 import { BatteryAlertEvaluator } from './battery-alerts';
+import { GeofenceEvaluator } from './geofence';
 import type { IngestMetrics } from './metrics';
 import { peekSchemaVersion, validateStatus, validateTelemetry } from './validate';
 
@@ -31,6 +32,7 @@ export class IngestPipeline {
   #vinCache = new Map<string, VehicleRef>();
   #canhBaoPin: BatteryAlertEvaluator;
   #batThuong: AnomalyEvaluator;
+  #geofence: GeofenceEvaluator;
 
   constructor(
     private readonly db: Queryable,
@@ -44,6 +46,7 @@ export class IngestPipeline {
   ) {
     this.#canhBaoPin = new BatteryAlertEvaluator(db, log, notifier);
     this.#batThuong = new AnomalyEvaluator(db, log, notifier);
+    this.#geofence = new GeofenceEvaluator(db, log, notifier);
   }
 
   async handle(msg: TelematicsEnvelope): Promise<void> {
@@ -126,6 +129,8 @@ export class IngestPipeline {
         },
         record.ts,
       );
+      // F-A5: ra/vào vùng geofence — cũng chạy trên chính dòng dữ liệu này.
+      await this.#geofence.danhGia(ref.vehicleId, { lat: record.lat, lng: record.lng }, record.ts);
     }
     await this.#touchDevice(ref, msg.receivedAtMs);
   }
