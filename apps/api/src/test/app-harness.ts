@@ -1,7 +1,7 @@
 // F-F1 · Dựng app + database test dùng chung cho các file test của apps/api.
 import pg from 'pg';
 import { testDatabaseUrl } from '@g3/db';
-import { ConsoleSmsSender } from '@g3/contracts';
+import { ConsoleSmsSender, type INotifier } from '@g3/contracts';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app';
 import { loadConfig } from '../config';
@@ -18,7 +18,11 @@ export interface Harness {
   close(): Promise<void>;
 }
 
-export async function createHarness(env: Record<string, string> = {}): Promise<Harness> {
+export async function createHarness(
+  env: Record<string, string> = {},
+  /** F-F3: tiêm MockNotifier để test khẳng định "ai được báo" mà không cần bảng prefs. */
+  extra: { notifier?: INotifier } = {},
+): Promise<Harness> {
   const db = new pg.Client({ connectionString: testDatabaseUrl() });
   await db.connect();
   const sms = new ConsoleSmsSender(() => {
@@ -29,6 +33,7 @@ export async function createHarness(env: Record<string, string> = {}): Promise<H
     config: loadConfig({ JWT_SECRET: TEST_JWT_SECRET, ...env }),
     db,
     sms,
+    ...(extra.notifier ? { notifier: extra.notifier } : {}),
     otpCodeFactory: () => TEST_OTP_CODE,
   });
   await app.ready();

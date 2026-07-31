@@ -40,7 +40,7 @@
 | Vi phạm (Violation) | `violations` | **append-only**; `evidence` jsonb (snapshot phiên + ngưỡng chính sách), mức nguy cơ |
 | Người dùng / Khách hàng / Tài xế | `users` / `customers` / `drivers` | vai trò sheet 9; hợp đồng + gói; consent Nghị định 13 |
 | Cảnh báo (Alert) | `alerts` | loại phân cấp (F-A2/A4/J1/J3), `dedup_key` chống spam |
-| Ticket | `tickets` | kênh (in-app/hotline/Zalo/SOS), SLA, ngữ cảnh xe jsonb |
+| Ticket | `tickets` | kênh (in-app/hotline/Zalo/SOS), `priority`, ngữ cảnh xe jsonb; đồng hồ SLA đo tới `acknowledged_at` (**có người nhận**) chứ không tới `resolved_at` — cam kết F-I2 là "gọi lại ≤5 phút", không phải "sửa xong trong 5 phút"; `escalated_at` chặn leo thang trùng |
 | Audit log vị trí | `audit_logs` | NF-06 — không có trong sheet 8 nhưng bắt buộc theo sheet 9/quy tắc 5 |
 | Bản tin telemetry hỏng | `telemetry_quarantine` | F-G1 — bản tin sai schema/VIN lạ cách ly kèm lý do, KHÔNG drop lặng lẽ (ADR-004); alert `data_quality` dedup 1 lần/giờ |
 | Phiên OCPP đang mở | `ocpp_transactions` | F-G2 — bảng MUTABLE của CSMS (ADR-005): meter/SoC cập nhật theo MeterValues; StopTransaction mới tổng hợp thành 1 dòng `charging_sessions` bất biến |

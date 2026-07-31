@@ -167,6 +167,7 @@ g3-network/
 | `CHARGE_EFFICIENCY` | Hiệu suất sạc lưới → pin. **1.0 chỉ đúng với simulator** — phải hiệu chuẩn trước Gate 1 ([ADR-007](docs/adr/ADR-007-hieu-suat-sac-doi-soat.md)) |
 | `CHARGING_PRICE_VND_PER_KWH` | Đơn giá điện GIẢ để quy tiền về kWh (mặc định 3500) |
 | `RECONCILE_SOC_WINDOW_S` | Telemetry xa mốc phiên quá số giây này → kết luận "thiếu dữ liệu" (mặc định 60) |
+| `SLA_SCAN_INTERVAL_MS` | F-I2 — chu kỳ quét ticket quá hạn chưa ai nhận (mặc định 60000; `0` = tắt). SLA của SOS là 5 phút nên không nên quét thưa hơn |
 | `DEVICE_SCAN_INTERVAL_MS` | F-J1 — chu kỳ job quét thiết bị im lặng trong tiến trình API (mặc định 600000; `0` = tắt) |
 | `DEVICE_SILENCE_HOURS` | F-J1 — im lặng quá số giờ này thì sinh cảnh báo (mặc định 6) |
 | `DEVICE_SUPPLY_VOLTAGE_LOW_V` / `DEVICE_SIGNAL_WEAK_DBM` | F-J3 — hai ngưỡng để phân biệt **bị tháo thiết bị** với **mất sóng**: nguồn nuôi dưới `..._LOW_V` = hết nguồn tự nhiên; sóng yếu hơn `..._WEAK_DBM` (dBm luôn âm) = mất sóng. Nguồn bình thường + sóng khoẻ rồi im bặt = nghi tháo |

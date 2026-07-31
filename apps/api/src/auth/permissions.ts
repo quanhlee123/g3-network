@@ -23,6 +23,12 @@ export const PERMISSIONS = [
   'reconciliation.read',
   /** Chạy tay job đối soát. */
   'reconciliation.run',
+  /** Tạo ticket hỗ trợ / bấm SOS (F-I2). Sheet 9: Tài xế ✓ (tạo), QL đội ✓ (tạo/xem đội). */
+  'ticket.create',
+  /** Xem ticket trong phạm vi của mình (F-I1/F-I2). */
+  'ticket.read',
+  /** XỬ LÝ ticket: nhận việc, đóng ticket. Sheet 9: CSKH ✓ (xử lý). */
+  'ticket.handle',
   /** Xem vùng geofence áp dụng cho xe/đội (F-A5). */
   'geofence.read',
   /** Tạo/sửa vùng geofence (F-A5) — thao tác cấu hình giám sát, không phải đọc dữ liệu xe. */
@@ -77,6 +83,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'vehicle.location.read': { scope: 'own' },
     'station.read': { scope: 'all' }, // "Tìm & điều hướng trạm sạc" = ✓
     'charging_session.read': { scope: 'own' },
+    // Sheet 9 dòng "Ticket hỗ trợ & SOS": Tài xế ✓ (tạo) — tạo và xem ticket XE MÌNH.
+    'ticket.create': { scope: 'own' },
+    'ticket.read': { scope: 'own' },
   },
   // Chủ xe / QL đội: V* trong đội mình + V* sản lượng/đối soát kWh + V* sức khỏe thiết bị.
   fleet_manager: {
@@ -90,6 +99,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     // ai giám sát được vị trí đội mình thì đặt được vùng cho đội mình (rbac-matrix R-07).
     'geofence.read': { scope: 'fleet' },
     'geofence.manage': { scope: 'fleet' },
+    // Sheet 9: QL đội ✓ (tạo/xem ticket của ĐỘI mình).
+    'ticket.create': { scope: 'fleet' },
+    'ticket.read': { scope: 'fleet' },
   },
   // Vận hành G3 Energy: ✓ trạm & đối soát kWh, nhưng "—" ở dòng "Xem trạng thái & vị trí xe"
   // → KHÔNG có vehicle.read/vehicle.location.read (test bắt buộc của Prompt 06).
@@ -111,6 +123,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'vehicle.location.read': { scope: 'all', requireOpenTicket: true },
     'charging_session.read': { scope: 'all' },
     'device_health.read': { scope: 'all' },
+    // Sheet 9: CSKH ✓ (XỬ LÝ ticket) — xem tất cả và nhận việc.
+    'ticket.read': { scope: 'all' },
+    'ticket.handle': { scope: 'all' },
   },
   // Admin G3 Network: ✓ toàn bộ.
   admin: {
@@ -123,6 +138,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'reconciliation.run': { scope: 'all' },
     'geofence.read': { scope: 'all' },
     'geofence.manage': { scope: 'all' },
+    'ticket.create': { scope: 'all' },
+    'ticket.read': { scope: 'all' },
+    'ticket.handle': { scope: 'all' },
   },
   // Sale (Holding): sheet 9 cho V ở dòng "Xem trạng thái & vị trí xe".
   // [CẦN REVIEW] Quyền xem toạ độ tài xế cho vai trò bán hàng khó biện minh theo nguyên tắc

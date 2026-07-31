@@ -3033,6 +3033,574 @@
         }
       }
     },
+    "/sos": {
+      "post": {
+        "summary": "Tài xế bấm nút cứu hộ / CSKH (F-I2)",
+        "tags": [
+          "cskh"
+        ],
+        "description": "Chỉ cần gửi VIN (và toạ độ nếu app có). Mã lỗi, SOC, vị trí cuối và các cảnh báo đang mở được hệ thống TỰ ĐÍNH KÈM từ DB — tài xế đang mắc kẹt không phải nhập gì. Tạo ticket ưu tiên CAO, hạn phản hồi 5 phút, báo ngay cho CSKH.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vin"
+                ],
+                "properties": {
+                  "vin": {
+                    "minLength": 3,
+                    "maxLength": 64,
+                    "type": "string"
+                  },
+                  "lat": {
+                    "minimum": -90,
+                    "maximum": 90,
+                    "type": "number"
+                  },
+                  "lng": {
+                    "minimum": -180,
+                    "maximum": 180,
+                    "type": "number"
+                  },
+                  "mo_ta": {
+                    "maxLength": 500,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ticket_id",
+                    "sla_due_at",
+                    "vin",
+                    "soc_pct",
+                    "fault_codes",
+                    "so_canh_bao_dang_mo"
+                  ],
+                  "properties": {
+                    "ticket_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "sla_due_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "vin": {
+                      "type": "string"
+                    },
+                    "soc_pct": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "fault_codes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "so_canh_bao_dang_mo": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tickets": {
+      "get": {
+        "summary": "Danh sách ticket trong phạm vi của người gọi (F-I1/F-I2)",
+        "tags": [
+          "cskh"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "open"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "in_progress"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "resolved"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "closed"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "trang_thai",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "chua_nhan",
+            "required": false,
+            "description": "Chỉ ticket chưa ai nhận"
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "total",
+                    "items"
+                  ],
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "channel",
+                          "status",
+                          "priority",
+                          "title",
+                          "vin",
+                          "sla_due_at",
+                          "acknowledged_at",
+                          "escalated_at",
+                          "created_at"
+                        ],
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "channel": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "priority": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "vin": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sla_due_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "acknowledged_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "escalated_at": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tickets/{id}/nhan": {
+      "post": {
+        "summary": "CSKH nhận xử lý ticket — dừng đồng hồ SLA (F-I2)",
+        "tags": [
+          "cskh"
+        ],
+        "description": "Đồng hồ SLA của F-I2 đo tới lúc CÓ NGƯỜI NHẬN, không phải lúc xong việc: cam kết là \"gọi lại ≤5 phút\", không phải \"sửa xong trong 5 phút\".",
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status",
+                    "acknowledged_at",
+                    "tre_han"
+                  ],
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "acknowledged_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "tre_han": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/notifications": {
       "get": {
         "summary": "Hộp thư in-app & lịch sử gửi của tôi (F-F3)",

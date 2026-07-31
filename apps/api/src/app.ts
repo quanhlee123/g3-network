@@ -6,7 +6,7 @@ import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
-import { ConsoleSmsSender, type ISmsSender } from '@g3/contracts';
+import { ConsoleSmsSender, type INotifier, type ISmsSender } from '@g3/contracts';
 import { registerAuthGuard } from './auth/guard';
 import { OtpService } from './auth/otp';
 import type { ApiConfig } from './config';
@@ -20,6 +20,7 @@ import { notificationRoutes } from './routes/notifications';
 import { reconciliationRoutes } from './routes/reconciliation';
 import { sessionRoutes } from './routes/sessions';
 import { stationRoutes } from './routes/stations';
+import { ticketRoutes } from './routes/tickets';
 import { vehicleRoutes } from './routes/vehicles';
 
 export interface BuildAppOptions {
@@ -28,6 +29,8 @@ export interface BuildAppOptions {
   db: Queryable;
   /** Phase 1 mặc định ConsoleSmsSender (quy tắc 2 & 12 — không gửi SMS thật). */
   sms?: ISmsSender;
+  /** F-F3: cổng thông báo. Không truyền = chỉ ghi alerts/tickets, không báo cho người. */
+  notifier?: INotifier;
   /** Tiêm mã OTP cố định trong test. */
   otpCodeFactory?: () => string;
   /**
@@ -128,6 +131,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(sessionRoutes, { db });
   await app.register(deviceRoutes, { db });
   await app.register(geofenceRoutes, { db });
+  await app.register(ticketRoutes, {
+    db,
+    ...(options.notifier ? { notifier: options.notifier } : {}),
+  });
   await app.register(notificationRoutes, { db });
   await app.register(reconciliationRoutes, { db, config });
 

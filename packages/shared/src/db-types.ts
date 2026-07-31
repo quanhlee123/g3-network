@@ -12,7 +12,9 @@ export type AlertType =
   | 'geofence'
   | 'maintenance'
   | 'data_quality'
-  | 'reconciliation_mismatch';
+  | 'reconciliation_mismatch'
+  | 'sos'
+  | 'sla_breach';
 export type AnomalyKind = 'nhiet_do_cao' | 'sut_ap_dot_ngot' | 'ma_loi_bms';
 export type ConnectorStatus = 'Available' | 'Charging' | 'Faulted' | 'Unavailable';
 export type DevicePowerStatus = 'normal' | 'low' | 'lost';
@@ -27,6 +29,7 @@ export type RiskLevel = 'low' | 'medium' | 'high';
 export type ServicePlan = 'basic' | 'standard';
 export type StationStatus = 'active' | 'maintenance' | 'inactive';
 export type TicketChannel = 'in_app' | 'hotline' | 'zalo' | 'sos';
+export type TicketPriority = 'thap' | 'binh_thuong' | 'cao' | 'khan_cap';
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 export type UserRole =
   'driver' | 'fleet_manager' | 'energy_ops' | 'warranty_admin' | 'cskh' | 'admin' | 'sale';
@@ -347,6 +350,10 @@ export interface TicketsRow {
   sla_due_at: Date | null;
   created_at: Date;
   resolved_at: Date | null;
+  priority: TicketPriority;
+  acknowledged_at: Date | null;
+  acknowledged_by: string | null;
+  escalated_at: Date | null;
 }
 
 export interface UsersRow {
