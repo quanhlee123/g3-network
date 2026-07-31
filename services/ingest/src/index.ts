@@ -3,7 +3,9 @@
 // Metric NF-01 expose tại http://localhost:${INGEST_METRICS_PORT}/metrics.
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
+import { ConsolePushSender, ConsoleSmsSender } from '@g3/contracts';
 import { databaseUrl, loadEnv } from '@g3/db';
+import { NotifierService } from '@g3/notify';
 import { IngestMetrics } from './metrics';
 import { MqttTelematicsSource } from './mqtt-source';
 import { IngestPipeline } from './pipeline';
@@ -12,7 +14,7 @@ import { IngestPipeline } from './pipeline';
 export { IngestMetrics } from './metrics';
 export { MqttTelematicsSource } from './mqtt-source';
 export { IngestPipeline } from './pipeline';
-export { BatteryAlertEvaluator, NGUONG_PIN } from './battery-alerts';
+export { BatteryAlertEvaluator, DAC_TA_MUC, docNguongPin } from './battery-alerts';
 
 /** Đọc URL MQTT từ biến môi trường (xem infra/.env.example), mặc định broker local. */
 export function resolveMqttUrl(env: NodeJS.ProcessEnv): string {
@@ -32,12 +34,20 @@ async function main(): Promise<void> {
   loadEnv();
   const pool = new pg.Pool({ connectionString: databaseUrl(), max: 5 });
   const metrics = new IngestMetrics();
+  // F-F3: kênh push/SMS ở Phase 1 đều là bản mock in ra console (quy tắc 2 & 12).
+  const notifier = new NotifierService({
+    db: pool,
+    push: new ConsolePushSender((m) => console.log(m)),
+    sms: new ConsoleSmsSender((m) => console.log(m)),
+    log: (m) => console.log(m),
+  });
   // Tham số 4: log để cảnh báo pin F-A2 hiện ra console khi chạy demo.
   const pipeline = new IngestPipeline(
     pool,
     metrics,
     () => Date.now(),
     (m) => console.log(m),
+    notifier,
   );
   const source = new MqttTelematicsSource(resolveMqttUrl(process.env));
 
