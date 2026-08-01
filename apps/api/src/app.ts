@@ -13,6 +13,7 @@ import type { ApiConfig } from './config';
 import type { Queryable } from './db';
 import { sendError } from './errors';
 import { authRoutes } from './routes/auth';
+import { chargingPolicyRoutes } from './routes/charging-policies';
 import { deviceRoutes } from './routes/devices';
 import { geofenceRoutes } from './routes/geofences';
 import { healthRoutes } from './routes/health';
@@ -129,6 +130,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
   await app.register(stationRoutes, { db });
   await app.register(sessionRoutes, { db });
+  await app.register(chargingPolicyRoutes, { db });
   await app.register(deviceRoutes, { db });
   await app.register(geofenceRoutes, { db });
   await app.register(ticketRoutes, {

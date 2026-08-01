@@ -16,6 +16,8 @@
 | `vehicle.location.read` | `GET /vehicles/{id}/location` | Xem trạng thái & vị trí xe |
 | `station.read` | `GET /stations`, `GET /stations/{id}` | Tìm & điều hướng trạm sạc ∪ Quản lý danh mục & trạng thái trạm |
 | `charging_session.read` | `GET /charging-sessions` | Sản lượng điện / đối soát kWh ∪ Xem trạng thái / báo cáo bảo hành |
+| `charging_policy.read` | `GET /charging-policies`, `.../{code}/versions`, `GET /vehicles/{id}/charging-policy` | *(không có dòng cho việc ĐỌC — xem R-09)* |
+| `charging_policy.manage` | `POST /charging-policies`, `.../{code}/versions`, `.../{code}/ngung` | Cấu hình chính sách sạc (bảo hành) |
 | `device_health.read` | `GET /devices/health` | Sức khỏe thiết bị telematics |
 | `vehicle.location.read` | `GET /vehicles/{id}/route` (F-A5 — lộ trình cũng là dữ liệu vị trí) | Xem trạng thái & vị trí xe |
 | `geofence.read` / `.manage` | `GET /geofences`, `POST /geofences` | *(không có dòng tương ứng — xem R-07)* |
@@ -33,6 +35,8 @@
 | `vehicle.location.read` | own | fleet | **—** | all | all *(cần ticket mở)* | all | all |
 | `station.read` | all | all | all | — | — | all | — |
 | `charging_session.read` | own | fleet | all | all | all | all | — |
+| `charging_policy.read` | own | fleet | — | all | — | all | — |
+| `charging_policy.manage` | — | — | — | **all** | — | all | — |
 | `device_health.read` | — | fleet | — | — | all | all | — |
 | `reconciliation.read` | — | fleet | all | — | — | all | — |
 | `reconciliation.run` | — | — | all | — | — | all | — |
@@ -61,6 +65,7 @@ so với sheet 9, chỉ chia nhỏ đường ra của dữ liệu.
 | R-08 | **Ticket cho Vận hành / Bảo hành / Sale (F-I2).** Sheet 9 dòng "Ticket hỗ trợ & SOS" cho ba vai trò này "V" kèm chú thích phạm vi trong ngoặc — *V (trạm)*, *V (bảo hành)*, *V* — nhưng không nói rõ "ticket về trạm" hay "ticket bảo hành" được lọc theo tiêu chí nào. | Chọn phương án CHẶT hơn (cùng cách xử lý như R-02): ba vai trò này **chưa** có `ticket.read`. Đã cấp: Tài xế `own` (tạo/xem), QL đội `fleet` (tạo/xem), CSKH `all` (xem + XỬ LÝ), Admin `all`. Khi làm F-I1/F-I3 sẽ mở quyền trên đúng bộ lọc. | PM + CSKH Holding (nằm trong D-09 đang MỞ) |
 | R-07 | **`geofence.read` / `geofence.manage` (F-A5).** Sheet 9 không có dòng nào cho geofence — vùng giám sát là khái niệm của "quy trình rủi ro G3" (nguồn của F-A5/F-J3) chứ không phải của ma trận quyền. | Đặt **ngang mức với quyền xem vị trí xe**: ai giám sát được vị trí đội mình thì đặt được vùng cho đội mình. QL đội = `fleet` (chỉ tạo vùng cho đội mình hoặc xe của đội mình, có test); Admin = `all` và là vai trò DUY NHẤT tạo được vùng áp dụng toàn hệ. Các vai trò khác: TỪ CHỐI. | PM + Vận hành |
 | R-06 | **`notification.read` cho MỌI vai trò (F-F3).** Sheet 9 không có dòng nào cho "thông báo của tôi" — ma trận đó nói về quyền xem dữ liệu xe/trạm, còn hộp thư là dữ liệu của chính người đăng nhập. Chặn người dùng đọc thông báo gửi cho họ thì cảnh báo an toàn vô nghĩa. | Cấp cho cả 7 vai trò với phạm vi **`own`** cứng: truy vấn luôn khoá theo `user_id` của token, không nhận `user_id` từ query — không ai xem hộp thư người khác, kể cả admin. Đặt riêng trong `QUYEN_CUA_MOI_VAI_TRO` (permissions.ts) để thấy rõ đây là ngoại lệ có chủ ý. | PM xác nhận |
+| R-09 | **Ai được ĐỌC chính sách sạc (F-B1).** Sheet 9 chỉ có dòng "Cấu hình chính sách sạc (bảo hành)" — tức quyền GHI (✓ Bảo hành, ✓ Admin, còn lại "—"). Không có dòng nào nói ai được *xem* nội dung chính sách. | Ghi: đúng sheet 9, chỉ Bảo hành + Admin. Đọc: thêm **Tài xế (`own`)** và **QL đội (`fleet`)**, chỉ thấy chính sách áp cho xe trong phạm vi của họ — vì F-B5 bắt buộc cảnh báo vi phạm phải "nêu rõ hành vi & cách khắc phục", mà nói người ta vi phạm rồi không cho xem quy định đã vi phạm thì cảnh báo vô nghĩa. Vận hành Energy, CSKH, Sale: **TỪ CHỐI** (chặt hơn, cùng cách xử lý R-02/R-08). | PM + Bảo hành Mobility |
 | R-05 | **Bảo hành & CSKH không thấy trạm sạc.** Sheet 9 để "—" ở cả hai dòng về trạm cho hai vai trò này, dù CSKH hỗ trợ tài xế hết pin thì cần biết trạm nào còn trống. | Giữ đúng sheet 9 (từ chối). Nếu vận hành thực tế cần, mở qua ADR. | CSKH Holding |
 
 ## Ghi audit — hành vi chính xác

@@ -36,7 +36,7 @@
 | Giao dịch thanh toán | `payment_transactions` | VNPay/Momo/ví (sandbox), trạng thái, mã đối soát cổng, idempotency webhook |
 | Trạm sạc (ChargingStation) | `charging_stations` | GPS PostGIS, khu vực, công suất, CCS2, giờ hoạt động, trạng thái |
 | Trụ/Súng (Connector) | `connectors` | công suất, chuẩn, trạng thái `Available/Charging/Faulted/Unavailable` (OCPP) |
-| Chính sách sạc (ChargingPolicy) | `charging_policies` | version + `(code, version)` unique; phạm vi xe/đội/dòng; ToU; SOC min–max; hiệu lực từ–đến |
+| Chính sách sạc (ChargingPolicy) | `charging_policies` | **không sửa đè** (F-B1): tạo version mới là INSERT thuần, trigger chặn UPDATE nội dung & DELETE; `(code, version)` unique và version phải nối tiếp; phạm vi xe/đội/dòng; ToU giờ VN; SOC min–max — xem [ADR-010](../adr/ADR-010-version-chinh-sach-sac.md) |
 | Vi phạm (Violation) | `violations` | **append-only**; `evidence` jsonb (snapshot phiên + ngưỡng chính sách), mức nguy cơ |
 | Người dùng / Khách hàng / Tài xế | `users` / `customers` / `drivers` | vai trò sheet 9; hợp đồng + gói; consent Nghị định 13 |
 | Cảnh báo (Alert) | `alerts` | loại phân cấp (F-A2/A4/J1/J3), `dedup_key` chống spam |
@@ -135,15 +135,18 @@ erDiagram
         risk_level risk_level
     }
     charging_policies {
-        uuid id PK
+        uuid id PK "KHONG sua de F-B1"
         text code UK "unique cung version"
-        int version UK
+        int version UK "noi tiep 1,2,3..."
         policy_scope scope_type "vehicle/fleet/model"
         numeric soc_min_pct
         numeric soc_max_pct
-        jsonb allowed_hours "ToU"
-        timestamptz effective_from
-        timestamptz effective_to
+        jsonb allowed_hours "ToU gio VN"
+        timestamptz effective_from "version sau dong version truoc"
+        timestamptz effective_to "chi khi ngung han"
+        uuid supersedes_id FK "version lien truoc"
+        uuid created_by FK
+        text change_note "ly do doi nguong"
     }
     payment_transactions {
         uuid id PK

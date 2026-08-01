@@ -27,3 +27,17 @@ export function sendError(
 ): FastifyReply {
   return reply.status(status).send({ error: { code, message } });
 }
+
+/**
+ * Thông điệp của một quy tắc nghiệp vụ do trigger PostgreSQL ném ra (RAISE EXCEPTION,
+ * SQLSTATE P0001), hoặc null nếu là lỗi khác.
+ *
+ * CHỈ nhận P0001 — đó là các câu tiếng Việt do chính chúng ta viết trong migration
+ * (vd "Chính sách sạc KHÔNG được sửa đè"), an toàn để trả cho người gọi. Lỗi ràng buộc
+ * khác (23xxx) mang tên bảng/cột/index của PostgreSQL nên KHÔNG được lộ ra ngoài.
+ */
+export function thongDiepQuyTacDb(err: unknown): string | null {
+  const e = err as { code?: unknown; message?: unknown };
+  if (e?.code === 'P0001' && typeof e.message === 'string') return e.message;
+  return null;
+}

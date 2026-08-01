@@ -34,6 +34,15 @@ const PHONES: Record<Role, string> = {
 export async function resetWorld(db: pg.Client): Promise<void> {
   await db.query(`TRUNCATE audit_logs, auth_otp_challenges RESTART IDENTITY`);
   await db.query(`DELETE FROM payment_transactions`);
+  // violations tham chiếu charging_sessions + charging_policies → xóa trước cả hai.
+  // Cả hai bảng đều có trigger chặn UPDATE/DELETE (NF-11, F-B1): tắt trong lúc dọn dữ liệu
+  // test rồi bật lại NGAY — không có đường nào khác để reset một bảng append-only.
+  await db.query(`ALTER TABLE violations DISABLE TRIGGER violations_append_only`);
+  await db.query(`DELETE FROM violations`);
+  await db.query(`ALTER TABLE violations ENABLE TRIGGER violations_append_only`);
+  await db.query(`ALTER TABLE charging_policies DISABLE TRIGGER charging_policies_khong_sua_de`);
+  await db.query(`DELETE FROM charging_policies`);
+  await db.query(`ALTER TABLE charging_policies ENABLE TRIGGER charging_policies_khong_sua_de`);
   // reconciliation_results tham chiếu charging_sessions → phải xóa trước
   await db.query(`DELETE FROM reconciliation_results`);
   await db.query(`ALTER TABLE charging_sessions DISABLE TRIGGER charging_sessions_append_only`);

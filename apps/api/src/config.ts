@@ -2,6 +2,7 @@
 // Mọi biến ở đây phải có mặt trong infra/.env.example và bảng biến môi trường của README.
 import { loadEnv } from '@g3/db';
 import { NGUONG_SUC_KHOE_MAC_DINH, type NguongSucKhoe } from './modules/devices/health-scan';
+import { MUI_GIO_MAC_DINH } from './modules/policies/policy';
 import { RECONCILE_DEFAULTS } from './modules/reconciliation/reconcile';
 
 export interface ApiConfig {
@@ -17,6 +18,12 @@ export interface ApiConfig {
   otpRequestWindowS: number;
   /** Trần số bản ghi 1 lần gọi lịch sử telemetry — chặn truy vấn quét cả hypertable. */
   telemetryHistoryMaxRows: number;
+  /**
+   * Múi giờ để hiểu khung giờ ToU của chính sách sạc (F-B1). Khung giờ trong hợp đồng bảo
+   * hành là giờ Việt Nam, timestamptz trong DB là UTC — sai chỗ này là gắn cờ vi phạm oan
+   * toàn bộ phiên sạc đêm. Xem docs/adr/ADR-010.
+   */
+  muiGio: string;
   /** Cấu hình job đối soát 3 chiều (F-C6, NF-10). */
   reconcile: {
     /** Chu kỳ chạy tự động (ms); 0 = tắt, chỉ chạy tay. */
@@ -65,6 +72,23 @@ function floatEnv(
 }
 
 /**
+ * Múi giờ IANA. Kiểm tra bằng chính Intl — tên sai (vd "Asia/HCM") mà để lọt thì mọi so
+ * sánh khung giờ âm thầm rơi về UTC, lệch đúng 7 tiếng, và không ai biết cho tới khi
+ * hệ thống gắn cờ oan một loạt phiên sạc đêm.
+ */
+function muiGioEnv(env: NodeJS.ProcessEnv): string {
+  const raw = env.APP_TIMEZONE ?? MUI_GIO_MAC_DINH;
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: raw });
+  } catch {
+    throw new Error(
+      `APP_TIMEZONE không hợp lệ: "${raw}" (cần tên múi giờ IANA, vd Asia/Ho_Chi_Minh)`,
+    );
+  }
+  return raw;
+}
+
+/**
  * Đọc & kiểm tra cấu hình. Ném lỗi TIẾNG VIỆT nêu rõ cách sửa thay vì chạy với
  * secret rỗng — API chạy được mà không ký nổi token là lỗi im lặng nguy hiểm nhất.
  */
@@ -85,6 +109,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     otpMaxRequestsPerWindow: intEnv(env, 'OTP_MAX_REQUESTS_PER_WINDOW', 5, 1),
     otpRequestWindowS: intEnv(env, 'OTP_REQUEST_WINDOW_S', 900, 1),
     telemetryHistoryMaxRows: intEnv(env, 'TELEMETRY_HISTORY_MAX_ROWS', 1000, 1),
+    muiGio: muiGioEnv(env),
     reconcile: {
       intervalMs: intEnv(env, 'RECONCILE_INTERVAL_MS', 300_000, 0),
       nguongPct: floatEnv(env, 'RECONCILE_NGUONG_PCT', RECONCILE_DEFAULTS.nguongPct, 0, 100),

@@ -44,6 +44,9 @@ describe('@g3/api — khung app', () => {
       '/vehicles/{id}/location',
       '/stations',
       '/charging-sessions',
+      '/charging-policies',
+      '/charging-policies/{code}/versions',
+      '/vehicles/{id}/charging-policy',
       '/devices/health',
     ]) {
       expect(spec.paths, `thiếu ${path} trong OpenAPI`).toHaveProperty(path);

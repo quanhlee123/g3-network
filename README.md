@@ -162,6 +162,7 @@ g3-network/
 | `OTP_TTL_SECONDS` / `OTP_MAX_ATTEMPTS` | Hạn dùng mã OTP (300s) và số lần nhập sai tối đa (5) |
 | `OTP_MAX_REQUESTS_PER_WINDOW` / `OTP_REQUEST_WINDOW_S` | Chống dò mã: tối đa 5 lần xin mã cho 1 SĐT mỗi 900s |
 | `TELEMETRY_HISTORY_MAX_ROWS` | Trần bản ghi mỗi lần gọi lịch sử telemetry (mặc định 1000) |
+| `APP_TIMEZONE` | F-B1 — múi giờ IANA để hiểu khung giờ ToU của chính sách sạc (mặc định `Asia/Ho_Chi_Minh`). Khung giờ trong hợp đồng là giờ Việt Nam còn DB lưu UTC; sai chỗ này lệch 7 tiếng và gắn cờ vi phạm oan toàn bộ phiên sạc đêm ([ADR-010](docs/adr/ADR-010-version-chinh-sach-sac.md)) |
 | `RECONCILE_INTERVAL_MS` | Chu kỳ job đối soát 3 chiều trong tiến trình API (mặc định 300000; `0` = chỉ chạy tay) |
 | `RECONCILE_NGUONG_PCT` | Ngưỡng NF-10 — lệch hơn mức này (%) thì sinh cảnh báo (mặc định 1) |
 | `CHARGE_EFFICIENCY` | Hiệu suất sạc lưới → pin. **1.0 chỉ đúng với simulator** — phải hiệu chuẩn trước Gate 1 ([ADR-007](docs/adr/ADR-007-hieu-suat-sac-doi-soat.md)) |
