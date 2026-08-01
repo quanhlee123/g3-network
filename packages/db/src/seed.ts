@@ -148,6 +148,15 @@ export async function seed(client: pg.Client): Promise<void> {
       [u.email, u.name, u.role, u.customerId, u.phone],
     );
     users[u.email] = res.rows[0]!.id;
+    // F-F3: token đẩy GIẢ cho mỗi tài khoản (quy tắc 12 — không phải token FCM thật).
+    // Không có dòng này thì mọi thông báo kênh 'push' đều ghi 'failed' với lý do
+    // "chưa đăng ký thiết bị", làm demo trông như hệ thống hỏng trong khi chỉ là thiếu seed.
+    await client.query(
+      `INSERT INTO push_tokens (user_id, token, platform)
+       VALUES ($1, $2, 'android')
+       ON CONFLICT (token) DO UPDATE SET revoked_at = NULL`,
+      [res.rows[0]!.id, `fcm-gia-${u.email.split('@')[0]!}`],
+    );
   }
 
   // Tài xế kèm consent Nghị định 13 (SĐT GIẢ 0900xxx không cấp phát thật)

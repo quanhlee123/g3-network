@@ -10,7 +10,15 @@
 import pg from 'pg';
 import { databaseUrl, loadEnv, runMigrations, seed } from '@g3/db';
 import { ConsoleSmsSender } from '@g3/contracts';
-import { buildApp, chayDoiSoat, loadConfigFromEnvFile, type TomTatDoiSoat } from '@g3/api';
+import {
+  buildApp,
+  chayDoiSoat,
+  loadConfigFromEnvFile,
+  quetSucKhoeThietBi,
+  type TomTatDoiSoat,
+} from '@g3/api';
+import { NotifierService } from '@g3/notify';
+import { ConsolePushSender } from '@g3/contracts';
 import { IngestMetrics, IngestPipeline, MqttTelematicsSource, resolveMqttUrl } from '@g3/ingest';
 import { startOcppServer, type SessionRegistry } from '@g3/csms';
 import { ChargePointSim } from '@g3/ocpp-sim';
@@ -21,9 +29,19 @@ import { bang, buoc, canhBao, choDen, khung, moTaLoi, nghi, ok, soVn, tieuDe, ti
 
 // ---- Thông số kịch bản demo (đổi ở đây nếu muốn video ngắn/dài hơn) --------------------
 const CAU_HINH = {
-  soXeDoi: 19, // 19 xe chạy bình thường (VIN 0002…0020)
+  // Nghiệm thu tuần 5 (Prompt 07): ba kịch bản nguy hiểm chạy ĐỒNG THỜI trên cùng 20 xe.
+  //   VIN 0001 — tụt pin (F-A2)   · VIN 0002 — nhiệt độ pin leo 60°C (F-A4)
+  //   VIN 0003 — mất nguồn đột ngột (F-J3) · VIN 0004…0020 — 17 xe chạy bình thường
+  soXeDoi: 17, // 17 xe chạy bình thường (VIN 0004…0020)
+  vinDoiBatDau: 4,
   vinPrefix: 'G3-SIM-VIN', // khớp seed (docs/simulators.md)
   vinXeTutPin: 1, // xe VIN 0001 là nhân vật chính
+  vinXeNongPin: 2, // F-A4 — nhiệt độ pin leo bất thường
+  vinXeMatNguon: 3, // F-J3 — bị cắt nguồn đột ngột (nghi tháo thiết bị)
+  phutLeoNhiet: 1, // nhiệt độ 32°C → 60°C trong 1 phút
+  // Cờ --power-loss-after-minutes của vehicle-sim chỉ nhận SỐ NGUYÊN phút.
+  phutMatNguonSau: 1, // cắt nguồn sau 1 phút (song song với lúc xe 0001 tụt pin)
+  gioImLangDemo: 0.02, // ~72 giây: ngưỡng "im lặng" rút ngắn cho demo (vận hành thật là 6 giờ)
   // Đội xe chạy tuyến miền Bắc (mặc định) nên phải sạc ở trạm miền Bắc — D-10.
   // Trước khi chốt D-10, demo sạc ở trạm TP.HCM trong khi xe đang ở Hà Nội.
   maTram: 'G3-ST-004', // Gia Lâm, ~7 km từ đầu tuyến Hà Nội – Lạng Sơn
@@ -37,6 +55,8 @@ const CAU_HINH = {
 
 const vin = (n: number): string => `${CAU_HINH.vinPrefix}-${String(n).padStart(4, '0')}`;
 const VIN_CHINH = vin(CAU_HINH.vinXeTutPin);
+const VIN_NONG = vin(CAU_HINH.vinXeNongPin);
+const VIN_MAT_NGUON = vin(CAU_HINH.vinXeMatNguon);
 
 interface DonDep {
   ten: string;
@@ -101,11 +121,23 @@ async function main(): Promise<void> {
   const config = loadConfigFromEnvFile();
 
   const metrics = new IngestMetrics();
+  // F-F3: khung thông báo thật, kênh push/SMS là bản mock in ra console (quy tắc 2 & 12).
+  // Nhờ vậy demo chứng minh được cả đường đi TỚI NGƯỜI chứ không chỉ dòng ghi vào bảng alerts.
+  const notifier = new NotifierService({
+    db: pool,
+    push: new ConsolePushSender(() => {
+      /* im lặng — số liệu tổng kết ở bước cuối */
+    }),
+    sms: new ConsoleSmsSender(() => {
+      /* im lặng */
+    }),
+  });
   const pipeline = new IngestPipeline(
     pool,
     metrics,
     () => Date.now(),
     (m) => console.log(`  ${m}`),
+    notifier,
   );
   const nguon = new MqttTelematicsSource(resolveMqttUrl(process.env));
   nguon.subscribe((msg) => pipeline.handle(msg));
@@ -130,20 +162,21 @@ async function main(): Promise<void> {
   const sms = new ConsoleSmsSender(() => {
     /* mã OTP lấy trực tiếp trong bước RBAC, không cần in ra */
   });
-  const app: FastifyInstance = await buildApp({ logger: false, config, db: pool, sms });
+  const app: FastifyInstance = await buildApp({ logger: false, config, db: pool, sms, notifier });
   await app.listen({ port: config.port, host: '0.0.0.0' });
   donDep.push({ ten: 'api', dung: () => app.close() });
   ok(`API: http://localhost:${config.port}  ·  tài liệu: http://localhost:${config.port}/docs`);
 
   // ---- BƯỚC 3 — Đội xe 20 chiếc lăn bánh ---------------------------------------------
-  tieuDe(3, `Giả lập ${CAU_HINH.soXeDoi + 1} xe gửi telemetry qua MQTT`);
+  // +3 = xe tụt pin (F-A2) · xe nóng pin (F-A4) · xe mất nguồn (F-J3)
+  tieuDe(3, `Giả lập ${CAU_HINH.soXeDoi + 3} xe gửi telemetry qua MQTT (3 kịch bản nguy hiểm)`);
   const doiXe = taoDoiXe([
     '--count',
     String(CAU_HINH.soXeDoi),
     '--vin-prefix',
     CAU_HINH.vinPrefix,
     '--vin-start',
-    '2',
+    String(CAU_HINH.vinDoiBatDau),
     '--scenario',
     'normal',
     '--interval-ms',
@@ -153,7 +186,52 @@ async function main(): Promise<void> {
   await doiXe.tick(Date.now());
   doiXe.startLoop();
   donDep.push({ ten: 'doi-xe', dung: () => doiXe.stop() });
-  ok(`${CAU_HINH.soXeDoi} xe (${vin(2)}…${vin(20)}) đang chạy tuyến Hà Nội – Lạng Sơn`);
+  ok(
+    `${CAU_HINH.soXeDoi} xe (${vin(CAU_HINH.vinDoiBatDau)}…${vin(20)}) đang chạy tuyến Hà Nội – Lạng Sơn`,
+  );
+
+  // NGHIỆM THU TUẦN 5: hai kịch bản nguy hiểm chạy SONG SONG với xe tụt pin, để chứng minh
+  // ba luồng cảnh báo không giẫm chân nhau (không trùng, không sót).
+  const xeNongPin = taoDoiXe([
+    '--count',
+    '1',
+    '--vin-prefix',
+    CAU_HINH.vinPrefix,
+    '--vin-start',
+    String(CAU_HINH.vinXeNongPin),
+    '--scenario',
+    'temp',
+    '--temp-ramp-minutes',
+    String(CAU_HINH.phutLeoNhiet),
+    '--interval-ms',
+    String(CAU_HINH.nhipXeChinhGiay * 1000),
+  ]);
+  await xeNongPin.start();
+  await xeNongPin.tick(Date.now());
+  xeNongPin.startLoop();
+  donDep.push({ ten: 'xe-nong-pin', dung: () => xeNongPin.stop() });
+  ok(`xe ${VIN_NONG} bắt đầu nóng pin 32°C → 60°C (F-A4)`);
+
+  // Kịch bản (e): mỗi xe một kết nối MQTT riêng có LWT — broker tự phát khi socket bị huỷ.
+  const xeMatNguon = taoDoiXe([
+    '--count',
+    '1',
+    '--vin-prefix',
+    CAU_HINH.vinPrefix,
+    '--vin-start',
+    String(CAU_HINH.vinXeMatNguon),
+    '--scenario',
+    'power-loss',
+    '--power-loss-after-minutes',
+    String(CAU_HINH.phutMatNguonSau),
+    '--interval-ms',
+    String(CAU_HINH.nhipXeChinhGiay * 1000),
+  ]);
+  await xeMatNguon.start();
+  await xeMatNguon.tick(Date.now());
+  xeMatNguon.startLoop();
+  donDep.push({ ten: 'xe-mat-nguon', dung: () => xeMatNguon.stop() });
+  ok(`xe ${VIN_MAT_NGUON} sẽ bị CẮT NGUỒN đột ngột sau ${CAU_HINH.phutMatNguonSau} phút (F-J3)`);
 
   const xeTutPin = taoDoiXe([
     '--count',
@@ -204,6 +282,30 @@ async function main(): Promise<void> {
     ]),
   );
   ok(`${canhBaoPin.length} cảnh báo, mỗi ngưỡng đúng 1 lần (chống spam — ADR-006)`);
+
+  // ---- BƯỚC 4b — Bất thường pin chạy SONG SONG (F-A4) --------------------------------
+  tieuDe(4, 'Bất thường pin: nhiệt độ leo 60°C trên xe khác, CÙNG LÚC (F-A4)');
+  const xeNongId = await layIdXe(pool, VIN_NONG);
+  const duBatThuong = await choDen(
+    'cảnh báo bất thường pin',
+    async () => (await demBatThuong(pool, xeNongId)) >= 1,
+    150,
+  );
+  const batThuong = await docBatThuong(pool, xeNongId);
+  if (!duBatThuong) canhBao('chưa bắt được bất thường trong thời gian chờ — vẫn tiếp tục demo');
+  bang(
+    [
+      { ten: 'Loại', rong: 18 },
+      { ten: 'Mức', rong: 10, phai: true },
+      { ten: 'Lý do', rong: 46 },
+      { ten: 'Snapshot', rong: 12, phai: true },
+    ],
+    batThuong.map((a) => [a.loai, `severity ${a.severity}`, a.ly_do, `${a.so_dong} bản ghi`]),
+  );
+  if (batThuong.length > 0) {
+    ok('cảnh báo CRITICAL kèm snapshot 5 phút dữ liệu quanh sự kiện (jsonb trong alert)');
+  }
+  await xeNongPin.stop();
 
   await xeTutPin.stop();
   buoc(`xe ${VIN_CHINH} dừng lại và cắm sạc tại trạm ${CAU_HINH.maTram}`);
@@ -337,8 +439,59 @@ async function main(): Promise<void> {
   tieuDe(9, 'Phân quyền sheet 9 + audit log vị trí xe (quy tắc 5)');
   await demoRbac(app, pool, xeChinhId, sms);
 
+  // ---- BƯỚC 9b — Thiết bị bị tháo (F-J1/F-J3) ----------------------------------------
+  tieuDe(9, 'Thiết bị im lặng: PHÂN BIỆT bị tháo với mất sóng (F-J1/F-J3)');
+  await xeMatNguon.stop();
+
+  // Hai xe kịch bản trước (tụt pin, nóng pin) đã bị CHÍNH DEMO tắt ở bước 4 — với hệ thống
+  // thì "simulator bị tắt" trông y hệt "thiết bị bị tháo": im bặt trong khi điện áp nguồn
+  // nuôi và sóng đều đang bình thường. Đây là phát hiện thật của đợt nghiệm thu, KHÔNG phải
+  // lỗi phân loại: F-J3 không có cách nào phân biệt tắt hợp pháp với tháo trộm, nên vận hành
+  // phải có quy trình báo trước khi tháo thiết bị (đã ghi vào docs/handover).
+  // Ở đây coi như hai xe đó vừa liên lạc, để phép đo "đúng 1 cảnh báo tamper" có nghĩa.
+  await pool.query(
+    `UPDATE devices SET last_seen_at = now()
+     WHERE vehicle_id IN (SELECT id FROM vehicles WHERE vin = ANY($1))`,
+    [[VIN_CHINH, VIN_NONG]],
+  );
+
+  const xeMatNguonId = await layIdXe(pool, VIN_MAT_NGUON);
+  const trangThaiNguon = await docTrangThaiNguon(pool, xeMatNguonId);
+  buoc(
+    `xe ${VIN_MAT_NGUON}: power_status = '${trangThaiNguon.power_status}' ` +
+      `(LWT của MQTT — ADR-003), im lặng ${trangThaiNguon.im_lang_giay}s`,
+  );
+  // Ngưỡng im lặng rút ngắn còn ~72s để demo chạy trong vài phút; vận hành thật là 6 giờ.
+  const tomTatThietBi = await quetSucKhoeThietBi(pool, {
+    nguong: { ...config.deviceScan.nguong, imLangGio: CAU_HINH.gioImLangDemo },
+    notifier,
+    log: (m) => console.log(`  ${m}`),
+  });
+  const canhBaoThietBi = await docCanhBaoThietBi(pool, xeMatNguonId);
+  bang(
+    [
+      { ten: 'Xe', rong: 20 },
+      { ten: 'Loại cảnh báo', rong: 18 },
+      { ten: 'Kết luận', rong: 22 },
+      { ten: 'Mức', rong: 12, phai: true },
+    ],
+    canhBaoThietBi.map((a) => [VIN_MAT_NGUON, a.type, a.loai, `severity ${a.severity}`]),
+  );
+  const tongTamper = await demTamper(pool);
+  if (canhBaoThietBi.some((a) => a.type === 'device_tamper') && tongTamper === 1) {
+    ok(
+      `phân loại NGHI THÁO THIẾT BỊ (không phải mất sóng) — ${tomTatThietBi.da_xet} thiết bị đã xét, ` +
+        'đúng 1 cảnh báo tamper và đúng trên xe bị cắt nguồn',
+    );
+  } else if (tongTamper > 1) {
+    canhBao(`${tongTamper} cảnh báo tamper trong khi chỉ 1 xe bị cắt nguồn — cần xem lại`);
+  } else {
+    canhBao('chưa sinh được cảnh báo tamper — kiểm tra lại job quét');
+  }
+
   // ---- BƯỚC 10 — Tóm tắt ---------------------------------------------------------------
   tieuDe(10, 'Tóm tắt kết quả');
+  await kiemTraTrungSot(pool, batDauDemo);
   await inTomTat(pool, batDauDemo, config.reconcile.nguongPct, lanMot, lanHai);
 
   khung([
@@ -380,9 +533,29 @@ async function donDepDuLieuDemoCu(db: pg.Client): Promise<void> {
      USING charging_sessions cs, vehicles v
      WHERE p.session_id = cs.id AND cs.vehicle_id = v.id AND v.vin LIKE 'G3-SIM-VIN-%'`,
   );
+  // notifications và tickets THAM CHIẾU alerts → phải xoá trước, nếu không lần chạy demo
+  // THỨ HAI sẽ gãy vì khoá ngoại (lần đầu chưa có thông báo nào nên không lộ ra).
+  await db.query(
+    `DELETE FROM notifications n USING alerts a, vehicles v
+     WHERE n.alert_id = a.id AND a.vehicle_id = v.id AND v.vin LIKE 'G3-SIM-VIN-%'`,
+  );
+  await db.query(
+    `DELETE FROM notifications n USING tickets t, vehicles v
+     WHERE n.ticket_id = t.id AND t.vehicle_id = v.id AND v.vin LIKE 'G3-SIM-VIN-%'`,
+  );
+  await db.query(
+    `DELETE FROM tickets t USING vehicles v
+     WHERE t.vehicle_id = v.id AND v.vin LIKE 'G3-SIM-VIN-%'`,
+  );
   await db.query(
     `DELETE FROM alerts a USING vehicles v
      WHERE a.vehicle_id = v.id AND v.vin LIKE 'G3-SIM-VIN-%'`,
+  );
+  // Trạng thái geofence của lần chạy trước: không xoá thì xe "đang trong vùng" từ lần trước
+  // sẽ không sinh cảnh báo VÀO ở lần này.
+  await db.query(
+    `DELETE FROM geofence_states g USING vehicles v
+     WHERE g.vehicle_id = v.id AND v.vin LIKE 'G3-SIM-VIN-%'`,
   );
 }
 
@@ -410,18 +583,144 @@ interface DongCanhBao {
 }
 
 async function docCanhBaoPin(db: pg.Pool, vehicleId: string): Promise<DongCanhBao[]> {
-  const res = await db.query<{ payload: DongCanhBao & { tram_goi_y: DongCanhBao['tram'] } }>(
+  const res = await db.query<{
+    payload: DongCanhBao & { nhan?: string; tram_goi_y: DongCanhBao['tram'] };
+  }>(
     `SELECT payload FROM alerts
      WHERE vehicle_id = $1 AND type IN ('battery_low', 'battery_critical')
      ORDER BY severity`,
     [vehicleId],
   );
   return res.rows.map((r) => ({
-    muc: r.payload.muc,
+    // `nhan` là nhãn tiếng Việt ('sớm'/'chính'/'nguy cấp'); `muc` là khoá kỹ thuật.
+    muc: r.payload.nhan ?? r.payload.muc,
     nguong_pct: r.payload.nguong_pct,
     soc_pct: r.payload.soc_pct,
     tram: r.payload.tram_goi_y,
   }));
+}
+
+// ---- F-A4: bất thường pin -------------------------------------------------------------
+
+async function demBatThuong(db: pg.Pool, vehicleId: string): Promise<number> {
+  const res = await db.query<{ n: string }>(
+    `SELECT count(*) AS n FROM alerts WHERE vehicle_id = $1 AND type = 'battery_anomaly'`,
+    [vehicleId],
+  );
+  return Number(res.rows[0]!.n);
+}
+
+interface DongBatThuong {
+  loai: string;
+  severity: number;
+  ly_do: string;
+  so_dong: number;
+}
+
+async function docBatThuong(db: pg.Pool, vehicleId: string): Promise<DongBatThuong[]> {
+  const res = await db.query<{
+    severity: number;
+    payload: { loai: string; ly_do: string; snapshot_so_dong: number };
+  }>(
+    `SELECT severity, payload FROM alerts
+     WHERE vehicle_id = $1 AND type = 'battery_anomaly'
+     ORDER BY triggered_at`,
+    [vehicleId],
+  );
+  return res.rows.map((r) => ({
+    loai: r.payload.loai,
+    severity: r.severity,
+    ly_do: r.payload.ly_do,
+    so_dong: r.payload.snapshot_so_dong,
+  }));
+}
+
+// ---- F-J1/F-J3: sức khoẻ & tamper thiết bị --------------------------------------------
+
+async function docTrangThaiNguon(
+  db: pg.Pool,
+  vehicleId: string,
+): Promise<{ power_status: string; im_lang_giay: number }> {
+  const res = await db.query<{ power_status: string; im_lang_giay: number | null }>(
+    `SELECT power_status::text AS power_status,
+            floor(EXTRACT(EPOCH FROM (now() - last_seen_at)))::int AS im_lang_giay
+     FROM devices WHERE vehicle_id = $1`,
+    [vehicleId],
+  );
+  const row = res.rows[0];
+  return {
+    power_status: row?.power_status ?? 'không rõ',
+    im_lang_giay: row?.im_lang_giay ?? 0,
+  };
+}
+
+async function demTamper(db: pg.Pool): Promise<number> {
+  const res = await db.query<{ n: string }>(
+    `SELECT count(*) AS n FROM alerts WHERE type = 'device_tamper'`,
+  );
+  return Number(res.rows[0]!.n);
+}
+
+async function docCanhBaoThietBi(
+  db: pg.Pool,
+  vehicleId: string,
+): Promise<{ type: string; loai: string; severity: number }[]> {
+  const res = await db.query<{ type: string; severity: number; payload: { loai: string } }>(
+    `SELECT type::text AS type, severity, payload FROM alerts
+     WHERE vehicle_id = $1 AND type IN ('device_offline', 'device_tamper')
+     ORDER BY triggered_at`,
+    [vehicleId],
+  );
+  return res.rows.map((r) => ({ type: r.type, loai: r.payload.loai, severity: r.severity }));
+}
+
+/**
+ * NGHIỆM THU: "mọi alert đúng, KHÔNG TRÙNG, KHÔNG SÓT".
+ *
+ * Trùng = hai cảnh báo cùng dedup_key mà cùng đang mở. Đây là thứ mà mỗi tính năng đều
+ * tự chống ở tầng của nó; kiểm ở đây là kiểm CHÉO, sau khi ba luồng chạy đồng thời.
+ * Sót = xe rơi vào tình huống nguy hiểm mà không có cảnh báo nào.
+ */
+async function kiemTraTrungSot(db: pg.Pool, tuLuc: Date): Promise<void> {
+  const trung = await db.query<{ dedup_key: string; n: number }>(
+    `SELECT dedup_key, count(*)::int AS n FROM alerts
+     WHERE dedup_key IS NOT NULL AND status <> 'resolved' AND triggered_at >= $1
+     GROUP BY dedup_key HAVING count(*) > 1`,
+    [tuLuc.toISOString()],
+  );
+  if (trung.rows.length === 0) {
+    ok('KHÔNG TRÙNG: không có hai cảnh báo đang mở nào dùng chung một khoá chống trùng');
+  } else {
+    canhBao(
+      `TRÙNG: ${trung.rows.length} khoá bị lặp — ${trung.rows.map((r) => r.dedup_key).join(', ')}`,
+    );
+  }
+
+  // Không sót: ba xe kịch bản đều phải có đúng loại cảnh báo của mình.
+  const kiemTra: { vin: string; ten: string; sql: string }[] = [
+    {
+      vin: VIN_CHINH,
+      ten: 'tụt pin (F-A2)',
+      sql: `type IN ('battery_low', 'battery_critical')`,
+    },
+    { vin: VIN_NONG, ten: 'nhiệt độ cao (F-A4)', sql: `type = 'battery_anomaly'` },
+    { vin: VIN_MAT_NGUON, ten: 'nghi tháo thiết bị (F-J3)', sql: `type = 'device_tamper'` },
+  ];
+  const thieu: string[] = [];
+  for (const kt of kiemTra) {
+    const res = await db.query<{ n: string }>(
+      `SELECT count(*) AS n FROM alerts a
+       JOIN vehicles v ON v.id = a.vehicle_id
+       WHERE v.vin = $1 AND ${kt.sql} AND a.triggered_at >= $2`,
+      [kt.vin, tuLuc.toISOString()],
+    );
+    if (Number(res.rows[0]!.n) === 0) thieu.push(`${kt.vin} — ${kt.ten}`);
+  }
+  if (thieu.length === 0) {
+    ok('KHÔNG SÓT: cả 3 xe kịch bản đều có đúng loại cảnh báo của mình');
+  } else {
+    canhBao(`SÓT: ${thieu.join(' · ')}`);
+  }
 }
 
 async function docSocMoiNhat(db: pg.Pool, vehicleId: string): Promise<number | null> {
@@ -578,6 +877,21 @@ async function inTomTat(
      WHERE type IN ('battery_low', 'battery_critical') AND triggered_at >= $1`,
     [tuLuc.toISOString()],
   );
+  const soBatThuong = await q(
+    `SELECT count(*) AS n FROM alerts WHERE type = 'battery_anomaly' AND triggered_at >= $1`,
+    [tuLuc.toISOString()],
+  );
+  const soTamper = await q(
+    `SELECT count(*) AS n FROM alerts WHERE type = 'device_tamper' AND triggered_at >= $1`,
+    [tuLuc.toISOString()],
+  );
+  const soThongBao = await q(`SELECT count(*) AS n FROM notifications WHERE created_at >= $1`, [
+    tuLuc.toISOString(),
+  ]);
+  const soThongBaoLoi = await q(
+    `SELECT count(*) AS n FROM notifications WHERE created_at >= $1 AND status = 'failed'`,
+    [tuLuc.toISOString()],
+  );
   const soQuarantine = await q(
     `SELECT count(*) AS n FROM telemetry_quarantine WHERE received_at >= $1`,
     [tuLuc.toISOString()],
@@ -602,6 +916,9 @@ async function inTomTat(
       ['Bản ghi telemetry đã nhận (F-A1, NF-01)', String(soBanGhi)],
       ['Bản tin bị cách ly vì dữ liệu bẩn (F-G1)', String(soQuarantine)],
       ['Cảnh báo pin phân cấp đã bắn (F-A2)', String(soCanhBaoPin)],
+      ['Cảnh báo bất thường pin — an toàn cháy nổ (F-A4)', String(soBatThuong)],
+      ['Cảnh báo nghi tháo thiết bị (F-J3)', String(soTamper)],
+      ['Thông báo đã gửi tới người dùng (F-F3)', `${soThongBao} (${soThongBaoLoi} lỗi kênh)`],
       ['Phiên sạc ghi nhận qua OCPP (F-B2, NF-11)', String(soPhien)],
       ['Trụ sạc đang trống (F-C2)', String(soTruAvailable)],
       [

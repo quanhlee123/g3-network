@@ -14,6 +14,7 @@
     "@g3/csms": "*",
     "@g3/db": "*",
     "@g3/ingest": "*",
+    "@g3/notify": "*",
     "@g3/ocpp-sim": "*",
     "@g3/vehicle-sim": "*",
     "pg": "^8.16.0"
