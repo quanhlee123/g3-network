@@ -4,6 +4,7 @@ import { loadEnv } from '@g3/db';
 import { NGUONG_SUC_KHOE_MAC_DINH, type NguongSucKhoe } from './modules/devices/health-scan';
 import { MUI_GIO_MAC_DINH } from './modules/policies/policy';
 import { RECONCILE_DEFAULTS } from './modules/reconciliation/reconcile';
+import { VI_PHAM_DEFAULTS } from './modules/violations/detect';
 
 export interface ApiConfig {
   port: number;
@@ -32,6 +33,14 @@ export interface ApiConfig {
     hieuSuatSac: number;
     giaVndMoiKwh: number;
     cuaSoSocGiay: number;
+  };
+  /** Job đối chiếu phiên sạc với chính sách & gắn cờ vi phạm (F-B3). */
+  viPham: {
+    /** Chu kỳ chạy tự động (ms); 0 = tắt, chỉ chạy tay. */
+    intervalMs: number;
+    /** ⚠️ Ngưỡng "thường xuyên" — CHƯA được Bảo hành/Legal ký, xem ADR-011 & Q4 (MỞ). */
+    socBreachCount: number;
+    socBreachWindowDays: number;
   };
   /** Chu kỳ quét đồng hồ SLA ticket (F-I2, ms); 0 = tắt. */
   slaScanIntervalMs: number;
@@ -123,6 +132,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
         1_000_000,
       ),
       cuaSoSocGiay: intEnv(env, 'RECONCILE_SOC_WINDOW_S', RECONCILE_DEFAULTS.cuaSoSocGiay, 1),
+    },
+    viPham: {
+      intervalMs: intEnv(env, 'VIOLATION_SCAN_INTERVAL_MS', 300_000, 0),
+      socBreachCount: intEnv(env, 'VIOLATION_SOC_BREACH_COUNT', VI_PHAM_DEFAULTS.socBreachCount, 1),
+      socBreachWindowDays: intEnv(
+        env,
+        'VIOLATION_SOC_BREACH_WINDOW_DAYS',
+        VI_PHAM_DEFAULTS.socBreachWindowDays,
+        1,
+      ),
     },
     slaScanIntervalMs: intEnv(env, 'SLA_SCAN_INTERVAL_MS', 60_000, 0),
     deviceScan: {

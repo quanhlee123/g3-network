@@ -37,7 +37,8 @@
 | Trạm sạc (ChargingStation) | `charging_stations` | GPS PostGIS, khu vực, công suất, CCS2, giờ hoạt động, trạng thái |
 | Trụ/Súng (Connector) | `connectors` | công suất, chuẩn, trạng thái `Available/Charging/Faulted/Unavailable` (OCPP) |
 | Chính sách sạc (ChargingPolicy) | `charging_policies` | **không sửa đè** (F-B1): tạo version mới là INSERT thuần, trigger chặn UPDATE nội dung & DELETE; `(code, version)` unique và version phải nối tiếp; phạm vi xe/đội/dòng; ToU giờ VN; SOC min–max — xem [ADR-010](../adr/ADR-010-version-chinh-sach-sac.md) |
-| Vi phạm (Violation) | `violations` | **append-only**; `evidence` jsonb (snapshot phiên + ngưỡng chính sách), mức nguy cơ |
+| Vi phạm (Violation) | `violations` | **append-only**; `evidence` jsonb TỰ ĐỨNG ĐƯỢC (snapshot phiên + ngưỡng của ĐÚNG version chính sách + telemetry trong phiên + cách tính), mức nguy cơ; khoá duy nhất (phiên × loại) chống nhân đôi khi chạy lại job |
+| Hồ sơ đối chiếu phiên sạc | `violation_checks` | F-B3 — MỌI phiên đã xét để lại 1 dòng, kể cả phiên SẠCH ("chưa kiểm tra" khác hẳn "kiểm tra rồi, không vi phạm"); giữ cờ SOC của từng phiên để đếm tiêu chí "thường xuyên" ([ADR-011](../adr/ADR-011-tieu-chi-vi-pham-sac.md)) |
 | Người dùng / Khách hàng / Tài xế | `users` / `customers` / `drivers` | vai trò sheet 9; hợp đồng + gói; consent Nghị định 13 |
 | Cảnh báo (Alert) | `alerts` | loại phân cấp (F-A2/A4/J1/J3), `dedup_key` chống spam |
 | Ticket | `tickets` | kênh (in-app/hotline/Zalo/SOS), `priority`, ngữ cảnh xe jsonb; đồng hồ SLA đo tới `acknowledged_at` (**có người nhận**) chứ không tới `resolved_at` — cam kết F-I2 là "gọi lại ≤5 phút", không phải "sửa xong trong 5 phút"; `escalated_at` chặn leo thang trùng |

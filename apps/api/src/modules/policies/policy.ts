@@ -32,6 +32,13 @@ export interface ChinhSachSac {
   max_power_kw: number | null;
   max_duration_minutes: number | null;
   max_sessions_per_day: number | null;
+  /**
+   * Tiêu chí "thường xuyên" của F-B3: bao nhiêu lần chạm ngưỡng SOC trong bao nhiêu ngày
+   * thì kết luận vi phạm. NULL = dùng mặc định toàn hệ (xem ADR-011 — con số mặc định
+   * CHƯA được ai ký).
+   */
+  soc_breach_count: number | null;
+  soc_breach_window_days: number | null;
   effective_from: string;
   effective_to: string | null;
   change_note: string | null;
@@ -118,6 +125,7 @@ const COT_CHINH_SACH = `
   p.allowed_hours,
   p.max_power_kw::float8         AS max_power_kw,
   p.max_duration_minutes, p.max_sessions_per_day,
+  p.soc_breach_count, p.soc_breach_window_days,
   p.effective_from, p.effective_to, p.change_note, p.created_by, p.supersedes_id, p.created_at`;
 
 /**

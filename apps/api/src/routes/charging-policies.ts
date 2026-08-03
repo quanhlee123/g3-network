@@ -48,6 +48,8 @@ const ChinhSachSchema = Type.Object({
   max_power_kw: NullableNumber,
   max_duration_minutes: Type.Union([Type.Integer(), Type.Null()]),
   max_sessions_per_day: Type.Union([Type.Integer(), Type.Null()]),
+  soc_breach_count: Type.Union([Type.Integer(), Type.Null()]),
+  soc_breach_window_days: Type.Union([Type.Integer(), Type.Null()]),
   effective_from: Type.String({ format: 'date-time' }),
   effective_to: NullableString,
   change_note: NullableString,
@@ -55,6 +57,20 @@ const ChinhSachSchema = Type.Object({
   supersedes_id: Type.Union([Type.String({ format: 'uuid' }), Type.Null()]),
   created_at: Type.String({ format: 'date-time' }),
 });
+
+/**
+ * Tiêu chí "thường xuyên" của F-B3 — bao nhiêu lần chạm ngưỡng SOC trong bao nhiêu ngày thì
+ * kết luận vi phạm. Bỏ trống = theo mặc định toàn hệ (`VIOLATION_SOC_BREACH_*`).
+ * ⚠️ Con số mặc định CHƯA được Bảo hành Mobility/Legal ký — xem ADR-011 và Q4 (MỞ).
+ */
+const NGUONG_THUONG_XUYEN = {
+  soc_breach_count: Type.Optional(
+    Type.Integer({ minimum: 1, description: 'Số lần chạm ngưỡng SOC thì coi là "thường xuyên"' }),
+  ),
+  soc_breach_window_days: Type.Optional(
+    Type.Integer({ minimum: 1, description: 'Cửa sổ đếm, tính bằng ngày' }),
+  ),
+};
 
 /** Ngưỡng khi BAN HÀNH mới: bỏ trống = không đặt giới hạn đó. */
 const NguongSchema = {
@@ -66,6 +82,7 @@ const NguongSchema = {
   max_power_kw: Type.Optional(Type.Number({ exclusiveMinimum: 0 })),
   max_duration_minutes: Type.Optional(Type.Integer({ minimum: 1 })),
   max_sessions_per_day: Type.Optional(Type.Integer({ minimum: 1 })),
+  ...NGUONG_THUONG_XUYEN,
   effective_from: Type.Optional(
     Type.String({ format: 'date-time', description: 'Mặc định: ngay bây giờ' }),
   ),
@@ -87,6 +104,8 @@ const NguongKeThuaSchema = {
   max_power_kw: Type.Optional(Type.Union([Type.Number({ exclusiveMinimum: 0 }), Type.Null()])),
   max_duration_minutes: Type.Optional(Type.Union([Type.Integer({ minimum: 1 }), Type.Null()])),
   max_sessions_per_day: Type.Optional(Type.Union([Type.Integer({ minimum: 1 }), Type.Null()])),
+  soc_breach_count: Type.Optional(Type.Union([Type.Integer({ minimum: 1 }), Type.Null()])),
+  soc_breach_window_days: Type.Optional(Type.Union([Type.Integer({ minimum: 1 }), Type.Null()])),
   effective_from: Type.Optional(
     Type.String({ format: 'date-time', description: 'Mặc định: ngay bây giờ' }),
   ),
@@ -104,6 +123,7 @@ const COT = `
   p.soc_min_pct::float8 AS soc_min_pct, p.soc_max_pct::float8 AS soc_max_pct,
   p.allowed_hours, p.max_power_kw::float8 AS max_power_kw,
   p.max_duration_minutes, p.max_sessions_per_day,
+  p.soc_breach_count, p.soc_breach_window_days,
   p.effective_from, p.effective_to, p.change_note, p.created_by, p.supersedes_id, p.created_at`;
 
 /**
@@ -410,6 +430,14 @@ export async function chargingPolicyRoutes(
           body.max_sessions_per_day as number | null | undefined,
           cu.max_sessions_per_day,
         ),
+        soc_breach_count: keThua(
+          body.soc_breach_count as number | null | undefined,
+          cu.soc_breach_count,
+        ),
+        soc_breach_window_days: keThua(
+          body.soc_breach_window_days as number | null | undefined,
+          cu.soc_breach_window_days,
+        ),
         effective_from: body.effective_from,
         change_note: body.change_note,
       };
@@ -513,13 +541,16 @@ async function chen(db: Queryable, p: ChenParams): Promise<ChinhSachSac> {
     `INSERT INTO charging_policies
        (code, version, name, scope_type, vehicle_id, customer_id, vehicle_model,
         soc_min_pct, soc_max_pct, allowed_hours, max_power_kw, max_duration_minutes,
-        max_sessions_per_day, effective_from, created_by, change_note, supersedes_id)
+        max_sessions_per_day, soc_breach_count, soc_breach_window_days,
+        effective_from, created_by, change_note, supersedes_id)
      VALUES ($1, $2, $3, $4::policy_scope, $5, $6, $7::vehicle_model,
-             $8, $9, $10::jsonb, $11, $12, $13, coalesce($14::timestamptz, now()), $15, $16, $17)
+             $8, $9, $10::jsonb, $11, $12, $13, $14, $15,
+             coalesce($16::timestamptz, now()), $17, $18, $19)
      RETURNING id, code, version, name, scope_type::text AS scope_type, vehicle_id, customer_id,
                vehicle_model::text AS vehicle_model, soc_min_pct::float8 AS soc_min_pct,
                soc_max_pct::float8 AS soc_max_pct, allowed_hours,
                max_power_kw::float8 AS max_power_kw, max_duration_minutes, max_sessions_per_day,
+               soc_breach_count, soc_breach_window_days,
                effective_from, effective_to, change_note, created_by, supersedes_id, created_at`,
     [
       p.code,
@@ -535,6 +566,8 @@ async function chen(db: Queryable, p: ChenParams): Promise<ChinhSachSac> {
       n.max_power_kw ?? null,
       n.max_duration_minutes ?? null,
       n.max_sessions_per_day ?? null,
+      n.soc_breach_count ?? null,
+      n.soc_breach_window_days ?? null,
       n.effective_from ?? null,
       p.createdBy,
       n.change_note ?? null,

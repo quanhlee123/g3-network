@@ -21,6 +21,7 @@ import { notificationRoutes } from './routes/notifications';
 import { reconciliationRoutes } from './routes/reconciliation';
 import { sessionRoutes } from './routes/sessions';
 import { stationRoutes } from './routes/stations';
+import { violationRoutes } from './routes/violations';
 import { ticketRoutes } from './routes/tickets';
 import { vehicleRoutes } from './routes/vehicles';
 
@@ -139,6 +140,11 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
   await app.register(notificationRoutes, { db });
   await app.register(reconciliationRoutes, { db, config });
+  await app.register(violationRoutes, {
+    db,
+    config,
+    ...(options.notifier ? { notifier: options.notifier } : {}),
+  });
 
   return app;
 }

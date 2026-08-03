@@ -2424,6 +2424,8 @@
                           "max_power_kw",
                           "max_duration_minutes",
                           "max_sessions_per_day",
+                          "soc_breach_count",
+                          "soc_breach_window_days",
                           "effective_from",
                           "effective_to",
                           "change_note",
@@ -2556,6 +2558,26 @@
                             ]
                           },
                           "max_sessions_per_day": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "soc_breach_count": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "soc_breach_window_days": {
                             "anyOf": [
                               {
                                 "type": "integer"
@@ -2795,6 +2817,16 @@
                     "minimum": 1,
                     "type": "integer"
                   },
+                  "soc_breach_count": {
+                    "minimum": 1,
+                    "description": "Số lần chạm ngưỡng SOC thì coi là \"thường xuyên\"",
+                    "type": "integer"
+                  },
+                  "soc_breach_window_days": {
+                    "minimum": 1,
+                    "description": "Cửa sổ đếm, tính bằng ngày",
+                    "type": "integer"
+                  },
                   "effective_from": {
                     "format": "date-time",
                     "description": "Mặc định: ngay bây giờ",
@@ -2831,6 +2863,8 @@
                     "max_power_kw",
                     "max_duration_minutes",
                     "max_sessions_per_day",
+                    "soc_breach_count",
+                    "soc_breach_window_days",
                     "effective_from",
                     "effective_to",
                     "change_note",
@@ -2963,6 +2997,26 @@
                       ]
                     },
                     "max_sessions_per_day": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "soc_breach_count": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "soc_breach_window_days": {
                       "anyOf": [
                         {
                           "type": "integer"
@@ -3209,6 +3263,8 @@
                           "max_power_kw",
                           "max_duration_minutes",
                           "max_sessions_per_day",
+                          "soc_breach_count",
+                          "soc_breach_window_days",
                           "effective_from",
                           "effective_to",
                           "change_note",
@@ -3341,6 +3397,26 @@
                             ]
                           },
                           "max_sessions_per_day": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "soc_breach_count": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "soc_breach_window_days": {
                             "anyOf": [
                               {
                                 "type": "integer"
@@ -3615,6 +3691,28 @@
                       }
                     ]
                   },
+                  "soc_breach_count": {
+                    "anyOf": [
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "soc_breach_window_days": {
+                    "anyOf": [
+                      {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "effective_from": {
                     "format": "date-time",
                     "description": "Mặc định: ngay bây giờ",
@@ -3661,6 +3759,8 @@
                     "max_power_kw",
                     "max_duration_minutes",
                     "max_sessions_per_day",
+                    "soc_breach_count",
+                    "soc_breach_window_days",
                     "effective_from",
                     "effective_to",
                     "change_note",
@@ -3793,6 +3893,26 @@
                       ]
                     },
                     "max_sessions_per_day": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "soc_breach_count": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "soc_breach_window_days": {
                       "anyOf": [
                         {
                           "type": "integer"
@@ -4087,6 +4207,8 @@
                             "max_power_kw",
                             "max_duration_minutes",
                             "max_sessions_per_day",
+                            "soc_breach_count",
+                            "soc_breach_window_days",
                             "effective_from",
                             "effective_to",
                             "change_note",
@@ -4219,6 +4341,26 @@
                               ]
                             },
                             "max_sessions_per_day": {
+                              "anyOf": [
+                                {
+                                  "type": "integer"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "soc_breach_count": {
+                              "anyOf": [
+                                {
+                                  "type": "integer"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "soc_breach_window_days": {
                               "anyOf": [
                                 {
                                   "type": "integer"
@@ -4445,6 +4587,8 @@
                     "max_power_kw",
                     "max_duration_minutes",
                     "max_sessions_per_day",
+                    "soc_breach_count",
+                    "soc_breach_window_days",
                     "effective_from",
                     "effective_to",
                     "change_note",
@@ -4577,6 +4721,26 @@
                       ]
                     },
                     "max_sessions_per_day": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "soc_breach_count": {
+                      "anyOf": [
+                        {
+                          "type": "integer"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "soc_breach_window_days": {
                       "anyOf": [
                         {
                           "type": "integer"
@@ -6802,6 +6966,656 @@
                     },
                     "nguong_pct": {
                       "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/violations": {
+      "get": {
+        "summary": "Danh sách vi phạm chính sách sạc (F-B3)",
+        "tags": [
+          "vi-pham-sac"
+        ],
+        "description": "Phạm vi theo vai trò như danh sách xe. Bằng chứng đầy đủ nằm ở GET /violations/{id}.",
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "vehicle_id",
+            "required": false
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "outside_hours"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "soc_above_max"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "soc_below_min"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "overpower"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "duration_exceeded"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "type",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 50,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "total",
+                    "theo_loai",
+                    "items"
+                  ],
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "theo_loai": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "vehicle_id",
+                          "vin",
+                          "session_id",
+                          "type",
+                          "risk_level",
+                          "policy_code",
+                          "policy_version",
+                          "mo_ta",
+                          "khuyen_nghi",
+                          "detected_at"
+                        ],
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "vehicle_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "session_id": {
+                            "anyOf": [
+                              {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "risk_level": {
+                            "description": "low | medium | high",
+                            "type": "string"
+                          },
+                          "policy_code": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "policy_version": {
+                            "anyOf": [
+                              {
+                                "type": "integer"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "mo_ta": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "khuyen_nghi": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "detected_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/violations/{id}": {
+      "get": {
+        "summary": "Chi tiết 1 vi phạm KÈM TOÀN BỘ BẰNG CHỨNG (F-B3, NF-11)",
+        "tags": [
+          "vi-pham-sac"
+        ],
+        "description": "Cột `evidence` là bằng chứng bất biến: snapshot phiên sạc, ngưỡng của ĐÚNG version chính sách đã dùng làm căn cứ, telemetry trong phiên, và cách tính. Đủ để người thứ ba tái dựng kết luận mà không cần truy cập hệ thống.",
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "vehicle_id",
+                        "vin",
+                        "session_id",
+                        "type",
+                        "risk_level",
+                        "policy_code",
+                        "policy_version",
+                        "mo_ta",
+                        "khuyen_nghi",
+                        "detected_at"
+                      ],
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "vehicle_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "vin": {
+                          "type": "string"
+                        },
+                        "session_id": {
+                          "anyOf": [
+                            {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "risk_level": {
+                          "description": "low | medium | high",
+                          "type": "string"
+                        },
+                        "policy_code": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "policy_version": {
+                          "anyOf": [
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "mo_ta": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "khuyen_nghi": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "detected_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "evidence"
+                      ],
+                      "properties": {
+                        "evidence": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/violations/run": {
+      "post": {
+        "summary": "Chạy tay job đối chiếu phiên sạc với chính sách (F-B3)",
+        "tags": [
+          "vi-pham-sac"
+        ],
+        "description": "Chạy lại được nhiều lần: mỗi phiên để lại đúng 1 dòng hồ sơ xét, và vi phạm có khoá duy nhất (phiên × loại) nên không nhân đôi.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "to": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "session_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "lam_lai_tat_ca": {
+                    "default": false,
+                    "description": "Xét lại cả phiên đã có kết luận",
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "da_xet",
+                    "sach",
+                    "co_vi_pham",
+                    "khong_co_chinh_sach",
+                    "vi_pham_moi",
+                    "loi"
+                  ],
+                  "properties": {
+                    "da_xet": {
+                      "type": "integer"
+                    },
+                    "sach": {
+                      "type": "integer"
+                    },
+                    "co_vi_pham": {
+                      "type": "integer"
+                    },
+                    "khong_co_chinh_sach": {
+                      "type": "integer"
+                    },
+                    "vi_pham_moi": {
+                      "type": "integer"
+                    },
+                    "loi": {
+                      "description": "Số phiên không xét được vì lỗi kỹ thuật — phải là 0 khi hệ khỏe",
+                      "type": "integer"
                     }
                   }
                 }

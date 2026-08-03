@@ -8,6 +8,7 @@ import { createPool } from './db';
 import { batLichQuetThietBi } from './modules/devices/scheduler';
 import { batLichDoiSoat } from './modules/reconciliation/scheduler';
 import { batLichSla } from './modules/tickets/scheduler';
+import { batLichViPham } from './modules/violations/scheduler';
 
 const config = loadConfigFromEnvFile();
 const pool = createPool();
@@ -32,12 +33,15 @@ const lichDoiSoat = batLichDoiSoat(pool, config, (m) => app.log.info(m));
 const lichQuetThietBi = batLichQuetThietBi(pool, config, (m) => app.log.info(m), notifier);
 // F-I2: đồng hồ SLA — ticket quá hạn chưa ai nhận thì leo thang.
 const lichSla = batLichSla(pool, config, (m) => app.log.info(m), notifier);
+// F-B3/F-B5: đối chiếu phiên sạc với chính sách, gắn cờ vi phạm và báo cho tài xế/chủ xe.
+const lichViPham = batLichViPham(pool, config, (m) => app.log.info(m), notifier);
 
 const shutdown = async (signal: string): Promise<void> => {
   app.log.info(`nhận ${signal} — tắt sạch…`);
   lichDoiSoat.dung();
   lichQuetThietBi.dung();
   lichSla.dung();
+  lichViPham.dung();
   await app.close();
   await pool.end();
   process.exit(0);

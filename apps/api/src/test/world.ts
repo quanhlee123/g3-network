@@ -40,6 +40,8 @@ export async function resetWorld(db: pg.Client): Promise<void> {
   await db.query(`ALTER TABLE violations DISABLE TRIGGER violations_append_only`);
   await db.query(`DELETE FROM violations`);
   await db.query(`ALTER TABLE violations ENABLE TRIGGER violations_append_only`);
+  // violation_checks (F-B3) cũng trỏ tới charging_policies → xóa trước chính sách
+  await db.query(`DELETE FROM violation_checks`);
   await db.query(`ALTER TABLE charging_policies DISABLE TRIGGER charging_policies_khong_sua_de`);
   await db.query(`DELETE FROM charging_policies`);
   await db.query(`ALTER TABLE charging_policies ENABLE TRIGGER charging_policies_khong_sua_de`);
