@@ -12,3 +12,33 @@ export {
   type TomTatDoiSoat,
 } from './modules/reconciliation/reconcile';
 export { batLichDoiSoat } from './modules/reconciliation/scheduler';
+export {
+  baoCaoLechTheoNgay,
+  sanLuongTheoKhach,
+  sanLuongTheoPhien,
+  type BaoCaoSanLuong,
+  type DongLechNgay,
+} from './modules/reconciliation/bao-cao';
+// F-B3/F-B5 — dùng cho kịch bản nghiệm thu tuần 8
+export {
+  kiemTraViPham,
+  VI_PHAM_DEFAULTS,
+  type TomTatKiemTra,
+  type ViPhamOptions,
+} from './modules/violations/detect';
+export {
+  chinhSachHieuLuc,
+  trongKhungGio,
+  moTaKhungGio,
+  MUI_GIO_MAC_DINH,
+  type ChinhSachSac,
+  type KhungGio,
+} from './modules/policies/policy';
+// F-H1 — luồng thanh toán
+export {
+  noiCacGiaoDichMoCoi,
+  taoGiaoDichChoPhien,
+  xuLyWebhook,
+  type GiaoDich,
+  type ThanhToanOptions,
+} from './modules/payments/service';

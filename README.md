@@ -40,6 +40,31 @@ khoảng 3 phút, in kết quả từng bước ra console:
 
 Demo giữ API sống sau khi xong để trình bày thêm tại <http://localhost:3000/docs>; `Ctrl+C` để tắt sạch.
 
+## NGHIỆM THU TUẦN 8 — vòng tiền & bảo hành (demo thứ 2)
+
+```bash
+npm run demo:tuan8
+```
+
+Kịch bản: **xe sạc sai khung giờ rồi trả tiền qua cổng sandbox**. Chạy ~2 phút, tự migrate +
+seed, in bảng kết quả từng tiêu chí:
+
+| Bước | Nội dung |
+|---|---|
+| 1–2 | Dựng DB · khởi động ingest, CSMS, API, cổng thanh toán **sandbox** |
+| 3 | Ban hành chính sách sạc có version, khung giờ ToU (F-B1) |
+| 4 | Xe sạc **ngoài khung giờ** → phiên qua OCPP 1.6J vào bảng append-only (F-B2) |
+| 5 | Thu tiền qua cổng sandbox · **webhook gửi 2 lần → đúng 1 giao dịch** (F-H1) |
+| 6 | Gắn cờ vi phạm + **bảng bằng chứng** + cảnh báo nêu cách khắc phục (F-B3, F-B5) |
+| 7 | Đổi chính sách sang v2 → phiên cũ **vẫn đối chiếu theo v1** (F-B1); thử sửa bảng bất biến → DB từ chối (NF-11) |
+| 8 | Đối soát 3 chiều trụ ↔ xe ↔ thanh toán (F-C6, NF-10) |
+| 9 | Báo cáo sản lượng theo khách + báo cáo lệch **theo ngày** (F-C6) |
+| 10 | Bảng tổng kết ĐẠT/CHƯA ĐẠT từng tiêu chí |
+
+Khung giờ cho phép được dựng **lùi về quá khứ so với lúc chạy**, nên phiên sạc luôn nằm ngoài
+khung dù demo chạy vào giờ nào trong ngày (có test quét cả 24 giờ khoá lại điều này).
+Demo giữ API sống sau khi xong; `Ctrl+C` để tắt sạch.
+
 ## Chạy để phát triển
 
 ```bash
@@ -110,7 +135,8 @@ g3-network/
 │   ├── vehicle-sim/     # Giả lập xe tải điện — MQTT telemetry, 6 kịch bản (F-A1, docs/simulators.md)
 │   └── ocpp-sim/        # F-G2: trụ sạc ảo OCPP 1.6J — 3 kịch bản normal/faulted/disconnect (docs/simulators.md)
 ├── tools/
-│   └── demo-gate0/      # Kịch bản demo end-to-end cho Gate 0 (npm run demo:gate0)
+│   ├── demo-gate0/      # Kịch bản demo end-to-end cho Gate 0 (npm run demo:gate0)
+│   └── demo-tuan8/      # Nghiệm thu tuần 8: vòng tiền & bảo hành (npm run demo:tuan8)
 ├── infra/
 │   ├── docker-compose.yml  # PostgreSQL 16 + TimescaleDB + PostGIS (1 container) + EMQX
 │   ├── .env.example        # Mẫu biến môi trường — copy thành .env (npm install tự làm)
@@ -141,6 +167,7 @@ g3-network/
 | `npm run start -w services/csms` | Chạy CSMS: OCPP WebSocket cổng 9220, HTTP nội bộ RemoteStart cổng 9221 |
 | `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc OCPP (kịch bản: `--scenario normal\|faulted\|disconnect`) |
 | `npm run demo:gate0` | **Demo Gate 0 end-to-end** (tự migrate + seed, ~3 phút) |
+| `npm run demo:tuan8` | **Nghiệm thu tuần 8** — vòng tiền & bảo hành (~2 phút) |
 | `npm run reconcile` | Chạy tay job đối soát 3 chiều (thêm `-- --lam-lai-tat-ca` để soát lại từ đầu) |
 | `GET /reports/kwh` | F-C6 — sản lượng kWh theo khách/phiên phục vụ hoá đơn & đối soát |
 | `GET /reconciliation/report` | F-C6 — báo cáo lệch **theo ngày**: bắt cả sự cố đơn lẻ lẫn sai lệch hệ thống (mọi phiên dưới ngưỡng nhưng cùng chiều) |
