@@ -2,12 +2,15 @@
 // xem infra/.env.example.
 import { ConsolePushSender, ConsoleSmsSender } from '@g3/contracts';
 import { NotifierService } from '@g3/notify';
+import { taoCongThanhToan } from '@g3/payments';
 import { buildApp } from './app';
 import { loadConfigFromEnvFile } from './config';
 import { createPool } from './db';
 import { batLichQuetThietBi } from './modules/devices/scheduler';
 import { batLichDoiSoat } from './modules/reconciliation/scheduler';
 import { batLichSla } from './modules/tickets/scheduler';
+import { HttpCsmsCommander } from './modules/payments/csms-client';
+import { batLichNoiPhien } from './modules/payments/scheduler';
 import { batLichViPham } from './modules/violations/scheduler';
 
 const config = loadConfigFromEnvFile();
@@ -24,7 +27,12 @@ const notifier = new NotifierService({
   log: (m) => ghiLog(m),
 });
 
-const app = await buildApp({ config, db: pool, notifier });
+// F-H1: cổng thanh toán SANDBOX. Mặc định là cổng GIẢ nội bộ — bật VNPay sandbox bằng
+// PAYMENT_GATEWAY=vnpay (và @g3/payments từ chối khởi động nếu URL không phải sandbox).
+const cong = taoCongThanhToan(process.env, (m) => ghiLog(m));
+const csms = new HttpCsmsCommander({ baseUrl: config.thanhToan.csmsBaseUrl });
+
+const app = await buildApp({ config, db: pool, notifier, cong, csms });
 ghiLog = (m) => app.log.info(m);
 
 // F-C6: job đối soát 3 chiều chạy định kỳ ngay trong tiến trình API (modular monolith).
@@ -35,6 +43,8 @@ const lichQuetThietBi = batLichQuetThietBi(pool, config, (m) => app.log.info(m),
 const lichSla = batLichSla(pool, config, (m) => app.log.info(m), notifier);
 // F-B3/F-B5: đối chiếu phiên sạc với chính sách, gắn cờ vi phạm và báo cho tài xế/chủ xe.
 const lichViPham = batLichViPham(pool, config, (m) => app.log.info(m), notifier);
+// F-H1: nối giao dịch đã thu tiền với phiên sạc về muộn (trụ mất kết nối — NF-09).
+const lichNoiPhien = batLichNoiPhien(pool, config, (m) => app.log.info(m));
 
 const shutdown = async (signal: string): Promise<void> => {
   app.log.info(`nhận ${signal} — tắt sạch…`);
@@ -42,6 +52,7 @@ const shutdown = async (signal: string): Promise<void> => {
   lichQuetThietBi.dung();
   lichSla.dung();
   lichViPham.dung();
+  lichNoiPhien.dung();
   await app.close();
   await pool.end();
   process.exit(0);

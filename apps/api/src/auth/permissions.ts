@@ -38,6 +38,13 @@ export const PERMISSIONS = [
   'violation.read',
   /** Chạy tay job đối chiếu vi phạm (F-B3). */
   'violation.run',
+  /**
+   * Bắt đầu phiên sạc bằng QR & tạo lệnh thanh toán (F-H1) — sheet 9 dòng
+   * "Thanh toán phiên sạc / ví": Tài xế ✓*, Chủ xe ✓ (đội), Admin ✓.
+   */
+  'payment.start',
+  /** Xem giao dịch thanh toán. Sheet 9 cho CSKH "V (hỗ trợ)" ở cùng dòng. */
+  'payment.read',
   /** Sức khỏe thiết bị telematics — last_seen, firmware, nguồn (F-J1). */
   'device_health.read',
   /** Xem kết quả đối soát 3 chiều (NF-10). */
@@ -106,6 +113,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_session.read': { scope: 'own' },
     'charging_policy.read': { scope: 'own' },
     'violation.read': { scope: 'own' },
+    // Sheet 9: Tài xế ✓* — trả tiền cho phiên sạc của XE MÌNH.
+    'payment.start': { scope: 'own' },
+    'payment.read': { scope: 'own' },
     // Sheet 9 dòng "Ticket hỗ trợ & SOS": Tài xế ✓ (tạo) — tạo và xem ticket XE MÌNH.
     'ticket.create': { scope: 'own' },
     'ticket.read': { scope: 'own' },
@@ -118,6 +128,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_session.read': { scope: 'fleet' },
     'charging_policy.read': { scope: 'fleet' },
     'violation.read': { scope: 'fleet' },
+    // Sheet 9: Chủ xe / QL đội ✓ (đội) — trả tiền cho cả đội.
+    'payment.start': { scope: 'fleet' },
+    'payment.read': { scope: 'fleet' },
     'device_health.read': { scope: 'fleet' },
     'reconciliation.read': { scope: 'fleet' },
     // [SUY LUẬN] Sheet 9 không có dòng cho geofence. Đặt cùng mức với quyền xem vị trí xe:
@@ -155,6 +168,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'vehicle.read': { scope: 'all' },
     'vehicle.location.read': { scope: 'all', requireOpenTicket: true },
     'charging_session.read': { scope: 'all' },
+    // Sheet 9 dòng "Thanh toán phiên sạc / ví" = V (hỗ trợ) — CSKH tra cứu giúp tài xế,
+    // KHÔNG tự trả tiền thay.
+    'payment.read': { scope: 'all' },
     // Sheet 9 dòng "Xem trạng thái / báo cáo bảo hành" = V — CSKH giải thích cho tài xế
     // vì sao bị cảnh báo vi phạm, nên phải ĐỌC được hồ sơ (không cấu hình, không chạy job).
     'violation.read': { scope: 'all' },
@@ -174,6 +190,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_policy.manage': { scope: 'all' },
     'violation.read': { scope: 'all' },
     'violation.run': { scope: 'all' },
+    'payment.start': { scope: 'all' },
+    'payment.read': { scope: 'all' },
     'device_health.read': { scope: 'all' },
     'reconciliation.read': { scope: 'all' },
     'reconciliation.run': { scope: 'all' },

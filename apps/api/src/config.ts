@@ -42,6 +42,15 @@ export interface ApiConfig {
     socBreachCount: number;
     socBreachWindowDays: number;
   };
+  /** Thanh toán phiên sạc (F-H1) — SANDBOX ONLY. */
+  thanhToan: {
+    /** URL app quay về sau khi trả tiền. */
+    returnUrl: string;
+    /** Gốc HTTP nội bộ của CSMS để gửi RemoteStart. */
+    csmsBaseUrl: string;
+    /** Chu kỳ nối lại giao dịch mồ côi với phiên về muộn (ms); 0 = tắt. */
+    noiPhienIntervalMs: number;
+  };
   /** Chu kỳ quét đồng hồ SLA ticket (F-I2, ms); 0 = tắt. */
   slaScanIntervalMs: number;
   /** Job quét sức khoẻ & tamper thiết bị (F-J1, F-J3). */
@@ -142,6 +151,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
         VI_PHAM_DEFAULTS.socBreachWindowDays,
         1,
       ),
+    },
+    thanhToan: {
+      returnUrl: env.PAYMENT_RETURN_URL ?? '',
+      csmsBaseUrl: env.CSMS_INTERNAL_URL ?? `http://localhost:${env.CSMS_HTTP_PORT ?? '9221'}`,
+      noiPhienIntervalMs: intEnv(env, 'PAYMENT_LINK_INTERVAL_MS', 120_000, 0),
     },
     slaScanIntervalMs: intEnv(env, 'SLA_SCAN_INTERVAL_MS', 60_000, 0),
     deviceScan: {
