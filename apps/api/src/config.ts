@@ -2,7 +2,9 @@
 // Mọi biến ở đây phải có mặt trong infra/.env.example và bảng biến môi trường của README.
 import { loadEnv } from '@g3/db';
 import { NGUONG_SUC_KHOE_MAC_DINH, type NguongSucKhoe } from './modules/devices/health-scan';
+import { MUI_GIO_MAC_DINH } from './modules/policies/policy';
 import { RECONCILE_DEFAULTS } from './modules/reconciliation/reconcile';
+import { VI_PHAM_DEFAULTS } from './modules/violations/detect';
 
 export interface ApiConfig {
   port: number;
@@ -17,6 +19,12 @@ export interface ApiConfig {
   otpRequestWindowS: number;
   /** Trần số bản ghi 1 lần gọi lịch sử telemetry — chặn truy vấn quét cả hypertable. */
   telemetryHistoryMaxRows: number;
+  /**
+   * Múi giờ để hiểu khung giờ ToU của chính sách sạc (F-B1). Khung giờ trong hợp đồng bảo
+   * hành là giờ Việt Nam, timestamptz trong DB là UTC — sai chỗ này là gắn cờ vi phạm oan
+   * toàn bộ phiên sạc đêm. Xem docs/adr/ADR-010.
+   */
+  muiGio: string;
   /** Cấu hình job đối soát 3 chiều (F-C6, NF-10). */
   reconcile: {
     /** Chu kỳ chạy tự động (ms); 0 = tắt, chỉ chạy tay. */
@@ -25,6 +33,23 @@ export interface ApiConfig {
     hieuSuatSac: number;
     giaVndMoiKwh: number;
     cuaSoSocGiay: number;
+  };
+  /** Job đối chiếu phiên sạc với chính sách & gắn cờ vi phạm (F-B3). */
+  viPham: {
+    /** Chu kỳ chạy tự động (ms); 0 = tắt, chỉ chạy tay. */
+    intervalMs: number;
+    /** ⚠️ Ngưỡng "thường xuyên" — CHƯA được Bảo hành/Legal ký, xem ADR-011 & Q4 (MỞ). */
+    socBreachCount: number;
+    socBreachWindowDays: number;
+  };
+  /** Thanh toán phiên sạc (F-H1) — SANDBOX ONLY. */
+  thanhToan: {
+    /** URL app quay về sau khi trả tiền. */
+    returnUrl: string;
+    /** Gốc HTTP nội bộ của CSMS để gửi RemoteStart. */
+    csmsBaseUrl: string;
+    /** Chu kỳ nối lại giao dịch mồ côi với phiên về muộn (ms); 0 = tắt. */
+    noiPhienIntervalMs: number;
   };
   /** Chu kỳ quét đồng hồ SLA ticket (F-I2, ms); 0 = tắt. */
   slaScanIntervalMs: number;
@@ -65,6 +90,23 @@ function floatEnv(
 }
 
 /**
+ * Múi giờ IANA. Kiểm tra bằng chính Intl — tên sai (vd "Asia/HCM") mà để lọt thì mọi so
+ * sánh khung giờ âm thầm rơi về UTC, lệch đúng 7 tiếng, và không ai biết cho tới khi
+ * hệ thống gắn cờ oan một loạt phiên sạc đêm.
+ */
+function muiGioEnv(env: NodeJS.ProcessEnv): string {
+  const raw = env.APP_TIMEZONE ?? MUI_GIO_MAC_DINH;
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: raw });
+  } catch {
+    throw new Error(
+      `APP_TIMEZONE không hợp lệ: "${raw}" (cần tên múi giờ IANA, vd Asia/Ho_Chi_Minh)`,
+    );
+  }
+  return raw;
+}
+
+/**
  * Đọc & kiểm tra cấu hình. Ném lỗi TIẾNG VIỆT nêu rõ cách sửa thay vì chạy với
  * secret rỗng — API chạy được mà không ký nổi token là lỗi im lặng nguy hiểm nhất.
  */
@@ -85,6 +127,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     otpMaxRequestsPerWindow: intEnv(env, 'OTP_MAX_REQUESTS_PER_WINDOW', 5, 1),
     otpRequestWindowS: intEnv(env, 'OTP_REQUEST_WINDOW_S', 900, 1),
     telemetryHistoryMaxRows: intEnv(env, 'TELEMETRY_HISTORY_MAX_ROWS', 1000, 1),
+    muiGio: muiGioEnv(env),
     reconcile: {
       intervalMs: intEnv(env, 'RECONCILE_INTERVAL_MS', 300_000, 0),
       nguongPct: floatEnv(env, 'RECONCILE_NGUONG_PCT', RECONCILE_DEFAULTS.nguongPct, 0, 100),
@@ -98,6 +141,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
         1_000_000,
       ),
       cuaSoSocGiay: intEnv(env, 'RECONCILE_SOC_WINDOW_S', RECONCILE_DEFAULTS.cuaSoSocGiay, 1),
+    },
+    viPham: {
+      intervalMs: intEnv(env, 'VIOLATION_SCAN_INTERVAL_MS', 300_000, 0),
+      socBreachCount: intEnv(env, 'VIOLATION_SOC_BREACH_COUNT', VI_PHAM_DEFAULTS.socBreachCount, 1),
+      socBreachWindowDays: intEnv(
+        env,
+        'VIOLATION_SOC_BREACH_WINDOW_DAYS',
+        VI_PHAM_DEFAULTS.socBreachWindowDays,
+        1,
+      ),
+    },
+    thanhToan: {
+      returnUrl: env.PAYMENT_RETURN_URL ?? '',
+      csmsBaseUrl: env.CSMS_INTERNAL_URL ?? `http://localhost:${env.CSMS_HTTP_PORT ?? '9221'}`,
+      noiPhienIntervalMs: intEnv(env, 'PAYMENT_LINK_INTERVAL_MS', 120_000, 0),
     },
     slaScanIntervalMs: intEnv(env, 'SLA_SCAN_INTERVAL_MS', 60_000, 0),
     deviceScan: {

@@ -6,20 +6,30 @@ import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
-import { ConsoleSmsSender, type INotifier, type ISmsSender } from '@g3/contracts';
+import {
+  ConsoleSmsSender,
+  MockPaymentGateway,
+  type ICsmsCommander,
+  type INotifier,
+  type IPaymentGateway,
+  type ISmsSender,
+} from '@g3/contracts';
 import { registerAuthGuard } from './auth/guard';
 import { OtpService } from './auth/otp';
 import type { ApiConfig } from './config';
 import type { Queryable } from './db';
 import { sendError } from './errors';
 import { authRoutes } from './routes/auth';
+import { chargingPolicyRoutes } from './routes/charging-policies';
 import { deviceRoutes } from './routes/devices';
 import { geofenceRoutes } from './routes/geofences';
 import { healthRoutes } from './routes/health';
 import { notificationRoutes } from './routes/notifications';
+import { paymentRoutes } from './routes/payments';
 import { reconciliationRoutes } from './routes/reconciliation';
 import { sessionRoutes } from './routes/sessions';
 import { stationRoutes } from './routes/stations';
+import { violationRoutes } from './routes/violations';
 import { ticketRoutes } from './routes/tickets';
 import { vehicleRoutes } from './routes/vehicles';
 
@@ -31,6 +41,10 @@ export interface BuildAppOptions {
   sms?: ISmsSender;
   /** F-F3: cổng thông báo. Không truyền = chỉ ghi alerts/tickets, không báo cho người. */
   notifier?: INotifier;
+  /** F-H1: cổng thanh toán. Không truyền = cổng GIẢ nội bộ (Phase 1 mặc định, quy tắc 12). */
+  cong?: IPaymentGateway;
+  /** F-H1: đường gửi RemoteStart tới CSMS. Không truyền = luồng quét QR báo 503. */
+  csms?: ICsmsCommander;
   /** Tiêm mã OTP cố định trong test. */
   otpCodeFactory?: () => string;
   /**
@@ -129,6 +143,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
   await app.register(stationRoutes, { db });
   await app.register(sessionRoutes, { db });
+  await app.register(chargingPolicyRoutes, { db });
   await app.register(deviceRoutes, { db });
   await app.register(geofenceRoutes, { db });
   await app.register(ticketRoutes, {
@@ -137,6 +152,17 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
   await app.register(notificationRoutes, { db });
   await app.register(reconciliationRoutes, { db, config });
+  await app.register(paymentRoutes, {
+    db,
+    config,
+    cong: options.cong ?? new MockPaymentGateway(),
+    ...(options.csms ? { csms: options.csms } : {}),
+  });
+  await app.register(violationRoutes, {
+    db,
+    config,
+    ...(options.notifier ? { notifier: options.notifier } : {}),
+  });
 
   return app;
 }

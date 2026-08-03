@@ -223,19 +223,25 @@ export async function seed(client: pg.Client): Promise<void> {
   }
 
   // --- 2 chính sách sạc mẫu (F-B1) ---
+  //
+  // Dùng `WHERE NOT EXISTS` chứ KHÔNG dùng `ON CONFLICT DO NOTHING`: trigger BEFORE INSERT
+  // của migration 0024 (chuỗi version phải nối tiếp) chạy TRƯỚC khi PostgreSQL phát hiện
+  // xung đột khoá, nên chạy lại `npm run db:seed` lần hai sẽ bị trigger từ chối với lý do
+  // "version phải nối tiếp: mong đợi 2, nhận 1" — dù ý định chỉ là bỏ qua dòng đã có.
   await client.query(
     `INSERT INTO charging_policies
-       (code, version, name, scope_type, customer_id, soc_min_pct, soc_max_pct, effective_from)
-     VALUES ('POL-SOC-2090', 1, 'Chính sách SOC 20–90% — đội Sao Mai', 'fleet', $1, 20, 90, '2026-01-01T00:00:00Z')
-     ON CONFLICT (code, version) DO NOTHING`,
+       (code, version, name, scope_type, customer_id, soc_min_pct, soc_max_pct, effective_from, change_note)
+     SELECT 'POL-SOC-2090', 1, 'Chính sách SOC 20–90% — đội Sao Mai', 'fleet', $1, 20, 90,
+            '2026-01-01T00:00:00Z', 'Ban hành theo hợp đồng bảo hành (dữ liệu GIẢ)'
+     WHERE NOT EXISTS (SELECT 1 FROM charging_policies WHERE code = 'POL-SOC-2090')`,
     [saoMaiId],
   );
   await client.query(
     `INSERT INTO charging_policies
-       (code, version, name, scope_type, vehicle_model, allowed_hours, max_power_kw, effective_from)
-     VALUES ('POL-TOU-DEM', 1, 'Chính sách ToU sạc đêm 22h–6h — dòng EVT-825', 'model', 'EVT-825',
-             $1, 150, '2026-01-01T00:00:00Z')
-     ON CONFLICT (code, version) DO NOTHING`,
+       (code, version, name, scope_type, vehicle_model, allowed_hours, max_power_kw, effective_from, change_note)
+     SELECT 'POL-TOU-DEM', 1, 'Chính sách ToU sạc đêm 22h–6h — dòng EVT-825', 'model', 'EVT-825',
+            $1, 150, '2026-01-01T00:00:00Z', 'Ban hành theo biểu giá ToU (dữ liệu GIẢ)'
+     WHERE NOT EXISTS (SELECT 1 FROM charging_policies WHERE code = 'POL-TOU-DEM')`,
     [JSON.stringify([{ from: '22:00', to: '06:00' }])],
   );
 }

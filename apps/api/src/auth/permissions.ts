@@ -15,8 +15,36 @@ export const PERMISSIONS = [
   'vehicle.location.read',
   /** Danh mục trạm + trạng thái trụ (sheet 9: "Tìm & điều hướng trạm sạc" ∪ "Quản lý danh mục…"). */
   'station.read',
+  /**
+   * Thêm/sửa danh mục trạm & trạng thái KHAI THÁC của trạm (F-C1) — sheet 9 dòng
+   * "Quản lý danh mục & trạng thái trạm": ✓ Vận hành G3 Energy, ✓ Admin.
+   * KHÔNG bao gồm trạng thái từng trụ: cái đó chỉ đến từ OCPP (F-C2, NF-02).
+   */
+  'station.manage',
   /** Danh sách phiên sạc (F-B2). */
   'charging_session.read',
+  /**
+   * Đọc chính sách sạc bảo hành (F-B1).
+   * [SUY LUẬN] Sheet 9 chỉ có dòng "Cấu hình chính sách sạc (bảo hành)" (= quyền GHI, xem
+   * charging_policy.manage). Không có dòng nào cho việc ĐỌC chính sách. Cấp quyền đọc trong
+   * phạm vi xe của mình cho tài xế/QL đội vì F-B5 bắt buộc cảnh báo phải "nêu rõ hành vi &
+   * cách khắc phục" — nói người ta vi phạm mà không cho xem quy định đã vi phạm thì cảnh báo
+   * vô nghĩa. Đã ghi vào rbac-matrix.md để review.
+   */
+  'charging_policy.read',
+  /** Tạo/đổi version chính sách sạc — sheet 9 dòng "Cấu hình chính sách sạc (bảo hành)": ✓ Bảo hành, ✓ Admin. */
+  'charging_policy.manage',
+  /** Xem hồ sơ vi phạm sạc + bằng chứng (F-B3) — sheet 9 dòng "Xem trạng thái / báo cáo bảo hành". */
+  'violation.read',
+  /** Chạy tay job đối chiếu vi phạm (F-B3). */
+  'violation.run',
+  /**
+   * Bắt đầu phiên sạc bằng QR & tạo lệnh thanh toán (F-H1) — sheet 9 dòng
+   * "Thanh toán phiên sạc / ví": Tài xế ✓*, Chủ xe ✓ (đội), Admin ✓.
+   */
+  'payment.start',
+  /** Xem giao dịch thanh toán. Sheet 9 cho CSKH "V (hỗ trợ)" ở cùng dòng. */
+  'payment.read',
   /** Sức khỏe thiết bị telematics — last_seen, firmware, nguồn (F-J1). */
   'device_health.read',
   /** Xem kết quả đối soát 3 chiều (NF-10). */
@@ -83,6 +111,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'vehicle.location.read': { scope: 'own' },
     'station.read': { scope: 'all' }, // "Tìm & điều hướng trạm sạc" = ✓
     'charging_session.read': { scope: 'own' },
+    'charging_policy.read': { scope: 'own' },
+    'violation.read': { scope: 'own' },
+    // Sheet 9: Tài xế ✓* — trả tiền cho phiên sạc của XE MÌNH.
+    'payment.start': { scope: 'own' },
+    'payment.read': { scope: 'own' },
     // Sheet 9 dòng "Ticket hỗ trợ & SOS": Tài xế ✓ (tạo) — tạo và xem ticket XE MÌNH.
     'ticket.create': { scope: 'own' },
     'ticket.read': { scope: 'own' },
@@ -93,6 +126,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'vehicle.location.read': { scope: 'fleet' },
     'station.read': { scope: 'all' },
     'charging_session.read': { scope: 'fleet' },
+    'charging_policy.read': { scope: 'fleet' },
+    'violation.read': { scope: 'fleet' },
+    // Sheet 9: Chủ xe / QL đội ✓ (đội) — trả tiền cho cả đội.
+    'payment.start': { scope: 'fleet' },
+    'payment.read': { scope: 'fleet' },
     'device_health.read': { scope: 'fleet' },
     'reconciliation.read': { scope: 'fleet' },
     // [SUY LUẬN] Sheet 9 không có dòng cho geofence. Đặt cùng mức với quyền xem vị trí xe:
@@ -107,6 +145,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
   // → KHÔNG có vehicle.read/vehicle.location.read (test bắt buộc của Prompt 06).
   energy_ops: {
     'station.read': { scope: 'all' },
+    'station.manage': { scope: 'all' },
     'charging_session.read': { scope: 'all' },
     'reconciliation.read': { scope: 'all' },
     'reconciliation.run': { scope: 'all' },
@@ -116,12 +155,25 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'vehicle.read': { scope: 'all' },
     'vehicle.location.read': { scope: 'all' },
     'charging_session.read': { scope: 'all' },
+    // Sheet 9 dòng "Cấu hình chính sách sạc (bảo hành)" = ✓ — vai trò DUY NHẤT ngoài admin.
+    'charging_policy.read': { scope: 'all' },
+    'charging_policy.manage': { scope: 'all' },
+    // Sheet 9 dòng "Xem trạng thái / báo cáo bảo hành" = ✓. Hồ sơ vi phạm CHÍNH LÀ hồ sơ
+    // bảo hành, nên vai trò này vừa đọc vừa chạy được job đối chiếu.
+    'violation.read': { scope: 'all' },
+    'violation.run': { scope: 'all' },
   },
   // CSKH Holding: V vị trí xe CHỈ KHI có ticket đang mở; V sức khỏe thiết bị.
   cskh: {
     'vehicle.read': { scope: 'all' },
     'vehicle.location.read': { scope: 'all', requireOpenTicket: true },
     'charging_session.read': { scope: 'all' },
+    // Sheet 9 dòng "Thanh toán phiên sạc / ví" = V (hỗ trợ) — CSKH tra cứu giúp tài xế,
+    // KHÔNG tự trả tiền thay.
+    'payment.read': { scope: 'all' },
+    // Sheet 9 dòng "Xem trạng thái / báo cáo bảo hành" = V — CSKH giải thích cho tài xế
+    // vì sao bị cảnh báo vi phạm, nên phải ĐỌC được hồ sơ (không cấu hình, không chạy job).
+    'violation.read': { scope: 'all' },
     'device_health.read': { scope: 'all' },
     // Sheet 9: CSKH ✓ (XỬ LÝ ticket) — xem tất cả và nhận việc.
     'ticket.read': { scope: 'all' },
@@ -132,7 +184,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'vehicle.read': { scope: 'all' },
     'vehicle.location.read': { scope: 'all' },
     'station.read': { scope: 'all' },
+    'station.manage': { scope: 'all' },
     'charging_session.read': { scope: 'all' },
+    'charging_policy.read': { scope: 'all' },
+    'charging_policy.manage': { scope: 'all' },
+    'violation.read': { scope: 'all' },
+    'violation.run': { scope: 'all' },
+    'payment.start': { scope: 'all' },
+    'payment.read': { scope: 'all' },
     'device_health.read': { scope: 'all' },
     'reconciliation.read': { scope: 'all' },
     'reconciliation.run': { scope: 'all' },

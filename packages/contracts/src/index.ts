@@ -16,6 +16,14 @@ export { ConsoleSmsSender } from './mocks/sms';
 export * from './notifier';
 export { ConsolePushSender } from './mocks/push';
 export { MockNotifier } from './mocks/notifier';
+export * from './payment';
+export {
+  MockPaymentGateway,
+  type MockPaymentOptions,
+  type MockPaymentRecord,
+} from './mocks/payment';
+export * from './csms-command';
+export { MockCsmsCommander, type LenhDaGui } from './mocks/csms-command';
 
 /** Loại adapter — chọn qua biến môi trường, mặc định 'mock' ở Phase 1 (dữ liệu giả 100%). */
 export type ProviderKind = 'mock' | 'real';

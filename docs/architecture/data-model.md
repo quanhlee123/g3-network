@@ -33,11 +33,12 @@
 | Pin (Battery) | `batteries` | pack_id, hóa chất, dung lượng, SOH, chu kỳ (SOC/điện áp/nhiệt độ realtime nằm ở telematics) |
 | Bản ghi telematics | `telematics_readings` | hypertable; `schema_version` (**v2** từ migration 0021); SOC, GPS, tốc độ, odometer, nhiệt độ, mã lỗi + `supply_voltage_v` (điện áp NGUỒN NUÔI thiết bị, khác điện áp pack) và `signal_dbm` — hai trường để F-J3 phân biệt mất nguồn với mất sóng |
 | Phiên sạc (ChargingSession) | `charging_sessions` | **append-only**; kWh, SOC đầu/cuối, công suất, chi phí VNĐ, `ocpp_transaction_id` |
-| Giao dịch thanh toán | `payment_transactions` | VNPay/Momo/ví (sandbox), trạng thái, mã đối soát cổng, idempotency webhook |
-| Trạm sạc (ChargingStation) | `charging_stations` | GPS PostGIS, khu vực, công suất, CCS2, giờ hoạt động, trạng thái |
-| Trụ/Súng (Connector) | `connectors` | công suất, chuẩn, trạng thái `Available/Charging/Faulted/Unavailable` (OCPP) |
-| Chính sách sạc (ChargingPolicy) | `charging_policies` | version + `(code, version)` unique; phạm vi xe/đội/dòng; ToU; SOC min–max; hiệu lực từ–đến |
-| Vi phạm (Violation) | `violations` | **append-only**; `evidence` jsonb (snapshot phiên + ngưỡng chính sách), mức nguy cơ |
+| Giao dịch thanh toán | `payment_transactions` | F-H1 — **SANDBOX**; neo vào `ocpp_transaction_id` (có từ lúc trụ mở phiên) chứ không neo vào `session_id`, để webhook đến TRƯỚC khi phiên được ghi vẫn nhận được tiền mà không phải bịa phiên sạc; `reference` UNIQUE là dây nối với cổng; `gateway_webhook_id` UNIQUE chống webhook trùng ngay ở DB. **Không có cột nào chứa dữ liệu thẻ** — có test khoá lại ([ADR-012](../adr/ADR-012-thanh-toan-sandbox.md)) |
+| Trạm sạc (ChargingStation) | `charging_stations` | GPS PostGIS, khu vực, công suất, CCS2, giờ hoạt động; `status` là quyết định VẬN HÀNH (active/maintenance/inactive) do G3 Energy sửa qua API, kèm `updated_by`/`note` (F-C1). KHÔNG xoá trạm — phiên sạc cũ trỏ tới nó |
+| Trụ/Súng (Connector) | `connectors` | công suất & chuẩn sửa được qua API (F-C1); `status` thì **KHÔNG** — đó là số đo từ trụ qua OCPP StatusNotification (F-C2, NF-02 ≤30s). Mở đường ghi tay là làm hỏng chính tiêu chí "chính xác ≥99%" |
+| Chính sách sạc (ChargingPolicy) | `charging_policies` | **không sửa đè** (F-B1): tạo version mới là INSERT thuần, trigger chặn UPDATE nội dung & DELETE; `(code, version)` unique và version phải nối tiếp; phạm vi xe/đội/dòng; ToU giờ VN; SOC min–max — xem [ADR-010](../adr/ADR-010-version-chinh-sach-sac.md) |
+| Vi phạm (Violation) | `violations` | **append-only**; `evidence` jsonb TỰ ĐỨNG ĐƯỢC (snapshot phiên + ngưỡng của ĐÚNG version chính sách + telemetry trong phiên + cách tính), mức nguy cơ; khoá duy nhất (phiên × loại) chống nhân đôi khi chạy lại job |
+| Hồ sơ đối chiếu phiên sạc | `violation_checks` | F-B3 — MỌI phiên đã xét để lại 1 dòng, kể cả phiên SẠCH ("chưa kiểm tra" khác hẳn "kiểm tra rồi, không vi phạm"); giữ cờ SOC của từng phiên để đếm tiêu chí "thường xuyên" ([ADR-011](../adr/ADR-011-tieu-chi-vi-pham-sac.md)) |
 | Người dùng / Khách hàng / Tài xế | `users` / `customers` / `drivers` | vai trò sheet 9; hợp đồng + gói; consent Nghị định 13 |
 | Cảnh báo (Alert) | `alerts` | loại phân cấp (F-A2/A4/J1/J3), `dedup_key` chống spam |
 | Ticket | `tickets` | kênh (in-app/hotline/Zalo/SOS), `priority`, ngữ cảnh xe jsonb; đồng hồ SLA đo tới `acknowledged_at` (**có người nhận**) chứ không tới `resolved_at` — cam kết F-I2 là "gọi lại ≤5 phút", không phải "sửa xong trong 5 phút"; `escalated_at` chặn leo thang trùng |
@@ -135,15 +136,18 @@ erDiagram
         risk_level risk_level
     }
     charging_policies {
-        uuid id PK
+        uuid id PK "KHONG sua de F-B1"
         text code UK "unique cung version"
-        int version UK
+        int version UK "noi tiep 1,2,3..."
         policy_scope scope_type "vehicle/fleet/model"
         numeric soc_min_pct
         numeric soc_max_pct
-        jsonb allowed_hours "ToU"
-        timestamptz effective_from
-        timestamptz effective_to
+        jsonb allowed_hours "ToU gio VN"
+        timestamptz effective_from "version sau dong version truoc"
+        timestamptz effective_to "chi khi ngung han"
+        uuid supersedes_id FK "version lien truoc"
+        uuid created_by FK
+        text change_note "ly do doi nguong"
     }
     payment_transactions {
         uuid id PK

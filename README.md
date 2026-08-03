@@ -102,6 +102,7 @@ g3-network/
 │   ├── portal/          # Portal đội xe Next.js — cổng 3100
 │   └── mobile/          # App tài xế Expo/React Native — KHUNG TRỐNG, build ở Prompt 09 (chờ D-01)
 ├── packages/
+│   ├── payments/        # F-H1: cổng thanh toán VNPay SANDBOX (từ chối khởi động nếu không phải sandbox)
 │   ├── shared/          # Hằng số & tiện ích dùng chung + db-types.ts sinh từ schema (F-G4)
 │   ├── db/              # Migration SQL đánh số + runner + seed + sinh types (F-G4, Prompt 03)
 │   └── contracts/       # Interface cho MỌI tích hợp ngoài + mocks (quy tắc 2 — cấm gọi thẳng SDK)
@@ -144,6 +145,8 @@ g3-network/
 | `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc OCPP (kịch bản: `--scenario normal\|faulted\|disconnect`) |
 | `npm run demo:gate0` | **Demo Gate 0 end-to-end** (tự migrate + seed, ~3 phút) |
 | `npm run reconcile` | Chạy tay job đối soát 3 chiều (thêm `-- --lam-lai-tat-ca` để soát lại từ đầu) |
+| `GET /reports/kwh` | F-C6 — sản lượng kWh theo khách/phiên phục vụ hoá đơn & đối soát |
+| `GET /reconciliation/report` | F-C6 — báo cáo lệch **theo ngày**: bắt cả sự cố đơn lẻ lẫn sai lệch hệ thống (mọi phiên dưới ngưỡng nhưng cùng chiều) |
 | `npm run openapi:generate` | Sinh lại `apps/api/openapi.json` |
 | `npm run gitleaks` | Quét secret toàn thư mục |
 
@@ -165,11 +168,19 @@ g3-network/
 | `OTP_TTL_SECONDS` / `OTP_MAX_ATTEMPTS` | Hạn dùng mã OTP (300s) và số lần nhập sai tối đa (5) |
 | `OTP_MAX_REQUESTS_PER_WINDOW` / `OTP_REQUEST_WINDOW_S` | Chống dò mã: tối đa 5 lần xin mã cho 1 SĐT mỗi 900s |
 | `TELEMETRY_HISTORY_MAX_ROWS` | Trần bản ghi mỗi lần gọi lịch sử telemetry (mặc định 1000) |
+| `VIOLATION_SCAN_INTERVAL_MS` | F-B3 — chu kỳ job đối chiếu phiên sạc với chính sách (mặc định 300000; `0` = chỉ chạy tay) |
+| `VIOLATION_SOC_BREACH_COUNT` / `VIOLATION_SOC_BREACH_WINDOW_DAYS` | F-B3 — tiêu chí "thường xuyên" của sheet 4 (mặc định 3 lần / 30 ngày). ⚠️ **Chưa ai thẩm định hai con số này** — xem [ADR-011](docs/adr/ADR-011-tieu-chi-vi-pham-sac.md) và Q4 (MỞ) |
+| `APP_TIMEZONE` | F-B1 — múi giờ IANA để hiểu khung giờ ToU của chính sách sạc (mặc định `Asia/Ho_Chi_Minh`). Khung giờ trong hợp đồng là giờ Việt Nam còn DB lưu UTC; sai chỗ này lệch 7 tiếng và gắn cờ vi phạm oan toàn bộ phiên sạc đêm ([ADR-010](docs/adr/ADR-010-version-chinh-sach-sac.md)) |
 | `RECONCILE_INTERVAL_MS` | Chu kỳ job đối soát 3 chiều trong tiến trình API (mặc định 300000; `0` = chỉ chạy tay) |
 | `RECONCILE_NGUONG_PCT` | Ngưỡng NF-10 — lệch hơn mức này (%) thì sinh cảnh báo (mặc định 1) |
 | `CHARGE_EFFICIENCY` | Hiệu suất sạc lưới → pin. **1.0 chỉ đúng với simulator** — phải hiệu chuẩn trước Gate 1 ([ADR-007](docs/adr/ADR-007-hieu-suat-sac-doi-soat.md)) |
 | `CHARGING_PRICE_VND_PER_KWH` | Đơn giá điện GIẢ để quy tiền về kWh (mặc định 3500) |
 | `RECONCILE_SOC_WINDOW_S` | Telemetry xa mốc phiên quá số giây này → kết luận "thiếu dữ liệu" (mặc định 60) |
+| `PAYMENT_GATEWAY` | F-H1 — cổng thanh toán: `mock` (mặc định, chạy trong tiến trình, không cần tài khoản) hoặc `vnpay` (**SANDBOX**) |
+| `VNPAY_TMN_CODE` / `VNPAY_HASH_SECRET` | F-H1 — thông tin tài khoản VNPay **sandbox**. **Để trống trong `.env.example`**; tự đăng ký tại sandbox.vnpayment.vn rồi điền vào `infra/.env` (không commit) |
+| `VNPAY_PAY_URL` / `VNPAY_RETURN_URL` / `VNPAY_EXPIRE_MINUTES` | F-H1 — endpoint sandbox, URL quay về, hạn link. **Hệ thống TỪ CHỐI KHỞI ĐỘNG nếu `VNPAY_PAY_URL` không phải host sandbox** ([ADR-012](docs/adr/ADR-012-thanh-toan-sandbox.md)) |
+| `PAYMENT_LINK_INTERVAL_MS` | F-H1 — chu kỳ nối giao dịch đã thu tiền với phiên sạc về muộn (mặc định 120000; `0` = tắt) |
+| `PAYMENT_RETURN_URL` / `CSMS_INTERNAL_URL` | F-H1 — URL app quay về sau khi trả tiền; gốc HTTP nội bộ của CSMS để gửi RemoteStart |
 | `SLA_SCAN_INTERVAL_MS` | F-I2 — chu kỳ quét ticket quá hạn chưa ai nhận (mặc định 60000; `0` = tắt). SLA của SOS là 5 phút nên không nên quét thưa hơn |
 | `DEVICE_SCAN_INTERVAL_MS` | F-J1 — chu kỳ job quét thiết bị im lặng trong tiến trình API (mặc định 600000; `0` = tắt) |
 | `DEVICE_SILENCE_HOURS` | F-J1 — im lặng quá số giờ này thì sinh cảnh báo (mặc định 6) |
