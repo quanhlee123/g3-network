@@ -116,6 +116,34 @@ Ma trận quyền đầy đủ + các điểm cần review: [docs/architecture/r
 Mọi lần truy cập `GET /vehicles/{id}/location` (kể cả bị từ chối) đều ghi `audit_logs`
 — quy tắc 5, NF-06, Nghị định 13/2023.
 
+## App tài xế (F-D4) — mới có KHUNG
+
+D-01 ("có app tài xế ở P1 không") **đã chốt CÓ** ngày 2026-08-03 — xem
+[docs/DECISION-LOG.md](docs/DECISION-LOG.md).
+
+Đã dựng: cấu hình theo môi trường, tầng gọi API (gắn token, hạn chờ, phân loại lỗi),
+luồng đăng nhập OTP, bảng 10 màn hình + luật điều hướng, kho chuỗi tiếng Việt.
+
+**CHƯA vẽ màn hình nào.** Bố cục chờ wireframe của Thiết kế theo chuẩn INPUT-03 §2 —
+yêu cầu đã gửi tại [docs/design/YEU-CAU-WIREFRAME.md](docs/design/YEU-CAU-WIREFRAME.md).
+
+```bash
+npm run start -w apps/mobile
+```
+
+Hai biến môi trường (đã có trong `infra/.env.example`):
+
+| Biến | Ý nghĩa |
+|---|---|
+| `EXPO_PUBLIC_API_URL` | Địa chỉ `apps/api`. **Bỏ trống chỉ chạy được trên trình giả lập Android** (mặc định `http://10.0.2.2:3000`). Điện thoại thật qua Expo Go phải điền IP LAN của máy chạy API, vd `http://192.168.1.50:3000` |
+| `EXPO_PUBLIC_API_TIMEOUT_MS` | Hạn chờ 1 lần gọi API, mặc định `10000` |
+
+⚠️ Tiền tố `EXPO_PUBLIC_` nghĩa là giá trị được **nhúng thẳng vào bundle** tải về máy —
+chỉ đặt thứ công khai được, tuyệt đối không đặt secret.
+
+⚠️ Phase 1 token cất trong bộ nhớ: **đóng app là mất phiên**. Bản dùng Android Keystore
+(`expo-secure-store`) gắn vào ở bước có màn hình — chỗ thay nằm ở `src/app-deps.ts`.
+
 ## Sơ đồ thư mục
 
 ```
@@ -124,7 +152,7 @@ g3-network/
 ├── apps/
 │   ├── api/             # API Fastify + TypeBox (OpenAPI tự sinh) — cổng 3000
 │   ├── portal/          # Portal đội xe Next.js — cổng 3100
-│   └── mobile/          # App tài xế Expo/React Native — KHUNG TRỐNG, build ở Prompt 09 (chờ D-01)
+│   └── mobile/          # F-D4: App tài xế Expo — KHUNG (cấu hình, tầng API, đăng nhập OTP, điều hướng); màn hình chờ wireframe
 ├── packages/
 │   ├── payments/        # F-H1: cổng thanh toán VNPay SANDBOX (từ chối khởi động nếu không phải sandbox)
 │   ├── shared/          # Hằng số & tiện ích dùng chung + db-types.ts sinh từ schema (F-G4)
