@@ -29,14 +29,16 @@ khoảng 3 phút, in kết quả từng bước ra console:
 | Bước | Nội dung |
 |---|---|
 | 1–2 | Dựng DB (migration + dữ liệu giả) · khởi động ingest, CSMS, API |
-| 3 | 20 xe giả lập gửi telemetry qua MQTT (F-A1) |
+| 3 | 20 xe: 17 xe chạy bình thường + **3 kịch bản nguy hiểm chạy đồng thời** (tụt pin · nóng pin · mất nguồn) |
 | 4 | 1 xe tụt pin → **cảnh báo phân cấp 30% / 20% / 10%** kèm gợi ý trạm (F-A2) |
+| 4b | Xe khác nóng pin lên 60°C → **cảnh báo CRITICAL kèm snapshot 5 phút** dữ liệu (F-A4) |
 | 5 | Xe cắm sạc → **phiên sạc qua OCPP 1.6J** ghi vào bảng append-only (F-B2, NF-11) |
 | 6 | Giao dịch thanh toán (bản ghi GIẢ do simulator sinh) |
 | 7 | **Đối soát 3 chiều trụ ↔ xe ↔ thanh toán → KHỚP** trong ngưỡng 1% (F-C6, NF-10) |
 | 8 | Bơm sai 5% có chủ ý → hệ thống **phát hiện và cảnh báo**; thử sửa bảng append-only → DB từ chối |
 | 9 | Vận hành G3 Energy gọi API vị trí xe → **403**, mọi lần truy cập đều vào audit log (quy tắc 5) |
-| 10 | Bảng tóm tắt toàn bộ số liệu lần chạy |
+| 9b | Xe bị cắt nguồn → job quét **phân biệt "nghi tháo thiết bị" với "mất sóng"** (F-J1/F-J3) |
+| 10 | Kiểm tra **không trùng / không sót** trên cả 3 luồng cảnh báo + bảng tóm tắt số liệu |
 
 Demo giữ API sống sau khi xong để trình bày thêm tại <http://localhost:3000/docs>; `Ctrl+C` để tắt sạch.
 
