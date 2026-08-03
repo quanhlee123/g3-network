@@ -1,8 +1,8 @@
 // F-F1 — Đăng nhập OTP: luồng chính + các kịch bản xấu (DoD: ít nhất 2 kịch bản xấu).
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { normalizePhone } from '@g3/shared';
 import { createHarness, TEST_OTP_CODE, type Harness } from '../test/app-harness';
 import { seedWorld, type TestWorld } from '../test/world';
-import { normalizePhone } from './otp';
 
 let h: Harness;
 let w: TestWorld;

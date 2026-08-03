@@ -2,10 +2,11 @@
 // Phase 1: OTP in ra console qua ConsoleSmsSender (quy tắc 2 & 12) — KHÔNG gửi SMS thật.
 import { Type } from '@sinclair/typebox';
 import type { FastifyInstance } from 'fastify';
+import { isValidPhone } from '@g3/shared';
 import type { Queryable } from '../db';
 import { sendError, ErrorSchema } from '../errors';
 import { requireAuth } from '../auth/guard';
-import { normalizePhone, type OtpService } from '../auth/otp';
+import type { OtpService } from '../auth/otp';
 import { ROLE_PERMISSIONS } from '../auth/permissions';
 
 export interface AuthRoutesDeps {
@@ -40,7 +41,7 @@ export async function authRoutes(app: FastifyInstance, deps: AuthRoutesDeps): Pr
     },
     async (request, reply) => {
       const { phone } = request.body as { phone: string };
-      if (!/^0\d{8,11}$/.test(normalizePhone(phone))) {
+      if (!isValidPhone(phone)) {
         return sendError(
           reply,
           400,
