@@ -36,6 +36,7 @@ Trạng thái: MỞ / ĐÃ CHỐT / HOÃN · Quyết định hợp lệ phải �
 ¹ Cột "Ảnh hưởng (F-xx)" của Q1–Q12 do người chuyển đổi suy ra từ ngữ cảnh PRD (sheet 14 không có cột này) — cần review xác nhận.
 
 ## Nhật ký thay đổi
+- 2026-08-03 · Claude Code · Lập [PHIẾU THẨM ĐỊNH](PHIEU-THAM-DINH.md) — gom TOÀN BỘ giá trị do Claude Code tự đặt (ngưỡng an toàn pin, tiêu chí "thường xuyên", rate-limit, đơn giá điện GIẢ), 9 ADR đang nháp, 11 mục phân quyền phải suy luận, và các mục MỞ đang chặn việc — kèm cột "hỏng thế nào nếu sai" và cách áp giá trị mới sau khi ký (không cần sửa code).
 - 2026-07-17 · Claude Code (Prompt 01) · Chốt D-04 = Fastify theo kế hoạch Prompt 01 được PM duyệt; chi tiết tại docs/adr/ADR-001-chon-fastify.md.
 - 2026-07-17 · Claude Code (Prompt 01) · Q1..Q12 chưa chép được vì PRD chưa có trong repo (docs/prd/ trống, chờ Prompt 02).
 - 2026-07-18 · Claude Code (Prompt 02) · Chép Q1–Q12 nguyên trạng từ PRD sheet 14 (trạng thái MỞ); thêm D-05..D-09 từ ghi chú review của Đức (docs/prd/review-notes-duc.md); bổ sung F-H2..H4, F-K1 vào phạm vi ảnh hưởng D-01 theo ghi chú của Đức.
