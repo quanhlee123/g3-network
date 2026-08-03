@@ -1,7 +1,7 @@
 # INDEX — Tra cứu mã F-xx → file → trạng thái build
 
 > Cập nhật cột "Trạng thái build" sau mỗi tính năng hoàn thành (Definition of Done trong CLAUDE.md).
-> Trạng thái: ⬜ chưa build · 🔨 đang build · ✅ xong (test xanh + OpenAPI + docs) · ⏸ chặn bởi quyết định MỞ.
+> Trạng thái: ⬜ chưa build · 🔨 đang build · ✅ xong (test xanh + OpenAPI + docs) · ⏸ chặn bởi quyết định MỞ · 🔶 một phần (backend xong, thiếu mặt tiền — xem cột Ghi chú).
 > Cảnh báo phụ thuộc: các mã có ghi chú D-xx đang chờ [DECISION-LOG](../DECISION-LOG.md).
 
 ## Danh sách file PRD
@@ -47,11 +47,11 @@
 | F-C4 | Đặt chỗ trụ sạc | P1.5 | Could | ⬜ | |
 | F-C5 | Sản lượng điện theo trạm | P1.1 | Should | ⬜ | |
 | F-C6 | Điện sử dụng theo khách hàng | P1.0 | Must | ⬜ | Đối soát 3 chiều (NF-10) |
-| F-D1 | Bản đồ trạm sạc | P1.0 | Must | ⏸ | D-01 (app tài xế P1?), Q5 (bản đồ) |
-| F-D2 | Điều hướng tới trạm | P1.0 | Must | ⏸ | D-01, Q5 |
-| F-D3 | Range-aware | P1.1 | Should | ⏸ | D-01, Q5 |
-| F-D4 | App tài xế (iOS & Android) | P1.0 | Must | ⏸ | D-01 |
-| F-D5 | Chế độ offline | P1.1 | Should | ⏸ | D-01 |
+| F-D1 | Bản đồ trạm sạc | P1.0 | Must | ⬜ | D-01 ĐÃ CHỐT (CÓ) · Q5 vẫn MỞ → đi qua `IMapProvider` |
+| F-D2 | Điều hướng tới trạm | P1.0 | Must | ⬜ | D-01 ĐÃ CHỐT (CÓ) · Q5 vẫn MỞ |
+| F-D3 | Range-aware | P1.1 | Should | ⬜ | D-01 ĐÃ CHỐT (CÓ) · Q5 vẫn MỞ |
+| F-D4 | App tài xế (iOS & Android) | P1.0 | Must | ⬜ | D-01 ĐÃ CHỐT (CÓ) — chờ wireframe (INPUT-03 §2) |
+| F-D5 | Chế độ offline | P1.1 | Should | ⬜ | D-01 ĐÃ CHỐT (CÓ) |
 | F-E1 | Danh sách & bản đồ đội xe | P1.0 | Must | ⬜ | |
 | F-E2 | Dashboard KPI đội xe | P1.1 | Must | ⬜ | |
 | F-E3 | Báo cáo sạc & bảo hành | P1.1 | Must | ⬜ | D-06 (đội xe hay admin tổng) |
@@ -64,17 +64,17 @@
 | F-G2 | Tích hợp trạm sạc (OCPP) | P1.0 | Must | ⬜ | Q2, Q8 — Phase 1 dùng simulator |
 | F-G3 | Pipeline dữ liệu (ETL) | P1.1 | Should | ⬜ | |
 | F-G4 | Quản trị & bảo mật dữ liệu | P1.0 | Must | ⬜ | Q7 |
-| F-H1 | Thanh toán phiên sạc in-app | P1.0 | Must | ⏸ | D-01, D-02 (RFID); SANDBOX |
-| F-H2 | Ví & lịch sử giao dịch | P1.1 | Should | ⏸ | D-01 |
-| F-H3 | Hóa đơn điện tử kWh | P1.1 | Must | ⏸ | D-01, Q9 |
-| F-H4 | Billing thuê bao SaaS | P1.5 | Should | ⏸ | D-01, Q3 (giá gói) |
+| F-H1 | Thanh toán phiên sạc in-app | P1.0 | Must | 🔶 | Backend XONG · D-01 ĐÃ CHỐT (CÓ) → còn màn hình quét QR · D-02 (RFID) vẫn MỞ; SANDBOX |
+| F-H2 | Ví & lịch sử giao dịch | P1.1 | Should | ⬜ | D-01 ĐÃ CHỐT (CÓ) |
+| F-H3 | Hóa đơn điện tử kWh | P1.1 | Must | ⏸ | D-01 ĐÃ CHỐT (CÓ) · **Q9 vẫn MỞ** — biên nhận hiện chưa phải hoá đơn hợp lệ |
+| F-H4 | Billing thuê bao SaaS | P1.5 | Should | ⏸ | D-01 ĐÃ CHỐT (CÓ) · **Q3 vẫn MỞ** (giá gói) |
 | F-I1 | Ticket hỗ trợ in-app | P1.1 | Should | ⏸ | D-09, Q6 |
-| F-I2 | Hỗ trợ sự cố (SOS) | P1.0 | Must | ⏸ | D-09, Q6 — Must P1.0 ⚠️ |
+| F-I2 | Hỗ trợ sự cố (SOS) | P1.0 | Must | 🔶 | Backend XONG · D-01 ĐÃ CHỐT (CÓ) → còn nút SOS trên app · **D-09/Q6 vẫn MỞ** (chưa có người trực 24/7) ⚠️ |
 | F-I3 | Đặt lịch bảo dưỡng | P1.5 | Could | ⏸ | D-09 |
 | F-J1 | Sức khỏe thiết bị telematics | P1.0 | Must | ⬜ | |
 | F-J2 | Cấu hình từ xa (OTA config) | P1.1 | Should | ⬜ | D-08 |
 | F-J3 | Cảnh báo offline & tháo thiết bị | P1.0 | Must | ⬜ | |
-| F-K1 | Chấm điểm hành vi lái | P1.1 | Should | ⬜ | D-01 (hiển thị ở app?) |
+| F-K1 | Chấm điểm hành vi lái | P1.1 | Should | ⬜ | D-01 ĐÃ CHỐT (CÓ) → có hiển thị ở app tài xế |
 
 Phạm vi P1.0 (Day-1, 23 tính năng — theo sheet 4): A1, A2, A4, A5 · B1, B2, B3, B5 · C1, C2, C6 · D1, D2, D4 · E1 · F1, F2, F3 · G1, G2, G4 · H1 · I2 · J1, J3.
 
