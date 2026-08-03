@@ -4,9 +4,9 @@
 // lần, mất sóng giữa chừng, người dùng bấm hai lần) và đó chính là những nhánh phải test.
 // Để trong React thì muốn test phải dựng cả cây component; để riêng thì test được bằng
 // hàm thuần, chạy trong mili giây.
+import { isValidPhone as sdtHopLe } from '@g3/shared';
 import { ApiError } from '../api/client';
 import type { AuthApi } from '../api/auth-api';
-import { sdtHopLe } from '../api/auth-api';
 import { cauLoiMang, dienThamSo, VI } from '../i18n';
 import type { KhoToken, PhienDangNhap } from './token-storage';
 

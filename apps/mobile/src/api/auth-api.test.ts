@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AuthApi, chuanHoaSdt, sdtHopLe } from './auth-api';
+import { normalizePhone as chuanHoaSdt, isValidPhone as sdtHopLe } from '@g3/shared';
+import { AuthApi } from './auth-api';
 import { ApiClient } from './client';
 
 describe('chuẩn hoá SĐT — phải khớp TUYỆT ĐỐI với backend (F-F1)', () => {
-  // Cột phải là kết quả của normalizePhone trong apps/api/src/auth/otp.ts.
-  // KHÔNG import thẳng hàm đó: file ấy cần node:crypto và @g3/contracts, kéo vào
-  // workspace mobile sẽ hỏng typecheck (tsconfig mobile chỉ khai types: ["react"]).
-  // Sửa normalizePhone ở backend thì phải sửa bảng này — nếu quên, test đỏ.
+  // Nay app và backend dùng CHUNG một hàm (packages/shared/src/phone.ts), nên bảng này
+  // không còn phải canh cho khớp một bản sao nữa. Giữ nguyên bảng vì nó khoá HÀNH VI:
+  // đổi cách chuẩn hoá ở packages/shared là test này đỏ ở cả hai bên.
   const mauThu: Array<[string, string]> = [
     ['0912345678', '0912345678'],
     ['+84912345678', '0912345678'],

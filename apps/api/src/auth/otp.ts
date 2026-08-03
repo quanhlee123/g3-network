@@ -10,7 +10,7 @@
 //   tài khoản nào có thật (user enumeration).
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import type { ISmsSender } from '@g3/contracts';
-import type { UserRole } from '@g3/shared';
+import { normalizePhone, type UserRole } from '@g3/shared';
 import type { Queryable } from '../db';
 
 /** Nhận Pool hoặc Client của pg — cùng quy ước với services/ingest và services/csms. */
@@ -30,17 +30,6 @@ export type OtpFailure =
 
 export type OtpVerifyResult =
   { ok: true; user: OtpVerifiedUser } | { ok: false; reason: OtpFailure };
-
-/**
- * Chuẩn hóa SĐT Việt Nam về dạng 0xxxxxxxxx: bỏ khoảng trắng/dấu gạch, +84/84 → 0.
- * Nhờ vậy "0900 000 001", "+84900000001" và "0900000001" là cùng một tài khoản.
- */
-export function normalizePhone(raw: string): string {
-  const digits = raw.replace(/[\s.-]/g, '');
-  if (digits.startsWith('+84')) return `0${digits.slice(3)}`;
-  if (digits.startsWith('84') && digits.length >= 11) return `0${digits.slice(2)}`;
-  return digits;
-}
 
 /** Mã 6 chữ số bằng randomInt (CSPRNG) — KHÔNG dùng Math.random cho mã đăng nhập. */
 export function generateOtpCode(rand: (max: number) => number = (m) => randomInt(m)): string {
