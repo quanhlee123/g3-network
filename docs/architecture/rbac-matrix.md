@@ -20,6 +20,9 @@
 | `charging_policy.manage` | `POST /charging-policies`, `.../{code}/versions`, `.../{code}/ngung` | Cấu hình chính sách sạc (bảo hành) |
 | `violation.read` | `GET /violations`, `GET /violations/{id}` | Xem trạng thái / báo cáo bảo hành — xem R-10 |
 | `violation.run` | `POST /violations/run` | Xem trạng thái / báo cáo bảo hành (thao tác của Bảo hành) |
+| `station.manage` | `POST /stations`, `PATCH /stations/{id}`, `POST|PATCH /stations/{id}/connectors…` | Quản lý danh mục & trạng thái trạm |
+| `station.read` | `GET /stations/map` (F-C2 — bản đồ cho app) | Tìm & điều hướng trạm sạc |
+| `reconciliation.read` | `GET /reports/kwh`, `GET /reconciliation/report` (F-C6) | Sản lượng điện / đối soát kWh |
 | `device_health.read` | `GET /devices/health` | Sức khỏe thiết bị telematics |
 | `vehicle.location.read` | `GET /vehicles/{id}/route` (F-A5 — lộ trình cũng là dữ liệu vị trí) | Xem trạng thái & vị trí xe |
 | `geofence.read` / `.manage` | `GET /geofences`, `POST /geofences` | *(không có dòng tương ứng — xem R-07)* |
@@ -36,6 +39,7 @@
 | `vehicle.read` | own | fleet | — | all | all | all | all |
 | `vehicle.location.read` | own | fleet | **—** | all | all *(cần ticket mở)* | all | all |
 | `station.read` | all | all | all | — | — | all | — |
+| `station.manage` | — | — | **all** | — | — | all | — |
 | `charging_session.read` | own | fleet | all | all | all | all | — |
 | `charging_policy.read` | own | fleet | — | all | — | all | — |
 | `charging_policy.manage` | — | — | — | **all** | — | all | — |

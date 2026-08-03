@@ -1769,6 +1769,373 @@
             }
           }
         }
+      },
+      "post": {
+        "summary": "Thêm trạm sạc mới kèm danh sách trụ (F-C1)",
+        "tags": [
+          "tram-sac"
+        ],
+        "description": "Mã trạm `code` chính là ChargePoint identity mà trụ dùng để kết nối CSMS (`ws://…/ocpp/{code}`) — đặt sai thì trụ không vào được hệ thống.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "name",
+                  "lat",
+                  "lng"
+                ],
+                "properties": {
+                  "code": {
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "type": "string"
+                  },
+                  "name": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "lat": {
+                    "minimum": -90,
+                    "maximum": 90,
+                    "type": "number"
+                  },
+                  "lng": {
+                    "minimum": -180,
+                    "maximum": 180,
+                    "type": "number"
+                  },
+                  "area": {
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "total_power_kw": {
+                    "exclusiveMinimum": 0,
+                    "type": "number"
+                  },
+                  "connector_standard": {
+                    "maxLength": 32,
+                    "default": "CCS2",
+                    "type": "string"
+                  },
+                  "operating_hours": {
+                    "maxLength": 64,
+                    "type": "string"
+                  },
+                  "note": {
+                    "maxLength": 1000,
+                    "type": "string"
+                  },
+                  "connectors": {
+                    "description": "Bỏ trống = tạo trạm chưa có trụ, thêm sau bằng POST .../connectors",
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "ocpp_connector_id",
+                        "max_power_kw"
+                      ],
+                      "properties": {
+                        "ocpp_connector_id": {
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "max_power_kw": {
+                          "exclusiveMinimum": 0,
+                          "type": "number"
+                        },
+                        "standard": {
+                          "maxLength": 32,
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "code",
+                        "name",
+                        "area",
+                        "status",
+                        "total_power_kw",
+                        "connector_standard",
+                        "operating_hours",
+                        "lat",
+                        "lng",
+                        "connectors_total",
+                        "connectors_available",
+                        "connectors_charging",
+                        "connectors_faulted",
+                        "connectors_unavailable"
+                      ],
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "area": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "total_power_kw": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "connector_standard": {
+                          "type": "string"
+                        },
+                        "operating_hours": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lat": {
+                          "type": "number"
+                        },
+                        "lng": {
+                          "type": "number"
+                        },
+                        "connectors_total": {
+                          "type": "integer"
+                        },
+                        "connectors_available": {
+                          "type": "integer"
+                        },
+                        "connectors_charging": {
+                          "type": "integer"
+                        },
+                        "connectors_faulted": {
+                          "type": "integer"
+                        },
+                        "connectors_unavailable": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "connectors"
+                      ],
+                      "properties": {
+                        "connectors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "ocpp_connector_id",
+                              "max_power_kw",
+                              "standard",
+                              "status",
+                              "updated_at"
+                            ],
+                            "properties": {
+                              "id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "ocpp_connector_id": {
+                                "type": "integer"
+                              },
+                              "max_power_kw": {
+                                "type": "number"
+                              },
+                              "standard": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "description": "Available | Charging | Faulted | Unavailable",
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "format": "date-time",
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/stations/{id}": {
@@ -1931,6 +2298,1152 @@
                       }
                     }
                   ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Sửa thông tin & trạng thái khai thác của trạm (F-C1)",
+        "tags": [
+          "tram-sac"
+        ],
+        "description": "Đổi được trạng thái KHAI THÁC của trạm (active/maintenance/inactive). KHÔNG đổi được trạng thái từng trụ — cái đó chỉ đến từ OCPP (F-C2). Cũng KHÔNG đổi được `code` vì trụ đang dùng mã đó để kết nối CSMS.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "lat": {
+                    "minimum": -90,
+                    "maximum": 90,
+                    "type": "number"
+                  },
+                  "lng": {
+                    "minimum": -180,
+                    "maximum": 180,
+                    "type": "number"
+                  },
+                  "area": {
+                    "anyOf": [
+                      {
+                        "maxLength": 200,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "total_power_kw": {
+                    "anyOf": [
+                      {
+                        "exclusiveMinimum": 0,
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "operating_hours": {
+                    "anyOf": [
+                      {
+                        "maxLength": 64,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "status": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "active"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "maintenance"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "inactive"
+                        ]
+                      }
+                    ]
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "maxLength": 1000,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "code",
+                        "name",
+                        "area",
+                        "status",
+                        "total_power_kw",
+                        "connector_standard",
+                        "operating_hours",
+                        "lat",
+                        "lng",
+                        "connectors_total",
+                        "connectors_available",
+                        "connectors_charging",
+                        "connectors_faulted",
+                        "connectors_unavailable"
+                      ],
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "area": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "total_power_kw": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "connector_standard": {
+                          "type": "string"
+                        },
+                        "operating_hours": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lat": {
+                          "type": "number"
+                        },
+                        "lng": {
+                          "type": "number"
+                        },
+                        "connectors_total": {
+                          "type": "integer"
+                        },
+                        "connectors_available": {
+                          "type": "integer"
+                        },
+                        "connectors_charging": {
+                          "type": "integer"
+                        },
+                        "connectors_faulted": {
+                          "type": "integer"
+                        },
+                        "connectors_unavailable": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "connectors"
+                      ],
+                      "properties": {
+                        "connectors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "ocpp_connector_id",
+                              "max_power_kw",
+                              "standard",
+                              "status",
+                              "updated_at"
+                            ],
+                            "properties": {
+                              "id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "ocpp_connector_id": {
+                                "type": "integer"
+                              },
+                              "max_power_kw": {
+                                "type": "number"
+                              },
+                              "standard": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "description": "Available | Charging | Faulted | Unavailable",
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "format": "date-time",
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/map": {
+      "get": {
+        "summary": "Bản đồ trạm + trạng thái trụ realtime cho app (F-C1, F-C2)",
+        "tags": [
+          "tram-sac"
+        ],
+        "description": "Trả trạm kèm toạ độ và số trụ theo từng trạng thái. Truyền `lat`/`lng` để sắp xếp theo khoảng cách và lọc trong bán kính. Chỉ trạm đang khai thác (`active`) trừ khi yêu cầu rõ trạng thái khác — tài xế không cần thấy trạm đang bảo trì trên bản đồ điều hướng.",
+        "parameters": [
+          {
+            "schema": {
+              "minimum": -90,
+              "maximum": 90,
+              "type": "number"
+            },
+            "in": "query",
+            "name": "lat",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": -180,
+              "maximum": 180,
+              "type": "number"
+            },
+            "in": "query",
+            "name": "lng",
+            "required": false
+          },
+          {
+            "schema": {
+              "exclusiveMinimum": 0,
+              "maximum": 500,
+              "default": 50,
+              "type": "number"
+            },
+            "in": "query",
+            "name": "ban_kinh_km",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "chi_con_tru_trong",
+            "required": false
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "active"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "maintenance"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "inactive"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "total",
+                    "items"
+                  ],
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "allOf": [
+                          {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "code",
+                              "name",
+                              "area",
+                              "status",
+                              "total_power_kw",
+                              "connector_standard",
+                              "operating_hours",
+                              "lat",
+                              "lng",
+                              "connectors_total",
+                              "connectors_available",
+                              "connectors_charging",
+                              "connectors_faulted",
+                              "connectors_unavailable"
+                            ],
+                            "properties": {
+                              "id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "code": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "area": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "total_power_kw": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "connector_standard": {
+                                "type": "string"
+                              },
+                              "operating_hours": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "lat": {
+                                "type": "number"
+                              },
+                              "lng": {
+                                "type": "number"
+                              },
+                              "connectors_total": {
+                                "type": "integer"
+                              },
+                              "connectors_available": {
+                                "type": "integer"
+                              },
+                              "connectors_charging": {
+                                "type": "integer"
+                              },
+                              "connectors_faulted": {
+                                "type": "integer"
+                              },
+                              "connectors_unavailable": {
+                                "type": "integer"
+                              }
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "khoang_cach_km"
+                            ],
+                            "properties": {
+                              "khoang_cach_km": {
+                                "anyOf": [
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/{id}/connectors": {
+      "post": {
+        "summary": "Thêm trụ/súng vào một trạm (F-C1)",
+        "tags": [
+          "tram-sac"
+        ],
+        "description": "Trụ mới bắt đầu ở trạng thái `Available`; từ đó trở đi trạng thái CHỈ do OCPP StatusNotification cập nhật.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ocpp_connector_id",
+                  "max_power_kw"
+                ],
+                "properties": {
+                  "ocpp_connector_id": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "max_power_kw": {
+                    "exclusiveMinimum": 0,
+                    "type": "number"
+                  },
+                  "standard": {
+                    "maxLength": 32,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "ocpp_connector_id",
+                    "max_power_kw",
+                    "standard",
+                    "status",
+                    "updated_at"
+                  ],
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "ocpp_connector_id": {
+                      "type": "integer"
+                    },
+                    "max_power_kw": {
+                      "type": "number"
+                    },
+                    "standard": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "description": "Available | Charging | Faulted | Unavailable",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/{id}/connectors/{connectorId}": {
+      "patch": {
+        "summary": "Sửa thông số kỹ thuật của một trụ (F-C1)",
+        "tags": [
+          "tram-sac"
+        ],
+        "description": "Chỉ đổi được công suất và chuẩn đầu sạc. Trường `status` KHÔNG có ở đây và sẽ không bao giờ có: trạng thái súng là dữ liệu đo từ trụ qua OCPP (F-C2, NF-02), sửa tay được thì tiêu chí \"chính xác ≥99%\" mất ý nghĩa.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "max_power_kw": {
+                    "exclusiveMinimum": 0,
+                    "type": "number"
+                  },
+                  "standard": {
+                    "maxLength": 32,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "connectorId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "ocpp_connector_id",
+                    "max_power_kw",
+                    "standard",
+                    "status",
+                    "updated_at"
+                  ],
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "ocpp_connector_id": {
+                      "type": "integer"
+                    },
+                    "max_power_kw": {
+                      "type": "number"
+                    },
+                    "standard": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "description": "Available | Charging | Faulted | Unavailable",
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -6966,6 +8479,520 @@
                     },
                     "nguong_pct": {
                       "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/kwh": {
+      "get": {
+        "summary": "Sản lượng kWh theo khách hàng, kèm chi tiết theo phiên (F-C6)",
+        "tags": [
+          "doi-soat"
+        ],
+        "description": "Kỳ báo cáo tính theo thời điểm KẾT THÚC phiên: phiên kết thúc 00:30 ngày 2 thuộc về ngày 2 dù bắt đầu từ ngày 1. Số tiền lấy từ giao dịch đã thành công, KHÔNG lấy giá tạm tính lúc đóng phiên — chênh lệch giữa hai số đó chính là thứ job đối soát sinh ra để phát hiện. Đơn vị: kWh và VNĐ (NF-17).",
+        "parameters": [
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "customer_id",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "chi_tiet_phien",
+            "required": false,
+            "description": "Kèm danh sách từng phiên"
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 500,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "tu_ngay",
+                    "den_ngay",
+                    "tong_kwh",
+                    "tong_tien_vnd",
+                    "tong_phien",
+                    "theo_khach"
+                  ],
+                  "properties": {
+                    "tu_ngay": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "den_ngay": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "tong_kwh": {
+                      "type": "number"
+                    },
+                    "tong_tien_vnd": {
+                      "type": "number"
+                    },
+                    "tong_phien": {
+                      "type": "integer"
+                    },
+                    "theo_khach": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "customer_id",
+                          "ten_khach",
+                          "so_hop_dong",
+                          "so_phien",
+                          "so_xe",
+                          "kwh",
+                          "so_tien_vnd"
+                        ],
+                        "properties": {
+                          "customer_id": {
+                            "anyOf": [
+                              {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "ten_khach": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "so_hop_dong": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "so_phien": {
+                            "type": "integer"
+                          },
+                          "so_xe": {
+                            "type": "integer"
+                          },
+                          "kwh": {
+                            "type": "number"
+                          },
+                          "so_tien_vnd": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "theo_phien": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "session_id",
+                          "vin",
+                          "customer_id",
+                          "ten_khach",
+                          "ma_tram",
+                          "ended_at",
+                          "kwh",
+                          "so_tien_vnd",
+                          "trang_thai_doi_soat",
+                          "lech_max_pct"
+                        ],
+                        "properties": {
+                          "session_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "customer_id": {
+                            "anyOf": [
+                              {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "ten_khach": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "ma_tram": {
+                            "type": "string"
+                          },
+                          "ended_at": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "kwh": {
+                            "type": "number"
+                          },
+                          "so_tien_vnd": {
+                            "type": "number"
+                          },
+                          "trang_thai_doi_soat": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lech_max_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "error"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "description": "Mã lỗi máy đọc được, vd khong_du_quyen",
+                          "type": "string"
+                        },
+                        "message": {
+                          "description": "Mô tả tiếng Việt cho người dùng",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reconciliation/report": {
+      "get": {
+        "summary": "Báo cáo lệch đối soát theo NGÀY (F-C6, NF-10)",
+        "tags": [
+          "doi-soat"
+        ],
+        "description": "Hai con số lệch bắt hai loại vấn đề khác nhau: `lech_max_phien_pct` bắt sự cố đơn lẻ (1 phiên lệch 40% giữa 200 phiên khớp), còn `lech_tong_pct` bắt sai lệch HỆ THỐNG (mọi phiên lệch 0,9% cùng chiều — dưới ngưỡng nên không phiên nào bị gắn cờ, nhưng cộng cả ngày thành tiền thật). `can_xem_lai = true` là ngày cần người nhìn.",
+        "parameters": [
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "chi_ngay_bat_thuong",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "nguong_pct",
+                    "so_ngay_can_xem_lai",
+                    "items"
+                  ],
+                  "properties": {
+                    "nguong_pct": {
+                      "type": "number"
+                    },
+                    "so_ngay_can_xem_lai": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "ngay",
+                          "so_phien",
+                          "khop",
+                          "lech",
+                          "thieu_du_lieu",
+                          "chua_doi_soat",
+                          "kwh_tru",
+                          "kwh_xe",
+                          "kwh_thanh_toan",
+                          "lech_tong_pct",
+                          "lech_max_phien_pct",
+                          "can_xem_lai"
+                        ],
+                        "properties": {
+                          "ngay": {
+                            "type": "string"
+                          },
+                          "so_phien": {
+                            "type": "integer"
+                          },
+                          "khop": {
+                            "type": "integer"
+                          },
+                          "lech": {
+                            "type": "integer"
+                          },
+                          "thieu_du_lieu": {
+                            "type": "integer"
+                          },
+                          "chua_doi_soat": {
+                            "type": "integer"
+                          },
+                          "kwh_tru": {
+                            "type": "number"
+                          },
+                          "kwh_xe": {
+                            "type": "number"
+                          },
+                          "kwh_thanh_toan": {
+                            "type": "number"
+                          },
+                          "lech_tong_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lech_max_phien_pct": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "can_xem_lai": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
                     }
                   }
                 }

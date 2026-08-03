@@ -141,6 +141,8 @@ g3-network/
 | `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc OCPP (kịch bản: `--scenario normal\|faulted\|disconnect`) |
 | `npm run demo:gate0` | **Demo Gate 0 end-to-end** (tự migrate + seed, ~3 phút) |
 | `npm run reconcile` | Chạy tay job đối soát 3 chiều (thêm `-- --lam-lai-tat-ca` để soát lại từ đầu) |
+| `GET /reports/kwh` | F-C6 — sản lượng kWh theo khách/phiên phục vụ hoá đơn & đối soát |
+| `GET /reconciliation/report` | F-C6 — báo cáo lệch **theo ngày**: bắt cả sự cố đơn lẻ lẫn sai lệch hệ thống (mọi phiên dưới ngưỡng nhưng cùng chiều) |
 | `npm run openapi:generate` | Sinh lại `apps/api/openapi.json` |
 | `npm run gitleaks` | Quét secret toàn thư mục |
 

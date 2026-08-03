@@ -15,6 +15,12 @@ export const PERMISSIONS = [
   'vehicle.location.read',
   /** Danh mục trạm + trạng thái trụ (sheet 9: "Tìm & điều hướng trạm sạc" ∪ "Quản lý danh mục…"). */
   'station.read',
+  /**
+   * Thêm/sửa danh mục trạm & trạng thái KHAI THÁC của trạm (F-C1) — sheet 9 dòng
+   * "Quản lý danh mục & trạng thái trạm": ✓ Vận hành G3 Energy, ✓ Admin.
+   * KHÔNG bao gồm trạng thái từng trụ: cái đó chỉ đến từ OCPP (F-C2, NF-02).
+   */
+  'station.manage',
   /** Danh sách phiên sạc (F-B2). */
   'charging_session.read',
   /**
@@ -126,6 +132,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
   // → KHÔNG có vehicle.read/vehicle.location.read (test bắt buộc của Prompt 06).
   energy_ops: {
     'station.read': { scope: 'all' },
+    'station.manage': { scope: 'all' },
     'charging_session.read': { scope: 'all' },
     'reconciliation.read': { scope: 'all' },
     'reconciliation.run': { scope: 'all' },
@@ -161,6 +168,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'vehicle.read': { scope: 'all' },
     'vehicle.location.read': { scope: 'all' },
     'station.read': { scope: 'all' },
+    'station.manage': { scope: 'all' },
     'charging_session.read': { scope: 'all' },
     'charging_policy.read': { scope: 'all' },
     'charging_policy.manage': { scope: 'all' },

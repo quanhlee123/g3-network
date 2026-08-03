@@ -8,6 +8,11 @@ import { vehicleScopeClause } from '../auth/scope';
 import type { ApiConfig } from '../config';
 import type { Queryable } from '../db';
 import { AUTH_ERROR_RESPONSES, sendError } from '../errors';
+import {
+  baoCaoLechTheoNgay,
+  sanLuongTheoKhach,
+  sanLuongTheoPhien,
+} from '../modules/reconciliation/bao-cao';
 import { chayDoiSoat } from '../modules/reconciliation/reconcile';
 
 export interface ReconciliationRoutesDeps {
@@ -216,6 +221,155 @@ export async function reconciliationRoutes(
         thieu_du_lieu: tomTat.thieu_du_lieu,
         loi: tomTat.loi,
         nguong_pct: config.reconcile.nguongPct,
+      };
+    },
+  );
+
+  // -----------------------------------------------------------------------------------
+  // F-C6 — Sản lượng điện theo khách hàng / theo phiên (hoá đơn & đối soát với khách)
+  // -----------------------------------------------------------------------------------
+  app.get(
+    '/reports/kwh',
+    {
+      config: { permission: 'reconciliation.read' },
+      schema: {
+        tags: ['doi-soat'],
+        summary: 'Sản lượng kWh theo khách hàng, kèm chi tiết theo phiên (F-C6)',
+        description:
+          'Kỳ báo cáo tính theo thời điểm KẾT THÚC phiên: phiên kết thúc 00:30 ngày 2 thuộc ' +
+          'về ngày 2 dù bắt đầu từ ngày 1. Số tiền lấy từ giao dịch đã thành công, KHÔNG lấy ' +
+          'giá tạm tính lúc đóng phiên — chênh lệch giữa hai số đó chính là thứ job đối soát ' +
+          'sinh ra để phát hiện. Đơn vị: kWh và VNĐ (NF-17).',
+        querystring: Type.Object({
+          from: Type.Optional(Type.String({ format: 'date-time' })),
+          to: Type.Optional(Type.String({ format: 'date-time' })),
+          customer_id: Type.Optional(Type.String({ format: 'uuid' })),
+          chi_tiet_phien: Type.Optional(
+            Type.Boolean({ default: false, description: 'Kèm danh sách từng phiên' }),
+          ),
+          limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 1000, default: 500 })),
+        }),
+        response: {
+          200: Type.Object({
+            tu_ngay: NullableString,
+            den_ngay: NullableString,
+            tong_kwh: Type.Number(),
+            tong_tien_vnd: Type.Number(),
+            tong_phien: Type.Integer(),
+            theo_khach: Type.Array(
+              Type.Object({
+                customer_id: Type.Union([Type.String({ format: 'uuid' }), Type.Null()]),
+                ten_khach: NullableString,
+                so_hop_dong: NullableString,
+                so_phien: Type.Integer(),
+                so_xe: Type.Integer(),
+                kwh: Type.Number(),
+                so_tien_vnd: Type.Number(),
+              }),
+            ),
+            theo_phien: Type.Optional(
+              Type.Array(
+                Type.Object({
+                  session_id: Type.String({ format: 'uuid' }),
+                  vin: Type.String(),
+                  customer_id: Type.Union([Type.String({ format: 'uuid' }), Type.Null()]),
+                  ten_khach: NullableString,
+                  ma_tram: Type.String(),
+                  ended_at: Type.String({ format: 'date-time' }),
+                  kwh: Type.Number(),
+                  so_tien_vnd: Type.Number(),
+                  trang_thai_doi_soat: NullableString,
+                  lech_max_pct: NullableNumber,
+                }),
+              ),
+            ),
+          }),
+          ...AUTH_ERROR_RESPONSES,
+        },
+      },
+    },
+    async (request) => {
+      const auth = requireScopedAuth(request);
+      const q = request.query as {
+        from?: string;
+        to?: string;
+        customer_id?: string;
+        chi_tiet_phien?: boolean;
+        limit?: number;
+      };
+      const loc = {
+        tuNgay: q.from,
+        denNgay: q.to,
+        customerId: q.customer_id,
+        phamVi: vehicleScopeClause(auth, 'v', 1),
+      };
+
+      const bao = await sanLuongTheoKhach(db, loc);
+      if (q.chi_tiet_phien !== true) return bao;
+      return { ...bao, theo_phien: await sanLuongTheoPhien(db, loc, q.limit ?? 500) };
+    },
+  );
+
+  // -----------------------------------------------------------------------------------
+  // F-C6 · NF-10 — Báo cáo lệch THEO NGÀY (nâng cấp job đối soát của Prompt 06)
+  // -----------------------------------------------------------------------------------
+  app.get(
+    '/reconciliation/report',
+    {
+      config: { permission: 'reconciliation.read' },
+      schema: {
+        tags: ['doi-soat'],
+        summary: 'Báo cáo lệch đối soát theo NGÀY (F-C6, NF-10)',
+        description:
+          'Hai con số lệch bắt hai loại vấn đề khác nhau: `lech_max_phien_pct` bắt sự cố đơn ' +
+          'lẻ (1 phiên lệch 40% giữa 200 phiên khớp), còn `lech_tong_pct` bắt sai lệch HỆ ' +
+          'THỐNG (mọi phiên lệch 0,9% cùng chiều — dưới ngưỡng nên không phiên nào bị gắn cờ, ' +
+          'nhưng cộng cả ngày thành tiền thật). `can_xem_lai = true` là ngày cần người nhìn.',
+        querystring: Type.Object({
+          from: Type.Optional(Type.String({ format: 'date-time' })),
+          to: Type.Optional(Type.String({ format: 'date-time' })),
+          chi_ngay_bat_thuong: Type.Optional(Type.Boolean({ default: false })),
+        }),
+        response: {
+          200: Type.Object({
+            nguong_pct: Type.Number(),
+            so_ngay_can_xem_lai: Type.Integer(),
+            items: Type.Array(
+              Type.Object({
+                ngay: Type.String(),
+                so_phien: Type.Integer(),
+                khop: Type.Integer(),
+                lech: Type.Integer(),
+                thieu_du_lieu: Type.Integer(),
+                chua_doi_soat: Type.Integer(),
+                kwh_tru: Type.Number(),
+                kwh_xe: Type.Number(),
+                kwh_thanh_toan: Type.Number(),
+                lech_tong_pct: NullableNumber,
+                lech_max_phien_pct: NullableNumber,
+                can_xem_lai: Type.Boolean(),
+              }),
+            ),
+          }),
+          ...AUTH_ERROR_RESPONSES,
+        },
+      },
+    },
+    async (request) => {
+      const auth = requireScopedAuth(request);
+      const q = request.query as { from?: string; to?: string; chi_ngay_bat_thuong?: boolean };
+
+      const tatCa = await baoCaoLechTheoNgay(db, {
+        tuNgay: q.from,
+        denNgay: q.to,
+        nguongPct: config.reconcile.nguongPct,
+        phamVi: vehicleScopeClause(auth, 'v', 1),
+      });
+      const canXem = tatCa.filter((d) => d.can_xem_lai);
+      return {
+        nguong_pct: config.reconcile.nguongPct,
+        so_ngay_can_xem_lai: canXem.length,
+        items: q.chi_ngay_bat_thuong === true ? canXem : tatCa,
       };
     },
   );

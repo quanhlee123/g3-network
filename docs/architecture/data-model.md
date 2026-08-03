@@ -34,8 +34,8 @@
 | Bản ghi telematics | `telematics_readings` | hypertable; `schema_version` (**v2** từ migration 0021); SOC, GPS, tốc độ, odometer, nhiệt độ, mã lỗi + `supply_voltage_v` (điện áp NGUỒN NUÔI thiết bị, khác điện áp pack) và `signal_dbm` — hai trường để F-J3 phân biệt mất nguồn với mất sóng |
 | Phiên sạc (ChargingSession) | `charging_sessions` | **append-only**; kWh, SOC đầu/cuối, công suất, chi phí VNĐ, `ocpp_transaction_id` |
 | Giao dịch thanh toán | `payment_transactions` | VNPay/Momo/ví (sandbox), trạng thái, mã đối soát cổng, idempotency webhook |
-| Trạm sạc (ChargingStation) | `charging_stations` | GPS PostGIS, khu vực, công suất, CCS2, giờ hoạt động, trạng thái |
-| Trụ/Súng (Connector) | `connectors` | công suất, chuẩn, trạng thái `Available/Charging/Faulted/Unavailable` (OCPP) |
+| Trạm sạc (ChargingStation) | `charging_stations` | GPS PostGIS, khu vực, công suất, CCS2, giờ hoạt động; `status` là quyết định VẬN HÀNH (active/maintenance/inactive) do G3 Energy sửa qua API, kèm `updated_by`/`note` (F-C1). KHÔNG xoá trạm — phiên sạc cũ trỏ tới nó |
+| Trụ/Súng (Connector) | `connectors` | công suất & chuẩn sửa được qua API (F-C1); `status` thì **KHÔNG** — đó là số đo từ trụ qua OCPP StatusNotification (F-C2, NF-02 ≤30s). Mở đường ghi tay là làm hỏng chính tiêu chí "chính xác ≥99%" |
 | Chính sách sạc (ChargingPolicy) | `charging_policies` | **không sửa đè** (F-B1): tạo version mới là INSERT thuần, trigger chặn UPDATE nội dung & DELETE; `(code, version)` unique và version phải nối tiếp; phạm vi xe/đội/dòng; ToU giờ VN; SOC min–max — xem [ADR-010](../adr/ADR-010-version-chinh-sach-sac.md) |
 | Vi phạm (Violation) | `violations` | **append-only**; `evidence` jsonb TỰ ĐỨNG ĐƯỢC (snapshot phiên + ngưỡng của ĐÚNG version chính sách + telemetry trong phiên + cách tính), mức nguy cơ; khoá duy nhất (phiên × loại) chống nhân đôi khi chạy lại job |
 | Hồ sơ đối chiếu phiên sạc | `violation_checks` | F-B3 — MỌI phiên đã xét để lại 1 dòng, kể cả phiên SẠCH ("chưa kiểm tra" khác hẳn "kiểm tra rồi, không vi phạm"); giữ cờ SOC của từng phiên để đếm tiêu chí "thường xuyên" ([ADR-011](../adr/ADR-011-tieu-chi-vi-pham-sac.md)) |
