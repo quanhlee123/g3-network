@@ -67,6 +67,35 @@ Khung giờ cho phép được dựng **lùi về quá khứ so với lúc chạ
 khung dù demo chạy vào giờ nào trong ngày (có test quét cả 24 giờ khoá lại điều này).
 Demo giữ API sống sau khi xong; `Ctrl+C` để tắt sạch.
 
+## NGHIỆM THU TUẦN 10–11 — một tuần của quản lý đội xe (demo thứ 3)
+
+```bash
+npm run demo:tuan11
+```
+
+Diễn tập đúng **Hành trình 2** (sheet 2 PRD): sáng thứ 2 mở portal thấy tổng quan · giữa tuần
+nhận vi phạm sạc · xử lý ngay từ portal. Chạy ~15 giây, in bảng ĐẠT/HỎNG 12 tiêu chí:
+
+| Bước | Nội dung |
+|---|---|
+| 2 | **Một màn hình tổng quan** có đủ bản đồ toàn đội + danh sách xe + cảnh báo + thiết bị offline (F-E1) |
+| 2 | Quản lý đội **chỉ thấy xe đội mình** — không thấy đội khác (sheet 9) |
+| 3 | Vi phạm sạc nổi lên khối cảnh báo, **mở được bằng chứng ngay từ portal** (F-B3, F-B5) |
+| 4 | Một lần xem bản đồ = **đúng một dòng** nhật ký truy cập vị trí (quy tắc 5, NF-06) |
+| 5 | Bàn giao xe mới theo VIN tới **tick xanh**; chưa có telemetry thì **không chốt được** (F-F2) |
+| 5 | Văn bản đồng ý tự khai là **BẢN NHÁP** vì Q7 chưa chốt |
+| 6 | Mời tài khoản · **khoá có hiệu lực ngay** với token đang cầm (F-F1) |
+
+Xem bằng mắt sau khi chạy: mở <http://localhost:3100>, đăng nhập `0900000002` (quản lý đội)
+hoặc `0900000010` (admin) — mã OTP in ra console của `apps/api`.
+
+Muốn bản đồ có xe **đang chạy thật** thì bật thêm simulator ở cửa sổ khác — lưu ý tiền tố VIN
+phải khớp seed, mặc định của simulator là `G3-SIM` chứ không phải `G3-SIM-VIN`:
+
+```bash
+npm run sim:vehicles -- --count 21 --vin-prefix G3-SIM-VIN
+```
+
 ## Chạy để phát triển
 
 ```bash
@@ -115,6 +144,31 @@ SĐT GIẢ có sẵn sau `npm run db:seed` (mỗi số là một vai trò trong 
 Ma trận quyền đầy đủ + các điểm cần review: [docs/architecture/rbac-matrix.md](docs/architecture/rbac-matrix.md).
 Mọi lần truy cập `GET /vehicles/{id}/location` (kể cả bị từ chối) đều ghi `audit_logs`
 — quy tắc 5, NF-06, Nghị định 13/2023.
+
+## Portal đội xe (F-E1, F-F1, F-F2)
+
+```bash
+npm run dev          # API cổng 3000 + Portal cổng 3100
+```
+
+Mở <http://localhost:3100> → đăng nhập bằng SĐT (mã OTP in ra console của `apps/api`).
+
+| Màn hình | Đường dẫn | Vai trò xem được |
+|---|---|---|
+| **Tổng quan** — bản đồ toàn đội + danh sách xe (lọc/tìm) + cảnh báo + thiết bị offline (F-E1) | `/tong-quan` | mọi vai trò, phạm vi theo sheet 9 |
+| **Quản trị tài khoản** — mời, khoá, gán vai trò (F-F1) | `/tai-khoan` | Admin (QL đội chỉ XEM) |
+| **Nhật ký truy cập vị trí** — ai · lúc nào · xe nào · lý do (F-F1, NF-06) | `/audit-log` | Admin, Vận hành, Bảo hành |
+| **Kích hoạt xe** — bàn giao theo VIN tới tick xanh + biên bản in được (F-F2) | `/kich-hoat` | Admin |
+
+Hai biến môi trường (đã có trong `infra/.env.example`): `G3_API_URL`, `G3_API_TIMEOUT_MS`.
+Khác app tài xế, **không** có tiền tố `NEXT_PUBLIC_`: mọi lời gọi API xuất phát từ máy chủ
+Next.js, và token nằm trong **cookie httpOnly** — mã trên trình duyệt không đọc được, nên một
+lỗi XSS bất kỳ cũng không lấy được token xem vị trí toàn đội.
+
+⚠️ **Bản đồ chưa có nền bản đồ thật.** Q5 (VietMap vs Google vs Mapbox) đang MỞ; vẽ tile của
+một nhà cung cấp lúc này là tự chốt Q5 bằng code. Xe hiện trên lưới toạ độ tự dựng — vẫn thấy
+đội hình, cụm xe và xe mất liên lạc. Khi Q5 chốt chỉ phải thay lớp nền: phép chiếu đã tách
+riêng ở `apps/portal/lib/ban-do.ts`.
 
 ## App tài xế (F-D4) — mới có KHUNG
 
@@ -166,7 +220,8 @@ g3-network/
 │   └── ocpp-sim/        # F-G2: trụ sạc ảo OCPP 1.6J — 3 kịch bản normal/faulted/disconnect (docs/simulators.md)
 ├── tools/
 │   ├── demo-gate0/      # Kịch bản demo end-to-end cho Gate 0 (npm run demo:gate0)
-│   └── demo-tuan8/      # Nghiệm thu tuần 8: vòng tiền & bảo hành (npm run demo:tuan8)
+│   ├── demo-tuan8/      # Nghiệm thu tuần 8: vòng tiền & bảo hành (npm run demo:tuan8)
+│   └── demo-tuan11/     # Nghiệm thu tuần 10–11: một tuần của quản lý đội (npm run demo:tuan11)
 ├── infra/
 │   ├── docker-compose.yml  # PostgreSQL 16 + TimescaleDB + PostGIS (1 container) + EMQX
 │   ├── .env.example        # Mẫu biến môi trường — copy thành .env (npm install tự làm)
@@ -187,7 +242,7 @@ g3-network/
 |---|---|
 | `docker compose -f infra/docker-compose.yml up -d` + `npm run dev` | Khởi động toàn hệ |
 | `npm run db:migrate` | Chạy migration DB (packages/db/migrations) + áp retention NF-16 |
-| `npm run db:seed` | Seed dữ liệu GIẢ: 20 xe, **6 trạm × 4 trụ** (3 miền Nam + 3 miền Bắc — D-10), 7 tài khoản đủ 7 vai trò, 2 chính sách |
+| `npm run db:seed` | Seed dữ liệu GIẢ: **21 xe** (20 đang chạy + 1 chờ kích hoạt để diễn tập F-F2), **6 trạm × 4 trụ** (3 miền Nam + 3 miền Bắc — D-10), 7 tài khoản đủ 7 vai trò, 2 chính sách |
 | `npm run db:types` | Sinh lại types TypeScript từ schema DB (packages/shared/src/db-types.ts) |
 | `npm test` | Toàn bộ test |
 | `npm test -w apps/api` | Test 1 workspace |
@@ -198,6 +253,7 @@ g3-network/
 | `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc OCPP (kịch bản: `--scenario normal\|faulted\|disconnect`) |
 | `npm run demo:gate0` | **Demo Gate 0 end-to-end** (tự migrate + seed, ~3 phút) |
 | `npm run demo:tuan8` | **Nghiệm thu tuần 8** — vòng tiền & bảo hành (~2 phút) |
+| `npm run demo:tuan11` | **Nghiệm thu tuần 10–11** — một tuần của quản lý đội xe (~15 giây) |
 | `npm run reconcile` | Chạy tay job đối soát 3 chiều (thêm `-- --lam-lai-tat-ca` để soát lại từ đầu) |
 | `GET /reports/kwh` | F-C6 — sản lượng kWh theo khách/phiên phục vụ hoá đơn & đối soát |
 | `GET /reconciliation/report` | F-C6 — báo cáo lệch **theo ngày**: bắt cả sự cố đơn lẻ lẫn sai lệch hệ thống (mọi phiên dưới ngưỡng nhưng cùng chiều) |

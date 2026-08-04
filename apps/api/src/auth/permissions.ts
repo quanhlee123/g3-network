@@ -94,6 +94,16 @@ export const PERMISSIONS = [
    * log": Vận hành G3 Energy V, Bảo hành G3 Mobility V, Admin ✓. Còn lại "—".
    */
   'audit.read',
+  /**
+   * Kích hoạt thiết bị theo VIN khi bàn giao xe (F-F2).
+   *
+   * [SUY LUẬN] Sheet 9 KHÔNG có dòng nào cho provisioning. Việc này do "nhân viên G3" làm
+   * tại chỗ (Hành trình 1 bước 1), mà sheet 9 không có vai trò "nhân viên hiện trường".
+   * Chọn phương án CHẶT: chỉ Admin — gán thiết bị vào xe là thao tác quyết định dữ liệu
+   * của xe đó chảy về đâu, và ghi consent thay tài xế là chạm dữ liệu cá nhân
+   * (Nghị định 13/2023). Xem rbac-matrix R-16.
+   */
+  'provisioning.manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -242,6 +252,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'user.read': { scope: 'all' },
     'user.manage': { scope: 'all' },
     'audit.read': { scope: 'all' },
+    'provisioning.manage': { scope: 'all' },
   },
   // Sale (Holding): sheet 9 cho V ở dòng "Xem trạng thái & vị trí xe".
   // [CẦN REVIEW] Quyền xem toạ độ tài xế cho vai trò bán hàng khó biện minh theo nguyên tắc

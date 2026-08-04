@@ -1,0 +1,20 @@
+{
+  "name": "@g3/demo-tuan11",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@g3/api": "*",
+    "@g3/contracts": "*",
+    "@g3/db": "*",
+    "@g3/demo-gate0": "*",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.0"
+  }
+}

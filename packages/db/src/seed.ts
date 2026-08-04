@@ -202,6 +202,22 @@ export async function seed(client: pg.Client): Promise<void> {
     }
   }
 
+  // --- 1 xe VỪA GIAO, CHƯA kích hoạt (F-F2) ---
+  // Cố ý KHÔNG tạo devices/batteries cho xe này: nó là đầu vào của luồng provisioning
+  // (Hành trình 1 bước 1). Không có xe nào chưa gắn thiết bị thì không diễn tập được
+  // việc bàn giao, và mọi VIN đem quét thử đều báo "đã có thiết bị".
+  //
+  // Số hiệu 0021 (ngay sau 20 xe trên) là có chủ ý: vehicle-sim sinh VIN theo dãy
+  // {prefix}-0001…{prefix}-{count}, nên `npm run sim:vehicles -- --count 21` cho xe này
+  // lên sóng thật để bước 4 của luồng kích hoạt có dữ liệu mà chờ. Đặt số ngoài dãy
+  // (vd 9001) thì simulator không bao giờ chạm tới và không diễn tập được tới tick xanh.
+  await client.query(
+    `INSERT INTO vehicles (vin, model, customer_id, handover_date, service_plan)
+     VALUES ('G3-SIM-VIN-0021', 'EVT-400', $1, NULL, 'standard')
+     ON CONFLICT (vin) DO NOTHING`,
+    [saoMaiId],
+  );
+
   // --- 6 trạm × 4 trụ (CCS2, 120 kW mỗi trụ) — 3 miền Nam + 3 miền Bắc, xem D-10 ---
   for (const s of SEED_STATIONS) {
     const station = await client.query<{ id: string }>(
