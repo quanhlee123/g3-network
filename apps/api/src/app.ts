@@ -20,6 +20,7 @@ import type { ApiConfig } from './config';
 import type { Queryable } from './db';
 import { sendError } from './errors';
 import { alertRoutes } from './routes/alerts';
+import { auditLogRoutes } from './routes/audit-logs';
 import { authRoutes } from './routes/auth';
 import { chargingPolicyRoutes } from './routes/charging-policies';
 import { deviceRoutes } from './routes/devices';
@@ -30,6 +31,7 @@ import { paymentRoutes } from './routes/payments';
 import { reconciliationRoutes } from './routes/reconciliation';
 import { sessionRoutes } from './routes/sessions';
 import { stationRoutes } from './routes/stations';
+import { userRoutes } from './routes/users';
 import { violationRoutes } from './routes/violations';
 import { ticketRoutes } from './routes/tickets';
 import { vehicleRoutes } from './routes/vehicles';
@@ -147,6 +149,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(chargingPolicyRoutes, { db });
   await app.register(deviceRoutes, { db });
   await app.register(alertRoutes, { db });
+  await app.register(userRoutes, { db });
+  await app.register(auditLogRoutes, { db });
   await app.register(geofenceRoutes, { db });
   await app.register(ticketRoutes, {
     db,
