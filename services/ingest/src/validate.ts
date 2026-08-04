@@ -49,6 +49,35 @@ const StatusPayload = Type.Object(
 
 type ValidateResult<T> = { ok: true; record: T } | { ok: false; reason: string };
 
+/**
+ * `ts` BẮT BUỘC có chỉ định múi giờ tường minh: `Z`, `+07:00` hoặc `-05:30`.
+ *
+ * VÌ SAO KHÔNG CHỈ DÙNG Date.parse: chuỗi ISO thiếu múi giờ (vd `2026-08-04T14:30:00`)
+ * KHÔNG bị Date.parse coi là lỗi — nó được hiểu theo GIỜ CỦA MÁY CHẠY INGEST. Nghĩa là
+ * cùng một bản tin sẽ cho hai kết quả khác nhau tuỳ nơi chạy: máy dev ở Asia/Bangkok (+07)
+ * ra đúng, nhưng container Docker mặc định UTC ra lệch ĐÚNG 7 TIẾNG. Lỗi nằm im cho tới
+ * lúc đổi chỗ chạy.
+ *
+ * Quyết định TR-03 (2026-08-04): thiết bị do phía Việt Nam chọn, giờ vận hành GMT+7.
+ * Nhưng "GMT+7" phải nằm TRONG bản tin, không phải là giả định của người đọc — nên bản ghi
+ * thiếu múi giờ bị đẩy vào quarantine thay vì đoán mò.
+ */
+const CO_MUI_GIO = /(?:[Zz]|[+-]\d{2}:?\d{2})$/;
+
+function kiemTraTs(ts: string, phienBan: number): string | null {
+  if (Number.isNaN(Date.parse(ts))) {
+    return `sai_schema_v${String(phienBan)}: /ts không phải ISO 8601 ("${ts}")`;
+  }
+  if (!CO_MUI_GIO.test(ts.trim())) {
+    return (
+      `sai_schema_v${String(phienBan)}: /ts thiếu múi giờ ("${ts}") — bắt buộc kết thúc bằng ` +
+      'Z hoặc +07:00. Thiếu thì giờ bị hiểu theo máy chạy ingest và lệch 7 tiếng khi ' +
+      'chạy trong Docker (mặc định UTC). Xem TR-03, docs/integrations/tri-ring-tbox.md.'
+    );
+  }
+  return null;
+}
+
 /** Registry validator theo schema_version — thêm version mới tại đây, không sửa cũ. */
 const TELEMETRY_VALIDATORS: Record<number, (raw: unknown) => ValidateResult<TelemetryRecord>> = {
   1: (raw) => {
@@ -57,9 +86,8 @@ const TELEMETRY_VALIDATORS: Record<number, (raw: unknown) => ValidateResult<Tele
       return { ok: false, reason: `sai_schema_v1: ${first?.path ?? '?'} ${first?.message ?? ''}` };
     }
     const record = raw as Static<typeof TelemetryV1>;
-    if (Number.isNaN(Date.parse(record.ts))) {
-      return { ok: false, reason: `sai_schema_v1: /ts không phải ISO 8601 ("${record.ts}")` };
-    }
+    const loiTs = kiemTraTs(record.ts, 1);
+    if (loiTs) return { ok: false, reason: loiTs };
     return { ok: true, record };
   },
   2: (raw) => {
@@ -68,9 +96,8 @@ const TELEMETRY_VALIDATORS: Record<number, (raw: unknown) => ValidateResult<Tele
       return { ok: false, reason: `sai_schema_v2: ${first?.path ?? '?'} ${first?.message ?? ''}` };
     }
     const record = raw as Static<typeof TelemetryV2>;
-    if (Number.isNaN(Date.parse(record.ts))) {
-      return { ok: false, reason: `sai_schema_v2: /ts không phải ISO 8601 ("${record.ts}")` };
-    }
+    const loiTs = kiemTraTs(record.ts, 2);
+    if (loiTs) return { ok: false, reason: loiTs };
     return { ok: true, record };
   },
 };
