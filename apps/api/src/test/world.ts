@@ -52,6 +52,10 @@ export async function resetWorld(db: pg.Client): Promise<void> {
   await db.query(`ALTER TABLE charging_sessions ENABLE TRIGGER charging_sessions_append_only`);
   await db.query(`DELETE FROM ocpp_transactions`);
   await db.query(`DELETE FROM telematics_readings`);
+  // provisioning_sessions tham chiếu vehicles + devices + drivers + users (F-F2, migration
+  // 0028) → phải xóa TRƯỚC cả bốn. Bài học Prompt 07: thêm bảng có khóa ngoại mà quên rà
+  // lại các chỗ DELETE thì lần chạy test THỨ HAI mới gãy, lần đầu vẫn xanh.
+  await db.query(`DELETE FROM provisioning_sessions`);
   // notifications tham chiếu users/alerts/tickets → phải xóa trước cả ba (F-F3)
   await db.query(`DELETE FROM notifications`);
   await db.query(`DELETE FROM push_tokens`);

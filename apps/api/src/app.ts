@@ -28,6 +28,7 @@ import { geofenceRoutes } from './routes/geofences';
 import { healthRoutes } from './routes/health';
 import { notificationRoutes } from './routes/notifications';
 import { paymentRoutes } from './routes/payments';
+import { provisioningRoutes } from './routes/provisioning';
 import { reconciliationRoutes } from './routes/reconciliation';
 import { sessionRoutes } from './routes/sessions';
 import { stationRoutes } from './routes/stations';
@@ -151,6 +152,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(alertRoutes, { db });
   await app.register(userRoutes, { db });
   await app.register(auditLogRoutes, { db });
+  await app.register(provisioningRoutes, { db });
   await app.register(geofenceRoutes, { db });
   await app.register(ticketRoutes, {
     db,
