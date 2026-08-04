@@ -1,0 +1,315 @@
+/* F-E1 — Giao diện portal đội xe. NF-12: tiếng Việt, CHỮ LỚN, TƯƠNG PHẢN CAO.
+   Người dùng là quản lý đội quen Excel & Zalo (sheet 2), thường xem trên màn hình văn
+   phòng ánh sáng mạnh — nên nền trắng, chữ gần đen, và không có chữ xám nhạt trang trí. */
+
+:root {
+  --nen: #ffffff;
+  --nen-phu: #f4f6f8;
+  --vien: #c9d1d9;
+  --chu: #111418;
+  /* Chữ phụ vẫn phải đạt tương phản >= 4.5:1 trên nền trắng (WCAG AA) — #5b6570 đạt 6.4:1.
+     Đây là lý do không dùng #999 như mặc định của nhiều thư viện. */
+  --chu-phu: #5b6570;
+  --xanh: #0b5cab;
+  --xanh-nen: #e7f0fa;
+  --luc: #0f7a3d;
+  --luc-nen: #e6f4ec;
+  --vang: #8a5a00;
+  --vang-nen: #fdf3e0;
+  --do: #b3261e;
+  --do-nen: #fdeceb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--chu);
+  background: var(--nen-phu);
+}
+
+h1 {
+  font-size: 1.9rem;
+  margin: 0 0 4px;
+}
+h2 {
+  font-size: 1.35rem;
+  margin: 0 0 12px;
+}
+
+a {
+  color: var(--xanh);
+}
+
+/* ---- Khung trang ---- */
+.thanh-tren {
+  background: var(--chu);
+  color: #ffffff;
+  padding: 12px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+.thanh-tren a {
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 6px 2px;
+  border-bottom: 3px solid transparent;
+}
+.thanh-tren a:hover {
+  border-bottom-color: #ffffff;
+}
+.thanh-tren .hien-tai {
+  border-bottom-color: #ffffff;
+}
+.thanh-tren .day-phai {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.95rem;
+}
+
+.trang {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.the {
+  background: var(--nen);
+  border: 1px solid var(--vien);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+/* ---- Ô đếm lớn ở đầu màn hình tổng quan ---- */
+.hang-o-dem {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.o-dem {
+  background: var(--nen);
+  border: 1px solid var(--vien);
+  border-left: 6px solid var(--xanh);
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+.o-dem .so {
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.o-dem .nhan {
+  color: var(--chu-phu);
+  font-size: 0.95rem;
+}
+.o-dem.canh-bao {
+  border-left-color: var(--do);
+}
+.o-dem.chu-y {
+  border-left-color: var(--vang);
+}
+.o-dem.tot {
+  border-left-color: var(--luc);
+}
+
+/* ---- Bố cục tổng quan: bản đồ trái, cảnh báo phải ---- */
+.luoi-tong-quan {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .luoi-tong-quan {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Bảng ---- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  text-align: left;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--vien);
+}
+th {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--chu-phu);
+  background: var(--nen-phu);
+}
+tbody tr:hover {
+  background: var(--nen-phu);
+}
+
+/* ---- Nhãn trạng thái ---- */
+.nhan {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.nhan.luc {
+  background: var(--luc-nen);
+  color: var(--luc);
+}
+.nhan.vang {
+  background: var(--vang-nen);
+  color: var(--vang);
+}
+.nhan.do {
+  background: var(--do-nen);
+  color: var(--do);
+}
+.nhan.xam {
+  background: var(--nen-phu);
+  color: var(--chu-phu);
+}
+
+/* ---- Cảnh báo ---- */
+.canh-bao-item {
+  border: 1px solid var(--vien);
+  border-left: 6px solid var(--vien);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: var(--nen);
+}
+.canh-bao-item.muc-3 {
+  border-left-color: var(--do);
+  background: var(--do-nen);
+}
+.canh-bao-item.muc-2 {
+  border-left-color: var(--vang);
+  background: var(--vang-nen);
+}
+.canh-bao-item.muc-1 {
+  border-left-color: var(--xanh);
+}
+.canh-bao-item .goi-y {
+  font-size: 0.95rem;
+  color: var(--chu-phu);
+  margin-top: 6px;
+}
+
+/* ---- Biểu mẫu ---- */
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+input[type='text'],
+input[type='tel'],
+input[type='search'],
+input[type='date'],
+select,
+textarea {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 1.05rem;
+  font-family: inherit;
+  border: 2px solid var(--vien);
+  border-radius: 8px;
+  background: var(--nen);
+  color: var(--chu);
+}
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+  outline: 3px solid var(--xanh);
+  outline-offset: 1px;
+}
+button {
+  font-size: 1.05rem;
+  font-family: inherit;
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: 8px;
+  border: 2px solid var(--xanh);
+  background: var(--xanh);
+  color: #ffffff;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+button.phu {
+  background: var(--nen);
+  color: var(--xanh);
+}
+button.nguy-hiem {
+  background: var(--do);
+  border-color: var(--do);
+}
+
+.loi {
+  background: var(--do-nen);
+  border: 1px solid var(--do);
+  color: var(--do);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 16px 0;
+  font-weight: 600;
+}
+.thanh-cong {
+  background: var(--luc-nen);
+  border: 1px solid var(--luc);
+  color: var(--luc);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 16px 0;
+  font-weight: 600;
+}
+.ghi-chu {
+  color: var(--chu-phu);
+  font-size: 0.95rem;
+}
+
+/* ---- In (checklist bàn giao F-F2) ---- */
+@media print {
+  body {
+    background: #ffffff;
+    font-size: 12pt;
+  }
+  .thanh-tren,
+  .khong-in {
+    display: none !important;
+  }
+  .trang {
+    max-width: none;
+    padding: 0;
+  }
+  .the {
+    border: none;
+    padding: 0;
+  }
+  /* Không để một mục checklist bị cắt đôi qua hai trang giấy */
+  .muc-in {
+    break-inside: avoid;
+  }
+}

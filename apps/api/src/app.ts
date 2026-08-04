@@ -19,6 +19,7 @@ import { OtpService } from './auth/otp';
 import type { ApiConfig } from './config';
 import type { Queryable } from './db';
 import { sendError } from './errors';
+import { alertRoutes } from './routes/alerts';
 import { authRoutes } from './routes/auth';
 import { chargingPolicyRoutes } from './routes/charging-policies';
 import { deviceRoutes } from './routes/devices';
@@ -145,6 +146,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(sessionRoutes, { db });
   await app.register(chargingPolicyRoutes, { db });
   await app.register(deviceRoutes, { db });
+  await app.register(alertRoutes, { db });
   await app.register(geofenceRoutes, { db });
   await app.register(ticketRoutes, {
     db,

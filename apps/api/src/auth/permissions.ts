@@ -36,6 +36,16 @@ export const PERMISSIONS = [
   'charging_policy.manage',
   /** Xem hồ sơ vi phạm sạc + bằng chứng (F-B3) — sheet 9 dòng "Xem trạng thái / báo cáo bảo hành". */
   'violation.read',
+  /**
+   * Xem cảnh báo pin / bất thường đã bắn (F-A2, F-A4, F-J3) — sheet 9 dòng
+   * "Nhận cảnh báo pin / bất thường": Tài xế ✓, QL đội ✓, Bảo hành V, CSKH V, Admin ✓.
+   * Vận hành G3 Energy và Sale là "—" nên KHÔNG có mặt ở đây.
+   *
+   * Khác `notification.read`: đó là HỘP THƯ của một người (đã gửi cho ai), còn đây là
+   * SỰ KIỆN cảnh báo gắn với xe — màn hình tổng quan F-E1 cần cái sau để hiện khối
+   * "cảnh báo qua đêm" của cả đội, kể cả cảnh báo gửi cho tài xế chứ không gửi cho quản lý.
+   */
+  'alert.read',
   /** Chạy tay job đối chiếu vi phạm (F-B3). */
   'violation.run',
   /**
@@ -113,6 +123,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_session.read': { scope: 'own' },
     'charging_policy.read': { scope: 'own' },
     'violation.read': { scope: 'own' },
+    'alert.read': { scope: 'own' }, // sheet 9 "Nhận cảnh báo pin / bất thường" = ✓
     // Sheet 9: Tài xế ✓* — trả tiền cho phiên sạc của XE MÌNH.
     'payment.start': { scope: 'own' },
     'payment.read': { scope: 'own' },
@@ -128,6 +139,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_session.read': { scope: 'fleet' },
     'charging_policy.read': { scope: 'fleet' },
     'violation.read': { scope: 'fleet' },
+    'alert.read': { scope: 'fleet' }, // sheet 9 "Nhận cảnh báo pin / bất thường" = ✓
     // Sheet 9: Chủ xe / QL đội ✓ (đội) — trả tiền cho cả đội.
     'payment.start': { scope: 'fleet' },
     'payment.read': { scope: 'fleet' },
@@ -162,6 +174,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     // bảo hành, nên vai trò này vừa đọc vừa chạy được job đối chiếu.
     'violation.read': { scope: 'all' },
     'violation.run': { scope: 'all' },
+    'alert.read': { scope: 'all' }, // sheet 9 "Nhận cảnh báo pin / bất thường" = V
   },
   // CSKH Holding: V vị trí xe CHỈ KHI có ticket đang mở; V sức khỏe thiết bị.
   cskh: {
@@ -174,6 +187,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     // Sheet 9 dòng "Xem trạng thái / báo cáo bảo hành" = V — CSKH giải thích cho tài xế
     // vì sao bị cảnh báo vi phạm, nên phải ĐỌC được hồ sơ (không cấu hình, không chạy job).
     'violation.read': { scope: 'all' },
+    'alert.read': { scope: 'all' }, // sheet 9 "Nhận cảnh báo pin / bất thường" = V
     'device_health.read': { scope: 'all' },
     // Sheet 9: CSKH ✓ (XỬ LÝ ticket) — xem tất cả và nhận việc.
     'ticket.read': { scope: 'all' },
@@ -190,6 +204,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_policy.manage': { scope: 'all' },
     'violation.read': { scope: 'all' },
     'violation.run': { scope: 'all' },
+    'alert.read': { scope: 'all' },
     'payment.start': { scope: 'all' },
     'payment.read': { scope: 'all' },
     'device_health.read': { scope: 'all' },
