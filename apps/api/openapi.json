@@ -6720,7 +6720,8 @@
                           "supply_voltage_v",
                           "signal_dbm",
                           "canh_bao_dang_mo",
-                          "loai_im_lang"
+                          "loai_im_lang",
+                          "he_toa_do"
                         ],
                         "properties": {
                           "device_id": {
@@ -6829,6 +6830,9 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "he_toa_do": {
+                            "type": "string"
                           }
                         }
                       }

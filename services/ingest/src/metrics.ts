@@ -5,6 +5,13 @@ import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client
 
 export const NF01_P95_MAX_SECONDS = 30;
 
+/**
+ * Đồng hồ thiết bị chạy TRƯỚC máy chủ quá số giây này thì coi là lệch đồng hồ, không phải
+ * nhiễu mạng. 120s đủ rộng để bỏ qua trôi NTP thông thường và độ trễ hàng đợi, nhưng vẫn
+ * bắt được ngay mức lệch nguy hiểm nhất: 1 giờ (UTC+8 của Trung Quốc so với UTC+7 Việt Nam).
+ */
+export const LECH_DONG_HO_TOI_DA_GIAY = 120;
+
 export type IngestResult = 'valid' | 'duplicate' | 'quarantine';
 
 /** Cửa sổ trượt tính p95 lag 5 phút gần nhất — cảnh báo vận hành khi vượt NF-01. */
@@ -38,7 +45,9 @@ export class IngestMetrics {
   readonly lagWindow: LagWindow;
   readonly #lag: Histogram;
   readonly #records: Counter;
+  readonly #lechDongHo: Counter;
   #warned = false;
+  #canhBaoLechDongHo = false;
 
   constructor(clock: () => number = () => Date.now()) {
     this.lagWindow = new LagWindow(undefined, clock);
@@ -47,6 +56,15 @@ export class IngestMetrics {
       name: 'g3_ingest_lag_seconds',
       help: 'Độ trễ ingest: giờ ghi DB trừ timestamp thiết bị (NF-01 ≤30s p95)',
       buckets: [1, 5, 10, 30, 60, 300, 3600],
+      registers: [this.registry],
+    });
+    // Đếm riêng, KHÔNG gộp vào histogram lag: đây là lỗi cấu hình thiết bị, không phải
+    // độ trễ mạng. Vận hành phải thấy được nó tách bạch trên Prometheus (NF-14).
+    this.#lechDongHo = new Counter({
+      name: 'g3_ingest_lech_dong_ho_total',
+      help:
+        'Số bản ghi có giờ thiết bị chạy TRƯỚC máy chủ quá ngưỡng — nghi lệch múi giờ ' +
+        '(vd T-BOX dùng UTC+8 gắn nhãn UTC). >0 là phải sửa trước khi tin dữ liệu thời gian.',
       registers: [this.registry],
     });
     this.#records = new Counter({
@@ -58,6 +76,33 @@ export class IngestMetrics {
   }
 
   observeLag(lagSeconds: number): void {
+    // ---- Đồng hồ thiết bị chạy TRƯỚC máy chủ (lag ÂM) -------------------------------
+    //
+    // Trước đây chỗ này chỉ có Math.max(0, …): lag âm bị kẹp về 0 và BIẾN MẤT. Nghĩa là
+    // một thiết bị gắn nhãn giờ sai vẫn cho metric NF-01 đẹp như xe khoẻ mạnh.
+    //
+    // Vì sao nguy hiểm chứ không chỉ khó coi: tài liệu kỹ thuật Tri-Ring (07/2026) đánh
+    // dấu "Timestamp theo UTC" là ✖ CHƯA XÁC NHẬN, kèm ghi chú "rủi ro lệch giờ TQ/VN".
+    // T-BOX Trung Quốc gửi giờ UTC+8 mà gắn nhãn UTC sẽ làm mọi bản ghi sớm 1 giờ. Khi đó
+    // ADR-010 mô tả đúng hậu quả: khung giờ ToU của chính sách sạc bị đối chiếu lệch giờ,
+    // và hệ thống gắn cờ vi phạm bảo hành OAN gần như toàn bộ phiên sạc đêm — tiền và
+    // pháp lý, không phải chuyện hiển thị.
+    //
+    // Nên: vẫn KHÔNG chặn bản ghi (NF-09 cấm mất dữ liệu), nhưng phải kêu to.
+    if (lagSeconds < -LECH_DONG_HO_TOI_DA_GIAY) {
+      this.#lechDongHo.inc();
+      if (!this.#canhBaoLechDongHo) {
+        this.#canhBaoLechDongHo = true;
+        const gio = (-lagSeconds / 3600).toFixed(2);
+        console.warn(
+          `[ingest] CẢNH BÁO LỆCH ĐỒNG HỒ: thiết bị gửi bản ghi sớm hơn máy chủ ` +
+            `${(-lagSeconds).toFixed(0)}s (~${gio} giờ). Nếu xấp xỉ 1 giờ, gần như chắc chắn ` +
+            'là thiết bị dùng UTC+8 (giờ Trung Quốc) mà gắn nhãn UTC. ĐỪNG bật job gắn cờ ' +
+            'vi phạm sạc cho tới khi sửa: khung giờ ToU sẽ lệch và gắn cờ oan (ADR-010).',
+        );
+      }
+    }
+
     // Bản ghi gửi bù sau mất sóng (NF-09) có lag lớn hợp lệ — vẫn ghi nhận trung thực,
     // NF-01 chỉ áp cho xe online nên cảnh báo dựa trên p95 cửa sổ, không từng bản ghi.
     this.#lag.observe(Math.max(0, lagSeconds));

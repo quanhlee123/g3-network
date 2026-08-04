@@ -35,7 +35,77 @@ Trạng thái: MỞ / ĐÃ CHỐT / HOÃN · Quyết định hợp lệ phải �
 
 ¹ Cột "Ảnh hưởng (F-xx)" của Q1–Q12 do người chuyển đổi suy ra từ ngữ cảnh PRD (sheet 14 không có cột này) — cần review xác nhận.
 
+## Q13–Q18 — MỚI ở PRD v3.0 (sheet 14, nền vàng: "phát sinh từ chỉ đạo của Lãnh đạo")
+
+> ⚠️ Repo đang giữ bản chuyển đổi PRD **v2.0** trong `docs/prd/`. Sáu quyết định dưới đây
+> chép từ **PRD v3.0**; phần `docs/prd/` chưa được cập nhật sang v3 — xem mục "Delta v2→v3".
+
+| Mã | Câu hỏi | Phương án / Khuyến nghị (từ PRD v3) | Người quyết | Deadline | Ảnh hưởng | Trạng thái |
+|---|---|---|---|---|---|---|
+| Q13 | Chính sách **giá điện động** theo nguồn phát & khung giờ: ai sở hữu biểu giá, biên độ chênh cao/thấp điểm? | G3 Energy sở hữu biểu giá, G3 Network cung cấp công cụ hiển thị & điều hướng nhu cầu. Chênh lệch ≥15% mới đủ đổi hành vi tài xế; công bố trước để tránh khiếu nại (NF-19) | BLĐ G3 Energy + Network | Trước Gate 2 | F-C8, F-D6, NF-19 | MỞ |
+| Q14 | Có làm **"HƯỚNG THỨ 2"** (phần mềm lập kế hoạch vận tải miễn phí + trợ lý ghép chuyến qua Zalo) song song P1 không? | CÓ nhưng **KHÔNG chen vào P1.0**: đội & ngân sách riêng, khởi động sau Gate 2. Đo bằng số nhà xe & số chuyến lập kế hoạch, không đo doanh thu | BLĐ + PM | Trước Gate 2 | (ngoài P1) | MỞ |
+| Q15 | Chia sẻ dữ liệu & bản đồ với đối tác ngoài (Hanel, Be…): phạm vi, chiều trao đổi, chi phí, tuân thủ NĐ 13/2023 | Bắt đầu từ **bản đồ** (dễ định giá, ít rủi ro pháp lý), sau mới tới dữ liệu luồng di chuyển dạng tổng hợp/ẩn danh. Legal rà trước khi tích hợp; luôn giữ phương án chỉ dùng dữ liệu nội bộ | BLĐ + Legal | Bản đồ: trước Gate 2 · Dữ liệu: trước Gate 3 | Q5, F-D1..D3, NF-08 | MỞ |
+| Q16 | Dịch vụ phi vận tải cho lái xe (ăn, giặt đồ, nghỉ, phụ kiện dùng điện) — G3 tự làm hay chỉ làm kênh? | Chỉ làm **KÊNH** (marketplace) và ăn chia, không tự vận hành. Tiện nghi dùng điện trên xe do G3 Mobility quyết cấu hình & an toàn điện | BLĐ Holding + G3 Mobility | 2027 (trước khi mở P2) | (P2) | MỞ |
+| Q17 | Kết nối vận tải **đường sông**: tự tích hợp, hợp tác hay chưa làm? | Khảo sát nhu cầu chủ hàng trong pilot P2; nếu làm thì tích hợp API đối tác, **không** tự xây phần mềm vận tải thủy | BLĐ + PM P2 | Trước Gate 3 | (P2) | MỞ |
+| Q18 | Đơn vị vận hành mạng lưới **sửa chữa & cứu hộ** cho F-I4: xưởng G3, đại lý Tri-Ring hay đối tác bên thứ ba theo khu vực? | Chốt cùng Q6 (CSKH 24/7). SLA tiếp nhận ≤15 phút phải khả thi trên **toàn tuyến khai thác** — nếu không thì công bố mức phủ thật thay vì hứa quá năng lực. Hợp đồng đối tác là điều kiện Gate 2 | BLĐ Holding + G3 Mobility | Trước roll-out | F-I4, NF-21, Q6 | MỞ |
+
+**Q5 được sửa ở v3:** danh sách nhà cung cấp bản đồ bổ sung **"bản đồ do Be cung cấp"**, và
+khuyến nghị đổi thành *"nghiêng phương án nội địa (VietMap/Be) nếu đạt chất lượng"*.
+→ Củng cố quyết định của Prompt 10: portal **không** gắn cứng nhà cung cấp bản đồ nào
+(xem `apps/portal/lib/ban-do.ts`).
+
+## TR-01…TR-05 — câu hỏi kỹ thuật Tri-Ring đang CHẶN
+
+> Nguồn: [docs/integrations/tri-ring-tbox.md](integrations/tri-ring-tbox.md) — tổng hợp trao
+> đổi 21–31/07/2026. Đây là phần **chưa trả lời** của Q1 (đặc tả telematics Tri-Ring), tách
+> ra thành từng câu để theo dõi được.
+
+| Mã | Câu hỏi | Rủi ro nếu không trả lời | Đã phòng vệ thế nào | Trạng thái |
+|---|---|---|---|---|
+| TR-01 | Hệ toạ độ GPS: **WGS-84 hay GCJ-02**? | GCJ-02 lệch **100–700 m** tại VN → geofence, gợi ý trạm, bản đồ đội đều sai đều mà không có dấu hiệu | Migration 0029: `devices.he_toa_do` (`wgs84`/`gcj02`/`chua_ro`) — ghi nguồn gốc để còn chuyển đổi được. **Không** quyết thay Tri-Ring | MỞ |
+| TR-02 | Giao thức lên server: **GB/T 32960 hay MQTT/JSON**? | Quyết định hình dạng adapter ingest | `ITelematicsSource` đã trừu tượng hoá; chỗ hở nhỏ: `payload` khai là JSON string, GB/T là nhị phân | MỞ |
+| TR-03 | Timestamp có phải **UTC** không? | TQ UTC+8 vs VN UTC+7 → lệch 1 giờ → **gắn cờ vi phạm bảo hành oan** toàn bộ phiên sạc đêm (ADR-010) | Metric `g3_ingest_lech_dong_ho_total` + cảnh báo: lag ÂM trước đây bị kẹp về 0 và biến mất | MỞ |
+| TR-04 | K4-E cấu hình gửi dữ liệu về **server tại Việt Nam** được không? | Nếu không → phải đổi terminal, ảnh hưởng kiến trúc backend | — | MỞ |
+| TR-05 | Bộ đệm offline **≥48 giờ**? | NF-09 yêu cầu store-and-forward ≥48h; chưa xác nhận thiết bị làm được | — | MỞ |
+
+## Delta PRD v2.0 → v3.0 (chưa chuyển đổi vào `docs/prd/`)
+
+`docs/prd/` hiện là bản chuyển đổi **v2.0**. So với **v3.0** (file
+`G3 Network_Định hướng và Yêu cầu sản phẩm app__PRD__v3.xlsx`):
+
+- **7 tính năng MỚI**, đều gắn nhãn "(MỚI v3.0)": `F-A7` dự báo tiêu hao pin & quãng đường
+  theo địa hình · `F-A8` báo cáo hiệu quả sạc theo lái xe · `F-A9` nhận diện chuyến chạy
+  rỗng · `F-C7` dự báo tải trạm & điều hướng phân tải · `F-C8` giá điện động theo nguồn &
+  khung giờ · `F-D6` gợi ý thời điểm/trạm sạc tối ưu chi phí · `F-I4` kết nối mạng lưới sửa
+  chữa & cứu hộ.
+- **3 yêu cầu phi chức năng MỚI**: `NF-19` minh bạch giá điện (giá hiển thị = giá tính tiền,
+  lưu log biểu giá theo từng phiên **≥5 năm**) · `NF-20` chất lượng mô hình dự báo (sai số
+  quãng đường còn lại ≤10% p50 / ≤15% p90) · `NF-21` SLA tích hợp đối tác dịch vụ (tiếp nhận
+  ≤15 phút, đổi đối tác theo khu vực **không phải sửa mã nguồn**).
+- **6 quyết định MỚI** Q13–Q18 (bảng trên) + Q5 được sửa.
+
+**Chưa có tính năng nào trong số này được xây** — toàn bộ là phạm vi mới, phần lớn phụ thuộc
+quyết định đang MỞ (Q13 giá điện, Q15 dữ liệu đối tác). Cần một prompt riêng để chuyển đổi
+PRD v3 vào `docs/prd/` trước khi lập kế hoạch xây.
+
+⚠️ `NF-19` có ảnh hưởng tới phần **đã xây**: hiện đơn giá điện là một hằng số môi trường
+(`CHARGING_PRICE_VND_PER_KWH`) dùng cho đối soát F-C6. NF-19 đòi **lưu biểu giá áp dụng theo
+từng phiên và giữ ≥5 năm**. Khi làm F-C8 phải chuyển từ hằng số sang bảng biểu giá có version
+(cùng kiểu `charging_policies` đã làm cho F-B1), nếu không sẽ không chứng minh được
+"giá hiển thị = giá tính tiền" cho một phiên trong quá khứ.
+
 ## Nhật ký thay đổi
+- **2026-08-04 · Claude Code · Nhận tài liệu kỹ thuật Tri-Ring + PRD v3.0.** Ghi TR-01…TR-05,
+  Q13–Q18 và delta v2→v3 vào log này; tạo [docs/integrations/tri-ring-tbox.md](integrations/tri-ring-tbox.md).
+  **Hai bản sửa phòng vệ trong code** (không quyết thay ai, chỉ để hỏng-âm-thầm thành hỏng-kêu-to):
+  - `devices.he_toa_do` (migration 0029) — TR-01 chưa trả lời, mà trộn GCJ-02 vào kho SRID 4326
+    là hỏng **không cứu lại được**: trong bảng không còn gì phân biệt hàng nào theo hệ nào.
+  - metric `g3_ingest_lech_dong_ho_total` — TR-03 chưa trả lời. Phát hiện: `observeLag()` kẹp
+    lag ÂM về 0, nên một T-BOX gửi UTC+8 gắn nhãn UTC (sớm 1 giờ) vẫn cho NF-01 **xanh** trong
+    khi ADR-010 nói đúng hậu quả là gắn cờ vi phạm bảo hành oan toàn bộ phiên sạc đêm.
+  - **KHÔNG làm**: 7 tính năng mới của v3 (F-A7…F-I4) và schema GB/T 32960 mở rộng (điện áp
+    từng cell, nhiệt độ theo điểm đo, điện trở cách điện) — chờ file DBC tháng 8/2026 và các
+    quyết định đang MỞ. Lý do chưa thêm cột rỗng: cột không ai ghi chỉ làm schema khó đọc.
 - **2026-08-03 · PM (Quốc Anh) · CHỐT D-01 = CÓ — làm CẢ HAI: app tài xế + portal đội xe.** Gỡ chặn Prompt 09 (F-D1/D2/D4) và phần mặt tiền của F-H1..H4, F-K1, F-I2. Ghi chú về thẩm quyền: cột "Người quyết" của D-01 ghi là **BLĐ**; quyết định này do PM đưa ra theo đúng tiền lệ D-03/D-04/D-10/D-11 — **cần BLĐ phê chuẩn hình thức trước Gate 1**, vì D-01 kéo theo ngân sách app store, bản đồ (Q5) và trực CSKH 24/7 (Q6). Nếu BLĐ lật lại, phần hỏng là mặt tiền app; backend F-H1/F-I2 đã làm vẫn dùng được cho portal.
   - **KHÔNG gỡ được các chặn khác**: Prompt 09 vẫn dừng vì **chưa có wireframe** trong `docs/design/screens/` — chuẩn **INPUT-03 §2** (bộ prompt-kit, ngoài repo) quy định wireframe là đầu vào bắt buộc trước Prompt 09, và chính Prompt 09 yêu cầu dừng nếu thiếu. Xem [yêu cầu wireframe](design/YEU-CAU-WIREFRAME.md).
   - Vẫn MỞ và vẫn giới hạn phạm vi app: **Q5** (nhà cung cấp bản đồ — F-D1/D2 đi qua interface `IMapProvider`, Phase 1 dùng Google free tier), **D-02** (RFID ở trụ — không đổi luồng tiền), **D-09/Q6** (ai trực CSKH 24/7 — nút SOS gọi được API nhưng chưa có người thật đầu bên kia), **Q9** (hoá đơn điện tử hợp lệ cho F-H3), **Q3** (giá gói F-H4).
