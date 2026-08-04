@@ -255,6 +255,144 @@ export async function vehicleRoutes(app: FastifyInstance, deps: VehicleRoutesDep
     },
   );
 
+  // ---- F-E1 · QUY TẮC 5: BẢN ĐỒ TOÀN ĐỘI — một truy vấn, MỘT dòng audit -------------
+  //
+  // Vì sao có endpoint riêng thay vì để portal gọi /vehicles/{id}/location N lần:
+  //   1. Đội 20 xe sẽ sinh 20 dòng audit MỖI LẦN mở trang chủ. Nhật ký vị trí khi đó
+  //      toàn nhiễu "xem bản đồ", không còn dùng để điều tra được nữa — trái tinh thần
+  //      quy tắc 5 dù vẫn đúng chữ.
+  //   2. Một lần xem bản đồ là MỘT hành vi truy cập dữ liệu vị trí. Ghi đúng như vậy,
+  //      kèm danh sách xe đã hiện trong metadata, mới phản ánh thật cái đã xảy ra.
+  app.get(
+    '/vehicles/map',
+    {
+      config: { permission: 'vehicle.location.read' },
+      schema: {
+        tags: ['xe'],
+        summary: 'Vị trí mới nhất của TOÀN ĐỘI cho bản đồ tổng quan (F-E1) — có ghi audit log',
+        description:
+          'Trả vị trí mới nhất của mọi xe trong phạm vi người gọi. Ghi ĐÚNG MỘT dòng ' +
+          'audit_logs cho cả lần xem, metadata kèm số xe và danh sách xe đã hiện (NF-06, ' +
+          'Nghị định 13/2023). Vai trò CSKH KHÔNG dùng được endpoint này — xem mô tả lỗi 403.',
+        querystring: Type.Object({
+          reason: Type.String({
+            minLength: 5,
+            maxLength: 200,
+            description: 'Lý do truy cập — bắt buộc, được lưu vào audit log',
+          }),
+          moi_trong_giay: Type.Optional(
+            Type.Integer({
+              minimum: 1,
+              description: 'Chỉ lấy xe có vị trí mới hơn số giây này (bỏ trống = mọi xe)',
+            }),
+          ),
+        }),
+        response: {
+          200: Type.Object({
+            so_xe: Type.Integer(),
+            items: Type.Array(
+              Type.Object({
+                vehicle_id: Type.String({ format: 'uuid' }),
+                vin: Type.String(),
+                time: Type.String({ format: 'date-time' }),
+                lat: Type.Number(),
+                lng: Type.Number(),
+                speed_kmh: NullableNumber,
+                soc_pct: NullableNumber,
+                cu_giay: Type.Integer({ description: 'Số giây kể từ bản ghi vị trí đó' }),
+              }),
+            ),
+          }),
+          ...AUTH_ERROR_RESPONSES,
+        },
+      },
+    },
+    async (request, reply) => {
+      const auth = requireScopedAuth(request);
+      const { reason, moi_trong_giay: moiTrongGiay } = request.query as {
+        reason: string;
+        moi_trong_giay?: number;
+      };
+
+      // Sheet 9: CSKH chỉ xem vị trí khi có ticket/SOS ĐANG MỞ, và ticket luôn gắn với
+      // MỘT xe. Bản đồ toàn đội không có khái niệm "ticket của cả đội" — cho phép ở đây
+      // là biến một ticket thành giấy phép xem vị trí mọi tài xế. Chặn thẳng, CSKH đi
+      // đường /vehicles/{id}/location kèm ticket_id như cũ. (rbac-matrix R-12)
+      if (auth.grant.requireOpenTicket) {
+        await writeAuditLog(db, {
+          userId: auth.userId,
+          action: ACTION_VEHICLE_LOCATION_DENIED,
+          vehicleId: null,
+          reason: `bản đồ toàn đội không mở cho vai trò cần ticket: ${reason}`,
+          metadata: { endpoint: 'map', vai_tro: auth.role },
+        });
+        return sendError(
+          reply,
+          403,
+          'khong_dung_duoc_ban_do_doi',
+          'Vai trò của bạn chỉ được xem vị trí từng xe kèm ticket đang mở, không xem được ' +
+            'bản đồ toàn đội. Dùng GET /vehicles/{id}/location với ticket_id.',
+        );
+      }
+
+      const scope = vehicleScopeClause(auth, 'v', 1);
+      const params: unknown[] = [...scope.params];
+      const filters = [scope.sql];
+      if (moiTrongGiay !== undefined) {
+        params.push(moiTrongGiay);
+        filters.push(`EXTRACT(EPOCH FROM (now() - t.time)) <= $${params.length}`);
+      }
+
+      const res = await db.query(
+        `SELECT v.id AS vehicle_id, v.vin, t.time,
+                ST_Y(t.position::geometry)::float8 AS lat,
+                ST_X(t.position::geometry)::float8 AS lng,
+                t.speed_kmh::float8 AS speed_kmh,
+                t.soc_pct::float8 AS soc_pct,
+                floor(EXTRACT(EPOCH FROM (now() - t.time)))::int AS cu_giay
+         FROM vehicles v
+         JOIN LATERAL (
+           SELECT time, position, speed_kmh, soc_pct
+           FROM telematics_readings tr
+           WHERE tr.vehicle_id = v.id AND tr.position IS NOT NULL
+           ORDER BY tr.time DESC LIMIT 1
+         ) t ON true
+         WHERE ${filters.join(' AND ')}
+         ORDER BY v.vin`,
+        params,
+      );
+
+      // Ghi audit TRƯỚC khi trả dữ liệu — cùng lý do như /vehicles/{id}/location:
+      // không có trường hợp "đã xem vị trí nhưng không có dấu vết".
+      await writeAuditLog(db, {
+        userId: auth.userId,
+        action: ACTION_VEHICLE_LOCATION_READ,
+        vehicleId: null, // một dòng cho NHIỀU xe — danh sách nằm trong metadata
+        reason,
+        metadata: {
+          vai_tro: auth.role,
+          endpoint: 'map',
+          so_xe: res.rows.length,
+          vehicle_ids: res.rows.map((r) => r.vehicle_id as string),
+        },
+      });
+
+      return {
+        so_xe: res.rows.length,
+        items: res.rows.map((r) => ({
+          vehicle_id: r.vehicle_id as string,
+          vin: r.vin as string,
+          time: toIso(r.time),
+          lat: r.lat as number,
+          lng: r.lng as number,
+          speed_kmh: (r.speed_kmh as number | null) ?? null,
+          soc_pct: (r.soc_pct as number | null) ?? null,
+          cu_giay: r.cu_giay as number,
+        })),
+      };
+    },
+  );
+
   // ---- F-A5 · QUY TẮC 5: vị trí xe — LUÔN ghi audit log ----------------------------
   app.get(
     '/vehicles/:id/location',

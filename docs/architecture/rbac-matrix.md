@@ -32,6 +32,8 @@
 | `ticket.create` / `.read` / `.handle` | `POST /sos`, `GET /tickets`, `POST /tickets/{id}/nhan` | Ticket hỗ trợ & SOS (MỚI) — xem R-08 |
 | `notification.read` | `GET /notifications`, `POST /notifications/{id}/da-doc` | *(không có dòng tương ứng — xem R-06)* |
 | `reconciliation.read` / `.run` | `GET /reconciliation/results`, `POST /reconciliation/run` | Sản lượng điện / đối soát kWh |
+| `alert.read` | `GET /alerts` (F-E1 — khối cảnh báo trên màn hình tổng quan) | Nhận cảnh báo pin / bất thường |
+| `vehicle.location.read` | `GET /vehicles/map` (F-E1 — bản đồ toàn đội) | Xem trạng thái & vị trí xe — xem R-12 |
 
 ## Bảng quyền đã cài đặt
 
@@ -53,6 +55,7 @@
 | `device_health.read` | — | fleet | — | — | all | all | — |
 | `reconciliation.read` | — | fleet | all | — | — | all | — |
 | `reconciliation.run` | — | — | all | — | — | all | — |
+| `alert.read` | own | fleet | — | all | all | all | — |
 
 ## Quyết định tách `vehicle.read` khỏi `vehicle.location.read`
 
@@ -75,6 +78,8 @@ so với sheet 9, chỉ chia nhỏ đường ra của dữ liệu.
 | R-02 | **Danh sách phiên sạc cho Sale.** Sheet 9 cho Sale "V" ở dòng *Xem trạng thái / báo cáo bảo hành* — nhưng đó là **báo cáo** bảo hành, không phải danh sách phiên sạc thô. | Chọn phương án chặt hơn: Sale **không** có `charging_session.read`. Khi có F-E3 (báo cáo bảo hành) sẽ mở quyền trên đúng endpoint báo cáo. | PM |
 | R-03 | **Tài xế xem danh sách trạm.** Dòng "Tìm & điều hướng trạm sạc" = ✓ nhưng dòng "Quản lý danh mục & trạng thái trạm" = —. | Cho `station.read` (chỉ đọc); các thao tác ghi/CRUD trạm sẽ là quyền riêng `station.manage` khi xây F-C1 phần ghi. | — (đã rõ) |
 | R-04 | **`reconciliation.read` phạm vi `fleet` cho QL đội.** Sheet 9 ghi "V\*" ở dòng "Sản lượng điện / đối soát kWh". Ký hiệu \* nghĩa là "chỉ trong đội mình" → lọc theo `customer_id` của xe trong phiên sạc. | Đã cài đặt theo cách đó | PM xác nhận |
+| R-12 | **CSKH và BẢN ĐỒ TOÀN ĐỘI (F-E1).** Sheet 9 cho CSKH xem vị trí xe "khi có ticket đang mở", và ticket luôn gắn với MỘT xe. Bản đồ toàn đội không có khái niệm "ticket của cả đội" — nếu cho qua thì một ticket bất kỳ trở thành giấy phép xem vị trí mọi tài xế, đúng điều ghi chú phạm vi của sheet 9 muốn ngăn. | Chọn phương án CHẶT hơn: `GET /vehicles/map` trả **403** cho mọi vai trò có `requireOpenTicket` (hiện là CSKH), và vẫn ghi audit dòng `vehicle_location.denied`. CSKH đi đường cũ `GET /vehicles/{id}/location?ticket_id=…` — không mất chức năng hỗ trợ nào. Có test. | PM + Legal (liên quan D-09 đang MỞ) |
+| R-13 | **Một dòng audit cho một lần xem BẢN ĐỒ.** Quy tắc 5 nói "mọi truy cập dữ liệu vị trí phải ghi audit: ai, lúc nào, **xe nào**, lý do". Bản đồ đội 20 xe nếu ghi 20 dòng mỗi lần mở trang chủ thì nhật ký chỉ còn nhiễu, không điều tra được nữa. | `GET /vehicles/map` ghi **một** dòng `vehicle_location.read` với `vehicle_id = NULL`, `metadata.endpoint = 'map'`, `metadata.so_xe` và `metadata.vehicle_ids` là danh sách xe đã hiện. Cột "xe nào" vẫn trả lời được, chỉ nằm trong metadata. Màn hình xem audit (F-F1) hiển thị đúng như vậy. | PM + Legal xác nhận cách ghi này đủ cho NF-06 |
 | R-08 | **Ticket cho Vận hành / Bảo hành / Sale (F-I2).** Sheet 9 dòng "Ticket hỗ trợ & SOS" cho ba vai trò này "V" kèm chú thích phạm vi trong ngoặc — *V (trạm)*, *V (bảo hành)*, *V* — nhưng không nói rõ "ticket về trạm" hay "ticket bảo hành" được lọc theo tiêu chí nào. | Chọn phương án CHẶT hơn (cùng cách xử lý như R-02): ba vai trò này **chưa** có `ticket.read`. Đã cấp: Tài xế `own` (tạo/xem), QL đội `fleet` (tạo/xem), CSKH `all` (xem + XỬ LÝ), Admin `all`. Khi làm F-I1/F-I3 sẽ mở quyền trên đúng bộ lọc. | PM + CSKH Holding (nằm trong D-09 đang MỞ) |
 | R-07 | **`geofence.read` / `geofence.manage` (F-A5).** Sheet 9 không có dòng nào cho geofence — vùng giám sát là khái niệm của "quy trình rủi ro G3" (nguồn của F-A5/F-J3) chứ không phải của ma trận quyền. | Đặt **ngang mức với quyền xem vị trí xe**: ai giám sát được vị trí đội mình thì đặt được vùng cho đội mình. QL đội = `fleet` (chỉ tạo vùng cho đội mình hoặc xe của đội mình, có test); Admin = `all` và là vai trò DUY NHẤT tạo được vùng áp dụng toàn hệ. Các vai trò khác: TỪ CHỐI. | PM + Vận hành |
 | R-06 | **`notification.read` cho MỌI vai trò (F-F3).** Sheet 9 không có dòng nào cho "thông báo của tôi" — ma trận đó nói về quyền xem dữ liệu xe/trạm, còn hộp thư là dữ liệu của chính người đăng nhập. Chặn người dùng đọc thông báo gửi cho họ thì cảnh báo an toàn vô nghĩa. | Cấp cho cả 7 vai trò với phạm vi **`own`** cứng: truy vấn luôn khoá theo `user_id` của token, không nhận `user_id` từ query — không ai xem hộp thư người khác, kể cả admin. Đặt riêng trong `QUYEN_CUA_MOI_VAI_TRO` (permissions.ts) để thấy rõ đây là ngoại lệ có chủ ý. | PM xác nhận |
