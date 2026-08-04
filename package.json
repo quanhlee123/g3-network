@@ -29,6 +29,7 @@
     "sim:ocpp": "npm run start -w simulators/ocpp-sim --",
     "demo:gate0": "npm run start -w tools/demo-gate0",
     "demo:tuan8": "npm run start -w tools/demo-tuan8",
+    "demo:tuan11": "npm run start -w tools/demo-tuan11",
     "reconcile": "npm run reconcile -w apps/api --",
     "gitleaks": "gitleaks dir . --no-banner --redact"
   },
