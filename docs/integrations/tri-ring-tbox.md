@@ -30,13 +30,18 @@ chân "trụ" và chân "thanh toán" để phát hiện lệch.
 
 ## 2. CHƯA TRẢ LỜI — đang chặn (ưu tiên cao)
 
-| # | Câu hỏi | Vì sao chặn |
-|---|---|---|
-| TR-01 | **Hệ toạ độ GPS: WGS-84 hay GCJ-02?** | GCJ-02 lệch **100–700 m** tại Việt Nam. Xem §3 — đã có bản sửa phòng vệ. |
-| TR-02 | **Giao thức truyền lên server: GB/T 32960 hay MQTT/JSON?** | Quyết định hình dạng adapter ingest. Xem §5. |
-| TR-03 | **Timestamp có phải UTC không?** | TQ là UTC+8, VN UTC+7. Xem §3 — đã có bản sửa phòng vệ. |
-| TR-04 | **K4-E cấu hình gửi dữ liệu về server tại Việt Nam được không?** | Nếu không, phải đổi terminal — ảnh hưởng kiến trúc backend. |
-| TR-05 | **Bộ đệm offline ≥48 giờ?** | NF-09 yêu cầu store-and-forward ≥48h. Chưa xác nhận thiết bị làm được. |
+| # | Câu hỏi | Vì sao chặn | Trạng thái |
+|---|---|---|---|
+| TR-01 | **Hệ toạ độ GPS: WGS-84 hay GCJ-02?** | GCJ-02 lệch **100–700 m** tại Việt Nam | ✅ **CHỐT = WGS-84** (§3.1) — phía G3 chọn hệ GPS |
+| TR-02 | **Giao thức truyền lên server: GB/T 32960 hay MQTT/JSON?** | Quyết định hình dạng adapter ingest. Xem §5. | MỞ |
+| TR-03 | **Timestamp có phải UTC không?** | TQ là UTC+8, VN UTC+7 | ✅ **CHỐT = GMT+7 + múi giờ tường minh** (§3.2) — T-BOX do VN chọn |
+| TR-04 | **K4-E cấu hình gửi dữ liệu về server tại Việt Nam được không?** | Nếu không, phải đổi terminal — ảnh hưởng kiến trúc backend | MỞ (nhẹ đi: VN tự chọn T-BOX) |
+| TR-05 | **Bộ đệm offline ≥48 giờ?** | NF-09 yêu cầu store-and-forward ≥48h | MỞ — **đưa vào tiêu chí chọn T-BOX** |
+
+> **Hai quyết định 2026-08-04 đổi thế cờ:** phía Việt Nam chọn **hệ GPS** và chọn **model
+> T-BOX**. TR-01/TR-03 do đó không còn phải chờ Tri-Ring trả lời — chúng trở thành **yêu cầu
+> kỹ thuật trong hồ sơ mua sắm**. TR-04/TR-05 cũng nhẹ đi vì ta chọn thiết bị đáp ứng được,
+> thay vì hỏi xem K4-E có làm được không.
 
 Ưu tiên trung bình: tương thích SIM Việt Nam (Viettel/Vinaphone/MobiFone) với K4-E · tần
 suất phát bản tin khi chạy/khi đỗ · danh sách PGN/SPN cụ thể (chờ **file DBC**, dự kiến
@@ -46,6 +51,18 @@ tháng 8/2026, **chú thích tiếng Trung** — cần bản dịch).
 
 Hai rủi ro trên là loại **hỏng âm thầm**: dữ liệu trông vẫn bình thường, chỉ sai. Không đợi
 câu trả lời được, vì khi có dữ liệu thật trộn vào rồi thì không tách lại được nữa.
+
+### 3.0 YÊU CẦU BẮT BUỘC cho hồ sơ mua sắm T-BOX
+
+Phía Việt Nam chọn thiết bị, nên bốn dòng dưới đây phải nằm trong **đặc tả kỹ thuật mời
+thầu**, không phải kỳ vọng ngầm:
+
+| # | Yêu cầu | Vì sao |
+|---|---|---|
+| 1 | Toạ độ xuất ra là **WGS-84 thô**, KHÔNG áp GCJ-02 | Nhiều module GNSS sản xuất tại TQ bật phép lệch này theo mặc định/firmware. Nhận nhầm thì lệch 100–700 m vĩnh viễn |
+| 2 | Timestamp mang **múi giờ tường minh** (`Z` hoặc `+07:00`), đồng hồ đồng bộ NTP | Thiếu múi giờ thì ingest phải đoán → lệch 7 tiếng khi chạy trong Docker |
+| 3 | Bộ đệm offline **≥48 giờ**, gửi bù giữ nguyên timestamp gốc | NF-09; tuyến biên giới sóng yếu |
+| 4 | Cấu hình được **địa chỉ server tại Việt Nam** + SIM nhà mạng VN | TR-04; nếu không thì dữ liệu không về được |
 
 ### 3.1 Hệ toạ độ — `devices.he_toa_do` (migration 0029)
 
@@ -57,9 +74,16 @@ sai đều 100–700 m mà không có dấu hiệu gì.
 `wgs84` (đúng với simulator Phase 1 — simulator phát WGS-84 thật). Trả về trong
 `GET /devices/health`.
 
-> **Việc phải làm khi có thiết bị thật:** đặt `he_toa_do = 'chua_ro'` cho mọi K4-E lúc nhập
-> kho, và **chỉ** đổi sang giá trị thật khi Tri-Ring xác nhận bằng văn bản. Toạ độ của
-> thiết bị `chua_ro` không được dùng cho geofence hay điều hướng.
+> **Sau khi TR-01 chốt = WGS-84**, cột này đổi vai: không còn là "chưa biết chính sách nào"
+> mà là **"đã kiểm chứng thiết bị CỤ THỂ này chưa"**. Chính sách đã rõ, nhưng một lô hàng
+> vẫn có thể về với firmware bật GCJ-02. Quy trình: đặt `chua_ro` khi nhập kho → bench test
+> đối chiếu với một mốc toạ độ đã biết → mới đổi sang `wgs84`. Toạ độ của thiết bị còn
+> `chua_ro` không được dùng cho geofence hay điều hướng.
+>
+> Cách phát hiện GCJ-02 trên bàn test: đặt xe/thiết bị tại một điểm đã biết chính xác toạ độ
+> (mốc trắc địa, hoặc điểm đo bằng máy GNSS RTK). Lệch **đều 100–700 m theo một hướng** là
+> dấu hiệu GCJ-02; lệch vài mét ngẫu nhiên là sai số GPS bình thường. Một điểm đơn lẻ không
+> có mốc so sánh thì **không** phân biệt được — nên phải test, không thể nhìn dữ liệu mà đoán.
 
 ### 3.2 Đồng hồ thiết bị chạy trước — metric `g3_ingest_lech_dong_ho_total`
 
@@ -74,6 +98,24 @@ toàn bộ phiên sạc đêm.
 Nay: lệch quá `LECH_DONG_HO_TOI_DA_GIAY` (120s) thì tăng counter riêng + cảnh báo console
 một lần, nêu thẳng nghi ngờ UTC+8 và khuyến cáo không bật job gắn cờ vi phạm. **Không chặn
 bản ghi** — NF-09 cấm mất dữ liệu.
+
+**Sau khi TR-03 chốt (GMT+7):** thêm một lớp chặn nữa ở validator — `ts` **bắt buộc mang
+múi giờ tường minh** (`Z` hoặc `+07:00`), thiếu thì vào quarantine. Lý do: chuỗi ISO thiếu
+múi giờ KHÔNG bị `Date.parse` coi là lỗi, nó hiểu theo giờ **máy chạy ingest**. Máy dev ở
+Asia/Bangkok (+07) ra đúng, container Docker mặc định UTC ra lệch **đúng 7 tiếng** — lỗi
+nằm im cho tới lúc đổi chỗ chạy.
+
+Ba tầng thời gian, cố ý tách bạch:
+
+| Tầng | Quy ước |
+|---|---|
+| Bản tin thiết bị | `ts` có múi giờ tường minh (`Z` hoặc `+07:00`) |
+| Lưu trữ | `timestamptz` — PostgreSQL quy về UTC. **Không** lưu giờ địa phương |
+| Hiển thị & nghiệp vụ | `Asia/Ho_Chi_Minh` (`APP_TIMEZONE`) — khung giờ ToU, báo cáo, portal |
+
+"Để giờ GMT+7" là quy ước **vận hành và hiển thị**, không phải cách lưu: `timestamptz` quy
+về UTC bên trong chính là thứ khiến so sánh/sắp xếp/tính khoảng không phụ thuộc nơi chạy.
+Việt Nam không có giờ mùa hè nên GMT+7 cố định quanh năm.
 
 ## 4. Khoảng trống schema — CHƯA làm, chờ file DBC
 

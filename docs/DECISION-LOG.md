@@ -62,11 +62,58 @@ khuyến nghị đổi thành *"nghiêng phương án nội địa (VietMap/Be) 
 
 | Mã | Câu hỏi | Rủi ro nếu không trả lời | Đã phòng vệ thế nào | Trạng thái |
 |---|---|---|---|---|
-| TR-01 | Hệ toạ độ GPS: **WGS-84 hay GCJ-02**? | GCJ-02 lệch **100–700 m** tại VN → geofence, gợi ý trạm, bản đồ đội đều sai đều mà không có dấu hiệu | Migration 0029: `devices.he_toa_do` (`wgs84`/`gcj02`/`chua_ro`) — ghi nguồn gốc để còn chuyển đổi được. **Không** quyết thay Tri-Ring | MỞ |
+| TR-01 | Hệ toạ độ GPS: **WGS-84 hay GCJ-02**? | GCJ-02 lệch **100–700 m** tại VN → geofence, gợi ý trạm, bản đồ đội đều sai đều mà không có dấu hiệu | **ĐÃ CHỐT = WGS-84** (xem dưới). Migration 0029 `devices.he_toa_do` giữ nguyên để kiểm chứng từng thiết bị | **ĐÃ CHỐT** |
 | TR-02 | Giao thức lên server: **GB/T 32960 hay MQTT/JSON**? | Quyết định hình dạng adapter ingest | `ITelematicsSource` đã trừu tượng hoá; chỗ hở nhỏ: `payload` khai là JSON string, GB/T là nhị phân | MỞ |
-| TR-03 | Timestamp có phải **UTC** không? | TQ UTC+8 vs VN UTC+7 → lệch 1 giờ → **gắn cờ vi phạm bảo hành oan** toàn bộ phiên sạc đêm (ADR-010) | Metric `g3_ingest_lech_dong_ho_total` + cảnh báo: lag ÂM trước đây bị kẹp về 0 và biến mất | MỞ |
+| TR-03 | Timestamp có phải **UTC** không? | TQ UTC+8 vs VN UTC+7 → lệch 1 giờ → **gắn cờ vi phạm bảo hành oan** toàn bộ phiên sạc đêm (ADR-010) | **ĐÃ CHỐT = giờ vận hành GMT+7, bản tin phải mang múi giờ tường minh** (xem dưới) | **ĐÃ CHỐT** |
 | TR-04 | K4-E cấu hình gửi dữ liệu về **server tại Việt Nam** được không? | Nếu không → phải đổi terminal, ảnh hưởng kiến trúc backend | — | MỞ |
 | TR-05 | Bộ đệm offline **≥48 giờ**? | NF-09 yêu cầu store-and-forward ≥48h; chưa xác nhận thiết bị làm được | — | MỞ |
+
+### TR-01 ĐÃ CHỐT (2026-08-04, PM) — hệ toạ độ **WGS-84 (EPSG:4326)**
+
+Phía G3 (Việt Nam) là bên chọn hệ thống GPS, nên không phải nhận theo Tri-Ring nữa.
+
+**Chọn WGS-84 vì:** đó là hệ mà chính vệ tinh GPS phát ra (mọi module GNSS xuất WGS-84 ở
+mức thô) · là SRID 4326 mà PostGIS đang dùng · là hệ của mọi nhà cung cấp bản đồ trong danh
+sách Q5 (VietMap, Google, Mapbox, Be) · và là hệ của OpenStreetMap.
+
+**Vì sao KHÔNG chọn VN-2000** dù đó là hệ quy chiếu quốc gia của Việt Nam: VN-2000 dành cho
+đo đạc — bản đồ địa chính, hồ sơ đất đai, công trình. Nó không phải hệ mà thiết bị GNSS phát
+ra, cũng không phải hệ mà bản đồ nền dùng, nên đưa vào luồng giám sát realtime chỉ thêm một
+lần chuyển đổi và một chỗ để sai. Khi nào phải nộp dữ liệu cho cơ quan nhà nước theo VN-2000
+thì chuyển đổi ở bước xuất báo cáo, không đổi cách lưu.
+
+**GCJ-02 bị loại.** Đó là phép làm lệch bắt buộc với bản đồ dân dụng *trong lãnh thổ Trung
+Quốc*, không có giá trị pháp lý hay kỹ thuật nào ở Việt Nam.
+
+**Việc kéo theo — phải đưa vào hồ sơ mua sắm T-BOX:** yêu cầu thiết bị xuất toạ độ **WGS-84
+thô, không áp GCJ-02**. Nhiều module GNSS sản xuất tại Trung Quốc bật phép lệch này theo mặc
+định hoặc theo firmware. Không ghi vào hợp đồng thì rất dễ nhận thiết bị đã lệch sẵn.
+Cột `devices.he_toa_do` giữ nguyên, nhưng đổi ý nghĩa: nay `chua_ro` là **"chưa kiểm chứng
+trên thiết bị cụ thể này"**, không còn là "chưa quyết chính sách".
+
+### TR-03 ĐÃ CHỐT (2026-08-04, PM) — giờ vận hành **GMT+7**, bản tin mang múi giờ tường minh
+
+T-BOX do phía Việt Nam chọn nên đặt theo giờ Việt Nam. Việt Nam **không có giờ mùa hè**, nên
+GMT+7 cố định quanh năm — bỏ được cả một lớp lỗi mà các nước có DST phải xử lý.
+
+Cách hiện thực, tách làm ba tầng để không lẫn:
+
+| Tầng | Quy ước | Đã có chưa |
+|---|---|---|
+| **Bản tin từ thiết bị** | `ts` phải mang **múi giờ tường minh**: `...Z` hoặc `...+07:00` | ✅ validator ép, thiếu thì vào quarantine |
+| **Lưu trữ** | `timestamptz` (PostgreSQL quy về UTC) — **không đổi** | ✅ đã đúng từ migration 0003 |
+| **Hiển thị & logic nghiệp vụ** | `Asia/Ho_Chi_Minh` (khung giờ ToU, báo cáo, portal) | ✅ `APP_TIMEZONE`, ADR-010 |
+
+⚠️ **Điểm dễ hiểu nhầm — vì sao KHÔNG lưu thẳng giờ GMT+7 trong DB:** "để giờ GMT+7" là quy
+ước *vận hành và hiển thị*, không phải cách lưu. `timestamptz` luôn quy về UTC bên trong;
+đó là thứ khiến so sánh, sắp xếp và tính khoảng thời gian không phụ thuộc nơi chạy. Đổi sang
+lưu giờ địa phương sẽ phá đối soát 3 chiều (F-C6) và cả bằng chứng bảo hành append-only.
+
+⚠️ **Cái bẫy đã bịt:** chuỗi ISO **thiếu** múi giờ (vd `2026-08-04T14:30:00`) KHÔNG bị
+`Date.parse` coi là lỗi — nó hiểu theo giờ **máy chạy ingest**. Máy dev ở Asia/Bangkok (+07)
+ra đúng; container Docker mặc định **UTC** ra lệch **đúng 7 tiếng**. Lỗi nằm im cho tới lúc
+đổi chỗ chạy, rồi biểu hiện thành gắn cờ vi phạm sạc oan (ADR-010). Nay validator bắt buộc
+có múi giờ, có test khoá lại.
 
 ## Delta PRD v2.0 → v3.0 (chưa chuyển đổi vào `docs/prd/`)
 

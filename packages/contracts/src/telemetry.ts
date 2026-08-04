@@ -42,7 +42,17 @@ export interface TelemetryRecord {
   /** VIN GIẢ 100% ở Phase 1 (quy tắc 12), ví dụ G3-SIM-0001. */
   vin: string;
   model: VehicleModel;
-  /** Giờ thiết bị, ISO 8601 UTC. */
+  /**
+   * Giờ THIẾT BỊ sinh bản ghi, ISO 8601 **BẮT BUỘC có múi giờ tường minh**:
+   * `2026-08-04T07:30:00Z` hoặc `2026-08-04T14:30:00+07:00`.
+   *
+   * KHÔNG được gửi dạng thiếu múi giờ (`2026-08-04T14:30:00`): `Date.parse` không coi đó
+   * là lỗi mà hiểu theo giờ MÁY CHẠY ingest — container Docker mặc định UTC sẽ lệch đúng
+   * 7 tiếng so với máy dev ở +07. Ingest từ chối bản ghi thiếu múi giờ (TR-03).
+   *
+   * Quy ước vận hành là GMT+7 (Việt Nam, không có giờ mùa hè), nhưng LƯU TRỮ vẫn quy về
+   * UTC qua `timestamptz`. Xem docs/integrations/tri-ring-tbox.md §3.2.
+   */
   ts: string;
   soc_pct: number;
   battery_voltage_v: number;
