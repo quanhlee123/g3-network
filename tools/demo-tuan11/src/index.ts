@@ -16,11 +16,23 @@
 import pg from 'pg';
 import { databaseUrl, loadEnv, runMigrations, seed } from '@g3/db';
 import { ConsoleSmsSender } from '@g3/contracts';
-import { buildApp, loadConfigFromEnvFile } from '@g3/api';
+import { buildApp, kiemTraViPham, loadConfigFromEnvFile } from '@g3/api';
 import type { FastifyInstance } from 'fastify';
 import { bang, canhBao, khung, moTaLoi, ok, tieuDe } from '@g3/demo-gate0/src/ui';
 
 const MA_OTP = '000000'; // mã cố định cho demo — không phải secret
+/** Tiền tố mã giao dịch OCPP của các phiên sạc do CHÍNH demo này dựng, để dọn lại được. */
+const MA_PHIEN_DEMO = 'DEMO-TUAN11-';
+/**
+ * Xe RIÊNG cho kịch bản vi phạm của demo này (đội Sao Mai, không dùng bởi gate0/tuan8).
+ *
+ * Vì sao không dùng chung xe 0001 với các demo khác: job F-B3 CỐ Ý không kết luận lại cùng
+ * một loại vi phạm "thường xuyên" trong một cửa sổ (30 ngày) — đó là hành vi đúng, tránh
+ * bắn cảnh báo trùng cho cùng một hành vi. Nhưng nó có nghĩa: xe nào đã bị kết luận
+ * soc_above_max gần đây thì tạo thêm bao nhiêu phiên vượt trần cũng KHÔNG sinh cảnh báo
+ * mới. Demo dùng xe riêng để không phải chống lại hành vi đúng đó.
+ */
+const XE_KICH_BAN_VI_PHAM = 'G3-SIM-VIN-0007';
 const VIN_CHUA_KICH_HOAT = 'G3-SIM-VIN-0021';
 const SDT_QUAN_LY = '0900000002'; // Trần Thị Mô Phỏng — đội Sao Mai
 const SDT_ADMIN = '0900000010';
@@ -70,6 +82,112 @@ async function donDepDemoCu(db: pg.Client): Promise<void> {
      WHERE user_id IN (SELECT id FROM users WHERE email = 'taixe-demo-tuan11@test.local')`,
   );
   await db.query(`DELETE FROM users WHERE email = 'taixe-demo-tuan11@test.local'`);
+
+  // Phiên sạc vi phạm do chính demo dựng (§ dungKichBanViPham). Thứ tự bắt buộc:
+  // alerts → violations → violation_checks → charging_sessions, vì ba bảng sau tham chiếu
+  // lẫn nhau. violations và charging_sessions là APPEND-ONLY (NF-11) nên phải tắt trigger
+  // trong lúc dọn rồi bật lại NGAY — không có đường nào khác để reset bảng bất biến.
+  const phienDemo = `SELECT id FROM charging_sessions WHERE ocpp_transaction_id LIKE '${MA_PHIEN_DEMO}%'`;
+  // So sánh ở dạng TEXT: split_part() trả text còn charging_sessions.id là uuid. Ép
+  // split_part sang uuid sẽ ném lỗi nếu gặp dedup_key sai định dạng — đổi chiều an toàn hơn.
+  const phienDemoText = `SELECT id::text FROM charging_sessions WHERE ocpp_transaction_id LIKE '${MA_PHIEN_DEMO}%'`;
+  await db.query(
+    `DELETE FROM notifications WHERE alert_id IN
+       (SELECT id FROM alerts WHERE dedup_key LIKE 'F-B5:%' AND vehicle_id IN
+          (SELECT vehicle_id FROM charging_sessions WHERE ocpp_transaction_id LIKE $1))`,
+    [`${MA_PHIEN_DEMO}%`],
+  );
+  await db.query(
+    `DELETE FROM alerts WHERE dedup_key LIKE 'F-B5:%'
+       AND split_part(dedup_key, ':', 2) IN (${phienDemoText})`,
+  );
+  await db.query(`ALTER TABLE violations DISABLE TRIGGER violations_append_only`);
+  await db.query(`DELETE FROM violations WHERE session_id IN (${phienDemo})`);
+  await db.query(`ALTER TABLE violations ENABLE TRIGGER violations_append_only`);
+  await db.query(`DELETE FROM violation_checks WHERE session_id IN (${phienDemo})`);
+  await db.query(`ALTER TABLE charging_sessions DISABLE TRIGGER charging_sessions_append_only`);
+  await db.query(`DELETE FROM charging_sessions WHERE ocpp_transaction_id LIKE $1`, [
+    `${MA_PHIEN_DEMO}%`,
+  ]);
+  await db.query(`ALTER TABLE charging_sessions ENABLE TRIGGER charging_sessions_append_only`);
+}
+
+/**
+ * Dựng kịch bản "giữa tuần có vi phạm sạc" — TỰ TẠO, không dựa vào demo khác.
+ *
+ * Vì sao phải có hàm này: bản đầu của demo chỉ ĐỌC `/alerts` rồi khẳng định có cảnh báo
+ * vi phạm. Nó xanh chỉ vì `demo:tuan8` đã chạy trước và để lại dữ liệu — chạy trên máy
+ * sạch, hoặc sau khi tuan8 dọn dẹp, tiêu chí F-B5 HỎNG. Đó đúng là kiểu "test xanh vì lý
+ * do sai" mà dự án đã vấp một lần (bài học Prompt 06).
+ *
+ * Chính sách áp cho đội Sao Mai không khai `allowed_hours`, nên `outside_hours` không kích
+ * hoạt được. Dùng `soc_above_max`: sạc vượt SOC trần. Kết luận này cần chạm ngưỡng
+ * ĐỦ SỐ LẦN trong cửa sổ ngày (VIOLATION_SOC_BREACH_COUNT, mặc định 3) — nên tạo đủ số
+ * phiên chứ không phải một.
+ */
+async function dungKichBanViPham(
+  pool: pg.Pool,
+  config: ReturnType<typeof loadConfigFromEnvFile>,
+): Promise<{ soPhien: number; socTran: number | null }> {
+  const xe = await pool.query<{ id: string; customer_id: string }>(
+    `SELECT id, customer_id FROM vehicles WHERE vin = $1`,
+    [XE_KICH_BAN_VI_PHAM],
+  );
+  const tram = await pool.query<{ station_id: string; id: string }>(
+    // connectors không có created_at (migration 0002) — sắp theo trạm + số trụ cho ổn định.
+    `SELECT station_id, id FROM connectors ORDER BY station_id, ocpp_connector_id LIMIT 1`,
+  );
+  if (xe.rowCount === 0 || tram.rowCount === 0) return { soPhien: 0, socTran: null };
+
+  // SOC trần của chính sách ĐANG hiệu lực cho xe này (fleet-specific thắng toàn hệ,
+  // bản mới nhất đã có hiệu lực thắng bản cũ).
+  const cs = await pool.query<{ soc_max_pct: string | null }>(
+    `SELECT soc_max_pct FROM charging_policies
+     WHERE soc_max_pct IS NOT NULL AND effective_from <= now()
+       AND (customer_id = $1 OR customer_id IS NULL)
+     ORDER BY (customer_id IS NULL), effective_from DESC LIMIT 1`,
+    [xe.rows[0]!.customer_id],
+  );
+  const socTran = cs.rows[0]?.soc_max_pct === undefined ? null : Number(cs.rows[0].soc_max_pct);
+  if (socTran === null) return { soPhien: 0, socTran: null };
+
+  // Tạo dư 1 phiên so với ngưỡng để kết luận chắc chắn kích hoạt.
+  const soPhien = config.viPham.socBreachCount + 1;
+  for (let i = 0; i < soPhien; i++) {
+    // Tất cả phiên nằm trong 12 giờ gần nhất, KHÔNG rải qua nhiều ngày.
+    // Rải qua nhiều ngày là bẫy: các phiên rơi vào những PHIÊN BẢN chính sách khác nhau
+    // (F-B1 đối chiếu theo chính sách hiệu lực LÚC SẠC), mỗi bản một SOC trần khác nhau,
+    // nên số lần thực sự vượt trần ít hơn số phiên đã tạo và kết luận "thường xuyên"
+    // không kích hoạt. Đã vấp đúng lỗi này: lần chạy đầu 0 cảnh báo, lần sau lại có.
+    const batDau = Date.now() - (i + 1) * 2 * 3600_000; // cách nhau 2 giờ
+    await pool.query(
+      `INSERT INTO charging_sessions
+         (vehicle_id, station_id, connector_id, ocpp_transaction_id, started_at, ended_at,
+          energy_kwh, soc_start_pct, soc_end_pct)
+       VALUES ($1, $2, $3, $4, $5, $6, 30, 60, $7)
+       ON CONFLICT (ocpp_transaction_id) DO NOTHING`,
+      [
+        xe.rows[0]!.id,
+        tram.rows[0]!.station_id,
+        tram.rows[0]!.id,
+        `${MA_PHIEN_DEMO}${String(i)}`,
+        new Date(batDau).toISOString(),
+        new Date(batDau + 3600_000).toISOString(),
+        socTran + 5, // vượt trần → soc_above_max
+      ],
+    );
+  }
+
+  // Chạy job đối chiếu — chính nó ghi violations (append-only) + cảnh báo F-B5.
+  await kiemTraViPham(pool, {
+    muiGio: config.muiGio,
+    socBreachCount: config.viPham.socBreachCount,
+    socBreachWindowDays: config.viPham.socBreachWindowDays,
+    log: () => {
+      /* demo tự in */
+    },
+  });
+  return { soPhien, socTran };
 }
 
 async function main(): Promise<void> {
@@ -104,6 +222,19 @@ async function main(): Promise<void> {
   await donDepDemoCu(admin);
 
   const pool = new pg.Pool({ connectionString: databaseUrl(), max: 10 });
+
+  // Dựng sẵn kịch bản vi phạm sạc mà bước 3 sẽ kiểm tra — demo phải TỰ TẠO dữ liệu nó
+  // khẳng định, không dựa vào demo khác đã chạy trước (xem ghi chú ở dungKichBanViPham).
+  const kichBan = await dungKichBanViPham(pool, config);
+  if (kichBan.soPhien > 0) {
+    ok(
+      `dựng kịch bản vi phạm: ${String(kichBan.soPhien)} phiên sạc vượt SOC trần ` +
+        `${String(kichBan.socTran)}% cho xe ${XE_KICH_BAN_VI_PHAM}`,
+    );
+  } else {
+    canhBao('không dựng được kịch bản vi phạm — chính sách sạc không khai SOC trần');
+  }
+
   const imLang = (): void => {
     /* demo tự in, không cần log của thư viện */
   };
