@@ -92,8 +92,12 @@ export function startOcppServer(
       }
       const session = new CsmsStationSession(transport, db, stationCode, stationId, opts);
       sessions.set(stationCode, session);
+      opts.metrics?.setStationsConnected(sessions.size);
       transport.onClose(() => {
         if (sessions.get(stationCode) === session) sessions.delete(stationCode);
+        // Đếm theo registry chứ không theo wss.clients: một kết nối WS đã bắt tay nhưng
+        // bị từ chối vì mã trạm lạ KHÔNG phải là "trụ đang kết nối".
+        opts.metrics?.setStationsConnected(sessions.size);
       });
       log(`[csms] trạm ${stationCode} đã kết nối (${wss.clients.size} kết nối)`);
     })().catch((err: unknown) => {

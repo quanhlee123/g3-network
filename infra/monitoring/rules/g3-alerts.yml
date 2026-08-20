@@ -1,0 +1,117 @@
+# NF-14 — Luật cảnh báo vận hành. Phase 1 CHƯA nối Alertmanager: cảnh báo hiện ở
+# Prometheus → Alerts và trên dashboard Grafana. Nối kênh gửi thật là việc của Phase 2
+# (cần quyết định kênh trực on-call — xem docs/DECISION-LOG.md).
+groups:
+  - name: g3-duong-du-lieu
+    rules:
+      # Đây là luật QUAN TRỌNG NHẤT của NF-14: "alert khi ingest gián đoạn".
+      # Không dùng rate() vì counter đứng yên trông y hệt counter không tồn tại;
+      # gauge mốc-thời-gian thì phân biệt được rõ ràng.
+      - alert: IngestGianDoan
+        expr: time() - g3_ingest_last_message_timestamp_seconds > 120
+        for: 1m
+        labels:
+          severity: critical
+          nf: NF-14
+        annotations:
+          summary: 'Ingest không nhận được bản tin nào trong hơn 2 phút'
+          description: >-
+            Bản tin telemetry hợp lệ gần nhất đã {{ $value | humanizeDuration }} trước.
+            Kiểm tra EMQX, services/ingest và đường mạng của thiết bị.
+
+      - alert: IngestVuotNguongNF01
+        expr: g3_ingest_lag_p95_5m_seconds > 30
+        for: 2m
+        labels:
+          severity: warning
+          nf: NF-01
+        annotations:
+          summary: 'p95 độ trễ ingest {{ $value | printf "%.1f" }}s > ngưỡng 30s (NF-01)'
+          description: 'Trễ 2 phút liên tục mới báo, để nhiễu nhất thời không làm kêu oan.'
+
+      - alert: LechDongHoThietBi
+        expr: increase(g3_ingest_lech_dong_ho_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          nf: NF-16
+        annotations:
+          summary: 'Có thiết bị gửi bản ghi với giờ chạy TRƯỚC máy chủ'
+          description: >-
+            Nghi T-BOX dùng UTC+8 mà gắn nhãn UTC. ĐỪNG bật job gắn cờ vi phạm sạc
+            cho tới khi sửa: khung giờ ToU sẽ lệch và gắn cờ oan (ADR-010).
+
+      - alert: TelemetryBiCachLyNhieu
+        expr: g3_telemetry_quarantine_24h > 100
+        for: 5m
+        labels:
+          severity: warning
+          nf: NF-16
+        annotations:
+          summary: '{{ $value }} bản tin telemetry bị cách ly trong 24h'
+          description: 'Thường là sai schema_version hoặc VIN chưa được provisioning (F-F2).'
+
+  - name: g3-tram-sac
+    rules:
+      - alert: OcppVuotNguongNF02
+        expr: >-
+          histogram_quantile(0.95, sum(rate(g3_ocpp_status_lag_seconds_bucket[5m])) by (le)) > 30
+        for: 2m
+        labels:
+          severity: warning
+          nf: NF-02
+        annotations:
+          summary: 'p95 trễ trạng thái trụ {{ $value | printf "%.1f" }}s > ngưỡng 30s (NF-02)'
+
+      - alert: KhongTruNaoKetNoi
+        expr: g3_ocpp_stations_connected == 0
+        for: 5m
+        labels:
+          severity: warning
+          nf: NF-03
+        annotations:
+          summary: 'Không còn trụ sạc nào kết nối tới CSMS'
+
+  - name: g3-nghiep-vu
+    rules:
+      # NF-10: lệch kWh >1% giữa trụ – xe – thanh toán là vấn đề TIỀN và BẢO HÀNH,
+      # nên báo ngay chứ không chờ 5 phút như các luật hiệu năng.
+      - alert: DoiSoatLechQuaNguong
+        expr: g3_reconciliation_lech_max_pct > 1
+        for: 0m
+        labels:
+          severity: critical
+          nf: NF-10
+        annotations:
+          summary: 'Đối soát 3 chiều lệch {{ $value | printf "%.2f" }}% > ngưỡng 1% (NF-10)'
+          description: 'Xem GET /reconciliation/results?status=lech để biết phiên nào.'
+
+      - alert: CanhBaoPinNguyCapDangMo
+        expr: sum(g3_alerts_open{severity="3"}) > 0
+        for: 0m
+        labels:
+          severity: critical
+          nf: NF-03
+        annotations:
+          summary: '{{ $value }} cảnh báo pin NGUY CẤP đang mở'
+
+  - name: g3-ha-tang
+    rules:
+      - alert: ServiceKhongPhanHoi
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          nf: NF-14
+        annotations:
+          summary: 'Prometheus không scrape được {{ $labels.job }}'
+          description: 'Kiểm tra tiến trình và endpoint /metrics của service này.'
+
+      - alert: ApiKhongDocDuocDatabase
+        expr: g3_api_metrics_scrape_error == 1
+        for: 1m
+        labels:
+          severity: critical
+          nf: NF-14
+        annotations:
+          summary: 'apps/api không đọc được PostgreSQL — mọi số nghiệp vụ bên dưới là số CŨ'

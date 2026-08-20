@@ -1,9 +1,15 @@
 // F-G1 — Metric ingest (NF-01: độ trễ thiết bị→DB ≤30s p95 · NF-14: expose Prometheus).
 // Lag = giờ ghi DB − ts THIẾT BỊ trong bản ghi (đúng cách đo ghi ở PRD sheet 5).
-import http from 'node:http';
-import { Counter, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
 
 export const NF01_P95_MAX_SECONDS = 30;
+
+/**
+ * NF-01 áp cho cả CẢNH BÁO: bản ghi chạm ngưỡng lúc T thì cảnh báo phải có mặt trước T+30s.
+ * Đo từ giờ THIẾT BỊ của bản ghi kích hoạt, không phải từ lúc pipeline bắt đầu xử lý —
+ * người vận hành chịu hậu quả của TOÀN BỘ chuỗi trễ, không riêng đoạn trong tiến trình.
+ */
+export const NF01_ALERT_MAX_SECONDS = 30;
 
 /**
  * Đồng hồ thiết bị chạy TRƯỚC máy chủ quá số giây này thì coi là lệch đồng hồ, không phải
@@ -44,12 +50,16 @@ export class IngestMetrics {
   readonly registry = new Registry();
   readonly lagWindow: LagWindow;
   readonly #lag: Histogram;
+  readonly #lagP95: Gauge;
   readonly #records: Counter;
   readonly #lechDongHo: Counter;
+  readonly #banTinCuoi: Gauge;
+  readonly #alerts: Counter;
+  readonly #alertLatency: Histogram;
   #warned = false;
   #canhBaoLechDongHo = false;
 
-  constructor(clock: () => number = () => Date.now()) {
+  constructor(private readonly clock: () => number = () => Date.now()) {
     this.lagWindow = new LagWindow(undefined, clock);
     collectDefaultMetrics({ register: this.registry });
     this.#lag = new Histogram({
@@ -71,6 +81,32 @@ export class IngestMetrics {
       name: 'g3_ingest_records_total',
       help: 'Số bản tin ingest theo kết quả xử lý',
       labelNames: ['result'],
+      registers: [this.registry],
+    });
+    // Bucket của histogram lag quá thưa để suy ra p95 chính xác; gauge này là p95 ĐÃ TÍNH
+    // của cửa sổ 5 phút — vẽ thẳng lên Grafana và đặt alert NF-01 không cần histogram_quantile.
+    this.#lagP95 = new Gauge({
+      name: 'g3_ingest_lag_p95_5m_seconds',
+      help: 'p95 độ trễ ingest trong cửa sổ trượt 5 phút (NF-01 ≤30s)',
+      registers: [this.registry],
+    });
+    // NF-14 'alert khi ingest gián đoạn': Prometheus KHÔNG phát hiện được sự vắng mặt của
+    // một counter đang đứng yên, nhưng phát hiện được 'time() - gauge này > ngưỡng'.
+    this.#banTinCuoi = new Gauge({
+      name: 'g3_ingest_last_message_timestamp_seconds',
+      help: 'Unix time (giây) của bản tin telemetry hợp lệ gần nhất — dùng để báo ingest đứt',
+      registers: [this.registry],
+    });
+    this.#alerts = new Counter({
+      name: 'g3_alerts_total',
+      help: 'Số cảnh báo đã bắn, theo bộ đánh giá sinh ra nó',
+      labelNames: ['nguon'],
+      registers: [this.registry],
+    });
+    this.#alertLatency = new Histogram({
+      name: 'g3_alert_latency_seconds',
+      help: 'Trễ cảnh báo: lúc ghi alert trừ ts THIẾT BỊ của bản ghi kích hoạt (NF-01 ≤30s)',
+      buckets: [0.5, 1, 2, 5, 10, 30, 60, 300],
       registers: [this.registry],
     });
   }
@@ -108,6 +144,7 @@ export class IngestMetrics {
     this.#lag.observe(Math.max(0, lagSeconds));
     this.lagWindow.add(Math.max(0, lagSeconds));
     const p95 = this.lagWindow.p95();
+    if (p95 !== null) this.#lagP95.set(p95);
     if (p95 !== null && p95 > NF01_P95_MAX_SECONDS) {
       if (!this.#warned) {
         this.#warned = true;
@@ -122,19 +159,27 @@ export class IngestMetrics {
     this.#records.inc({ result });
   }
 
-  /** HTTP GET /metrics dạng text Prometheus (NF-14). */
-  serve(port: number): http.Server {
-    const server = http.createServer((req, res) => {
-      if (req.url === '/metrics') {
-        void this.registry.metrics().then((body) => {
-          res.writeHead(200, { 'content-type': this.registry.contentType });
-          res.end(body);
-        });
-        return;
-      }
-      res.writeHead(404).end();
-    });
-    server.listen(port);
-    return server;
+  /** Đánh dấu vừa nhận được bản tin hợp lệ — mốc để báo 'ingest gián đoạn' (NF-14). */
+  markBanTin(atMs: number): void {
+    this.#banTinCuoi.set(atMs / 1000);
+  }
+
+  /**
+   * Ghi nhận cảnh báo vừa bắn từ MỘT bộ đánh giá (pin / bất thường / geofence).
+   * tsThietBiMs = giờ THIẾT BỊ của bản ghi kích hoạt; null thì chỉ đếm, KHÔNG bịa
+   * số 0 vào histogram trễ. soLuong = 0 thì không ghi gì (đường chạy thường xuyên nhất).
+   *
+   * Nhãn ở đây là NGUỒN chứ không phải alert_type: pipeline chỉ biết bộ đánh giá nào vừa
+   * bắn bao nhiêu cái. Bảng chia theo type/severity chính xác do apps/api đọc thẳng từ
+   * bảng alerts (xem apps/api/src/routes/metrics.ts) — không đoán ở tầng này.
+   */
+  observeAlert(nguon: string, soLuong: number, tsThietBiMs: number | null): void {
+    if (soLuong <= 0) return;
+    this.#alerts.inc({ nguon }, soLuong);
+    if (tsThietBiMs === null || Number.isNaN(tsThietBiMs)) return;
+    // Dữ liệu gửi bù sau mất sóng (NF-09) sinh cảnh báo với ts rất cũ — vẫn ghi trung thực;
+    // chỉ chặn số ÂM (đồng hồ thiết bị chạy nhanh, đã có counter riêng ở trên).
+    const tre = Math.max(0, (this.clock() - tsThietBiMs) / 1000);
+    for (let i = 0; i < soLuong; i++) this.#alertLatency.observe(tre);
   }
 }

@@ -1,0 +1,15 @@
+# NF-14 — Nguồn dữ liệu Prometheus tự nạp khi Grafana khởi động (không bấm tay).
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    # uid cố định để file dashboard trỏ thẳng vào (xem dashboards/g3-tong-quan.json).
+    uid: g3-prometheus
+    type: prometheus
+    access: proxy
+    # Tên service trong docker compose — Grafana và Prometheus cùng mạng nội bộ compose.
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 15s

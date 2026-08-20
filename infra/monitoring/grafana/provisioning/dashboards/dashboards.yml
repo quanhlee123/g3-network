@@ -1,0 +1,16 @@
+# NF-14 — Nạp dashboard từ file JSON. Sửa file JSON rồi `docker compose restart grafana`
+# là thấy thay đổi; sửa trên giao diện Grafana thì KHÔNG lưu ngược lại file (allowUiUpdates
+# = false có chủ ý — dashboard là mã nguồn, phải đi qua PR).
+apiVersion: 1
+
+providers:
+  - name: 'G3 Network'
+    orgId: 1
+    folder: 'G3 Network'
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

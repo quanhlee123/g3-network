@@ -22,6 +22,7 @@ import {
   type StopTransactionConf,
   type StopTransactionReq,
 } from '@g3/contracts';
+import type { CsmsMetrics } from './metrics';
 
 /** Nhận Pool hoặc Client của pg — test truyền Client vào thẳng. */
 export interface Queryable {
@@ -36,6 +37,8 @@ export interface CsmsSessionOptions {
   heartbeatIntervalS?: number;
   clock?: () => number;
   log?: (msg: string) => void;
+  /** NF-14: không truyền = không đo (test cũ và demo in-process không cần metric). */
+  metrics?: CsmsMetrics;
 }
 
 /**
@@ -66,6 +69,7 @@ export class CsmsStationSession {
   #log: (msg: string) => void;
   #clock: () => number;
   #heartbeatIntervalS: number;
+  #metrics: CsmsMetrics | undefined;
 
   constructor(
     transport: IChargePointTransport,
@@ -77,6 +81,7 @@ export class CsmsStationSession {
     this.#clock = opts.clock ?? (() => Date.now());
     this.#heartbeatIntervalS = opts.heartbeatIntervalS ?? 30;
     this.#log = opts.log ?? ((m) => console.log(m));
+    this.#metrics = opts.metrics;
     this.rpc = new OcppRpc(transport);
     this.rpc.onCall((action, payload) => this.#dispatch(action, payload));
     transport.onClose(() => void this.#onDisconnect());
@@ -89,6 +94,19 @@ export class CsmsStationSession {
   }
 
   async #dispatch(action: string, payload: unknown): Promise<unknown> {
+    // NF-14: đếm CẢ bản tin lỗi. Trụ gửi action lạ hoặc DB từ chối là tín hiệu vận hành,
+    // và nếu chỉ đếm đường thành công thì "CSMS im lặng vì hỏng" trông y hệt "không có trụ".
+    try {
+      const ket_qua = await this.#dispatchAction(action, payload);
+      this.#metrics?.countMessage(action, 'ok');
+      return ket_qua;
+    } catch (err) {
+      this.#metrics?.countMessage(action, 'loi');
+      throw err;
+    }
+  }
+
+  async #dispatchAction(action: string, payload: unknown): Promise<unknown> {
     switch (action) {
       case 'BootNotification':
         return this.#onBoot(payload as BootNotificationReq);
@@ -126,6 +144,9 @@ export class CsmsStationSession {
          WHERE station_id = $2 AND ocpp_connector_id = $3`,
         [mapOcppStatus(req.status), this.stationId, req.connectorId],
       );
+      // Đo SAU khi ghi DB xong: NF-02 nói về lúc trạng thái NHÌN THẤY ĐƯỢC trong hệ,
+      // không phải lúc gói tin chạm vào tiến trình CSMS.
+      this.#metrics?.observeStatusLag(req.timestamp);
       this.#log(`[csms] ${this.stationCode}: connector ${req.connectorId} → ${req.status}`);
     }
     return {};

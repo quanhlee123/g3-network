@@ -31,7 +31,8 @@
     "demo:tuan8": "npm run start -w tools/demo-tuan8",
     "demo:tuan11": "npm run start -w tools/demo-tuan11",
     "reconcile": "npm run reconcile -w apps/api --",
-    "gitleaks": "gitleaks dir . --no-banner --redact"
+    "gitleaks": "gitleaks dir . --no-banner --redact",
+    "loadtest": "npm run start -w tools/load-test --"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",

@@ -26,6 +26,7 @@ import { chargingPolicyRoutes } from './routes/charging-policies';
 import { deviceRoutes } from './routes/devices';
 import { geofenceRoutes } from './routes/geofences';
 import { healthRoutes } from './routes/health';
+import { metricsRoutes } from './routes/metrics';
 import { notificationRoutes } from './routes/notifications';
 import { paymentRoutes } from './routes/payments';
 import { provisioningRoutes } from './routes/provisioning';
@@ -140,6 +141,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   });
 
   await app.register(healthRoutes);
+  await app.register(metricsRoutes, { db });
   await app.register(authRoutes, { db, otp, jwtExpiresIn: config.jwtExpiresIn });
   await app.register(vehicleRoutes, {
     db,

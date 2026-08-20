@@ -113,29 +113,48 @@ export class IngestPipeline {
     if ((inserted.rowCount ?? 0) === 0) {
       this.metrics.count('duplicate'); // bản ghi gửi bù đã có (NF-09) — không phải lỗi
     } else {
+      const tsThietBiMs = Date.parse(record.ts);
       this.metrics.count('valid');
-      this.metrics.observeLag((this.clock() - Date.parse(record.ts)) / 1000);
+      this.metrics.observeLag((this.clock() - tsThietBiMs) / 1000);
+      // NF-14: mốc "lần cuối ingest còn sống" — Prometheus báo đứt dựa vào gauge này.
+      this.metrics.markBanTin(this.clock());
       // F-A2: đánh giá ngưỡng pin NGAY trên dòng dữ liệu mới (không chờ job quét).
       // Chỉ chạy với bản ghi mới: dữ liệu gửi bù sau mất sóng không bắn lại cảnh báo cũ.
-      await this.#canhBaoPin.danhGia(
-        ref.vehicleId,
-        record.soc_pct,
-        { lat: record.lat, lng: record.lng },
-        record.ts,
+      this.metrics.observeAlert(
+        'pin',
+        await this.#canhBaoPin.danhGia(
+          ref.vehicleId,
+          record.soc_pct,
+          { lat: record.lat, lng: record.lng },
+          record.ts,
+        ),
+        tsThietBiMs,
       );
       // F-A4: rule engine bất thường chạy trên cùng dòng dữ liệu — snapshot đọc từ
       // telematics_readings nên PHẢI gọi SAU khi bản ghi hiện tại đã được ghi vào bảng.
-      await this.#batThuong.danhGia(
-        ref.vehicleId,
-        {
-          battery_temp_c: record.battery_temp_c,
-          battery_voltage_v: record.battery_voltage_v,
-          fault_codes: record.fault_codes,
-        },
-        record.ts,
+      this.metrics.observeAlert(
+        'bat_thuong',
+        await this.#batThuong.danhGia(
+          ref.vehicleId,
+          {
+            battery_temp_c: record.battery_temp_c,
+            battery_voltage_v: record.battery_voltage_v,
+            fault_codes: record.fault_codes,
+          },
+          record.ts,
+        ),
+        tsThietBiMs,
       );
       // F-A5: ra/vào vùng geofence — cũng chạy trên chính dòng dữ liệu này.
-      await this.#geofence.danhGia(ref.vehicleId, { lat: record.lat, lng: record.lng }, record.ts);
+      this.metrics.observeAlert(
+        'geofence',
+        await this.#geofence.danhGia(
+          ref.vehicleId,
+          { lat: record.lat, lng: record.lng },
+          record.ts,
+        ),
+        tsThietBiMs,
+      );
     }
     await this.#touchDevice(ref, msg.receivedAtMs);
   }

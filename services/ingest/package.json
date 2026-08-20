@@ -15,6 +15,7 @@
     "@g3/contracts": "*",
     "@g3/db": "*",
     "@g3/notify": "*",
+    "@g3/observability": "*",
     "@g3/shared": "*",
     "@sinclair/typebox": "^0.34.0",
     "mqtt": "^5.10.1",
