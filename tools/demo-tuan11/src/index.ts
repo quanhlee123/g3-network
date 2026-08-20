@@ -105,6 +105,12 @@ async function donDepDemoCu(db: pg.Client): Promise<void> {
   await db.query(`DELETE FROM violations WHERE session_id IN (${phienDemo})`);
   await db.query(`ALTER TABLE violations ENABLE TRIGGER violations_append_only`);
   await db.query(`DELETE FROM violation_checks WHERE session_id IN (${phienDemo})`);
+  // reconciliation_results và payment_transactions cũng tham chiếu charging_sessions.
+  // Lần chạy ĐẦU không đụng tới chúng (chưa job nào chạy qua phiên vừa dựng), nên thiếu hai
+  // dòng này demo vẫn xanh — nó chỉ hỏng từ lần chạy THỨ HAI trở đi, sau khi job đối soát
+  // của apps/api đã kịp quét phiên demo cũ. Cả hai bảng không có trigger append-only.
+  await db.query(`DELETE FROM reconciliation_results WHERE session_id IN (${phienDemo})`);
+  await db.query(`DELETE FROM payment_transactions WHERE session_id IN (${phienDemo})`);
   await db.query(`ALTER TABLE charging_sessions DISABLE TRIGGER charging_sessions_append_only`);
   await db.query(`DELETE FROM charging_sessions WHERE ocpp_transaction_id LIKE $1`, [
     `${MA_PHIEN_DEMO}%`,

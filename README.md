@@ -7,6 +7,29 @@ sách sạc & bằng chứng bảo hành, quản lý trạm sạc (OCPP 1.6J), t
 > Phase 1 chạy 100% trên **simulator** và **dữ liệu giả**: không phần cứng thật, không VIN
 > thật, không tiền thật. Đọc `CLAUDE.md` trước khi làm bất cứ việc gì.
 
+## 👷 Dành cho nhà thầu mới
+
+Nếu bạn vừa được cấp quyền vào repo này để báo giá hoặc nhận một gói thầu, **đọc
+[docs/handover/](docs/handover/) trước, đừng đọc tiếp README này**. Ở đó có:
+
+| Tài liệu | Trả lời câu hỏi |
+|---|---|
+| [handover/system-overview.md](docs/handover/system-overview.md) | Hệ thống làm gì · kiến trúc (Mermaid) · luồng dữ liệu · stack · cách chạy · cách demo · **ranh giới Phase 1** |
+| [handover/feature-status.md](docs/handover/feature-status.md) | **46 mã F-xx** với trạng thái thật (Hoàn thành trên mock / Sandbox / Interface-only / Một phần / Chưa làm) + link thẳng tới code và test |
+| [handover/debt-register.md](docs/handover/debt-register.md) | 13 mục nợ kỹ thuật, có mức độ — đọc **trước khi ước lượng công** |
+| [handover/load-test-300.md](docs/handover/load-test-300.md) | Số đo tải ở 300 xe, kèm phần **lượt đo đó KHÔNG chứng minh được** |
+| [handover/sow/](docs/handover/sow/) | 4 gói thầu + Definition of Done từng gói |
+
+Bốn gói thầu: [SOW-01 Hardening & hạ tầng](docs/handover/sow/SOW-01-hardening-ha-tang.md) ·
+[SOW-02 Tích hợp phần cứng](docs/handover/sow/SOW-02-tich-hop-phan-cung.md) ·
+[SOW-03 Thanh toán & hóa đơn production](docs/handover/sow/SOW-03-thanh-toan-hoa-don-production.md) ·
+[SOW-04 App tài xế P1.1](docs/handover/sow/SOW-04-mobile-p1-1.md).
+
+Ràng buộc bắt buộc, kể cả khi bạn **không dùng AI để code**: toàn bộ [CLAUDE.md](CLAUDE.md)
+và `standards/INPUT-05-nha-thau.md` của prompt-kit. Ba điều hay bị bỏ qua nhất — test đi
+kèm **trong cùng PR** với code; PR >500 dòng phải chia nhỏ; tích hợp thật phải **giữ nguyên
+interface** trong `packages/contracts` và **để nguyên simulator + test mock đang xanh**.
+
 ## DEMO GATE 0 — máy sạch, 3 lệnh
 
 Yêu cầu máy: **Node.js ≥ 22**, **Docker Desktop** (đang chạy), **Git**.
@@ -113,6 +136,60 @@ Kiểm tra nhanh sau khi chạy:
 | http://localhost:3000/docs | Tài liệu OpenAPI (tự sinh) — bấm **Authorize** để dán token |
 | http://localhost:3100 | Portal đội xe (trang chào) |
 | http://localhost:18083 | Dashboard EMQX (user `admin`, mật khẩu trong `infra/.env`) |
+| http://localhost:9090 | Prometheus — bấm **Alerts** để xem 10 luật cảnh báo vận hành (NF-14) |
+| http://localhost:3001 | Grafana — dashboard "G3 Network — Sức khỏe hệ thống & đường dữ liệu" |
+
+## Quan sát hệ thống (NF-14)
+
+Mọi service đều có `/health` và `/metrics`. Cả hai chỉ dành cho hạ tầng nội bộ —
+**không expose ra internet** (quy tắc 12); Prometheus và Grafana chỉ bind vào `127.0.0.1`.
+
+| Service | /health | /metrics | Đo gì |
+|---|---|---|---|
+| `apps/api` | http://localhost:3000/health | http://localhost:3000/metrics | Tồn kho nghiệp vụ đọc từ DB: cảnh báo đang mở, đối soát lệch (NF-10), telemetry bị cách ly |
+| `services/ingest` | http://localhost:9464/health | http://localhost:9464/metrics | Độ trễ ingest p95 (NF-01), nhịp bản tin, cảnh báo vừa bắn, lệch đồng hồ thiết bị |
+| `services/csms` | http://localhost:9465/health | http://localhost:9465/metrics | Độ trễ trạng thái trụ (NF-02), số trụ đang kết nối, bản tin OCPP |
+
+`/health` trả **HTTP 503** khi một phụ thuộc hỏng (probe đọc mã trạng thái, không parse JSON):
+
+```bash
+curl -s http://localhost:9464/health
+```
+
+Đăng nhập Grafana: user `admin`, mật khẩu ở biến `GRAFANA_ADMIN_PASSWORD` trong
+`infra/.env` (do `npm install` sinh ngẫu nhiên — không có trong `.env.example`).
+Dashboard và nguồn dữ liệu **nạp tự động từ file**, sửa trên giao diện Grafana sẽ KHÔNG
+lưu lại: muốn đổi thì sửa `infra/monitoring/grafana/dashboards/g3-tong-quan.json` rồi
+`docker compose -f infra/docker-compose.yml restart grafana`.
+
+**Muốn thấy dữ liệu CHẠY trên Grafana ngay bây giờ:** các service chỉ đẩy metric khi
+chúng đang chạy, nên mở Grafana lúc không có gì chạy thì biểu đồ trống. Bật một lượt tải
+ngắn rồi xem:
+
+```bash
+npm run loadtest -- --vehicles 50 --stations 3 --minutes 5 --out load-test-logs/xem-grafana.md
+```
+
+`--out` trỏ sang chỗ khác để lượt xem thử này KHÔNG ghi đè báo cáo load test thật. Nếu
+muốn xem lại lượt chạy 300 xe đã đo, đổi khoảng thời gian trên Grafana sang đúng giờ ghi
+ở đầu [docs/handover/load-test-300.md](docs/handover/load-test-300.md) — Prometheus giữ
+dữ liệu 15 ngày, nhưng khung giờ mặc định của dashboard là `now-1h`.
+
+⚠️ Prometheus scrape các service chạy **trên máy** qua `host.docker.internal`. Đổi cổng
+trong `infra/.env` thì phải sửa cả `infra/monitoring/prometheus.yml` — Prometheus không
+đọc được biến môi trường trong file cấu hình của nó.
+
+## Load test (NF-04)
+
+```bash
+npm run loadtest -- --vehicles 300 --stations 10 --minutes 30
+```
+
+Lệnh này tự bổ sung dữ liệu lên 300 xe + 10 trạm (idempotent, chỉ THÊM), bật
+`services/ingest`, `services/csms`, `apps/api` và hai simulator, lấy mẫu `/metrics`
+mỗi 15 giây, rồi tắt sạch và ghi báo cáo vào
+[docs/handover/load-test-300.md](docs/handover/load-test-300.md). Log từng tiến trình và
+số liệu thô nằm ở `load-test-logs/` (đã gitignore).
 
 ## Đăng nhập API (F-F1)
 
@@ -248,7 +325,8 @@ g3-network/
 | `npm test -w apps/api` | Test 1 workspace |
 | `npm run lint` | ESLint + Prettier check |
 | `npm run sim:vehicles -- --count 20` | Giả lập 20 xe gửi telemetry MQTT (kịch bản & flag: `docs/simulators.md`) |
-| `npm run start -w services/ingest` | Chạy service ingest: MQTT → DB, metrics tại http://localhost:9464/metrics |
+| `npm run start -w services/ingest` | Chạy service ingest: MQTT → DB, health/metrics tại http://localhost:9464 |
+| `npm run loadtest -- --vehicles 300 --stations 10 --minutes 30` | Load test NF-04, ghi `docs/handover/load-test-300.md` |
 | `npm run start -w services/csms` | Chạy CSMS: OCPP WebSocket cổng 9220, HTTP nội bộ RemoteStart cổng 9221 |
 | `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc OCPP (kịch bản: `--scenario normal\|faulted\|disconnect`) |
 | `npm run demo:gate0` | **Demo Gate 0 end-to-end** (tự migrate + seed, ~3 phút) |
@@ -272,7 +350,10 @@ g3-network/
 | `API_PORT` / `PORTAL_PORT` | Cổng API (3000) và Portal (3100) |
 | `CSMS_WS_PORT` | Cổng WebSocket CSMS cho OCPP 1.6J (trụ kết nối `ws://…/ocpp/{mãTrạm}`) |
 | `CSMS_HTTP_PORT` | Cổng HTTP nội bộ CSMS: RemoteStart/RemoteStop (chuẩn bị F-H1, mặc định 9221) |
-| `INGEST_METRICS_PORT` | Cổng HTTP `/metrics` Prometheus của service ingest (NF-01/NF-14, mặc định 9464) |
+| `INGEST_METRICS_PORT` | Cổng HTTP `/health` + `/metrics` của service ingest (NF-01/NF-14, mặc định 9464) |
+| `CSMS_METRICS_PORT` | Cổng HTTP `/health` + `/metrics` của service CSMS (NF-02/NF-14, mặc định 9465) |
+| `PROMETHEUS_PORT` / `GRAFANA_PORT` | Cổng giao diện Prometheus (9090) và Grafana (3001), chỉ bind 127.0.0.1 |
+| `GRAFANA_ADMIN_PASSWORD` | Mật khẩu admin Grafana — `npm install` sinh ngẫu nhiên vào `infra/.env`, `.env.example` để TRỐNG (quy tắc 3) |
 | `JWT_SECRET` | Khóa ký token API. **Để trống trong `.env.example`** — `npm install` sinh khóa ngẫu nhiên vào `infra/.env` |
 | `JWT_EXPIRES_IN` | Hạn dùng token (mặc định `12h`) |
 | `OTP_TTL_SECONDS` / `OTP_MAX_ATTEMPTS` | Hạn dùng mã OTP (300s) và số lần nhập sai tối đa (5) |

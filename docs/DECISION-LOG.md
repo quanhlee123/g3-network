@@ -142,6 +142,42 @@ từng phiên và giữ ≥5 năm**. Khi làm F-C8 phải chuyển từ hằng s
 "giá hiển thị = giá tính tiền" cho một phiên trong quá khứ.
 
 ## Nhật ký thay đổi
+- **2026-08-20 · Claude Code (Prompt 12) · Gói bàn giao nhà thầu.**
+  Thêm [docs/handover/](handover/): `system-overview.md`, `feature-status.md` (đối chiếu
+  **46 mã F-xx** với mã nguồn và test thật), `README.md` mục lục, và **4 gói thầu** trong
+  `sow/` kèm Definition of Done lấy từ acceptance PRD + ngưỡng NF-xx + tiêu chí Gate 1/2.
+  - **Đếm lại số mục MỞ trong chính file này: 28**, không phải 19 — 7 mã D-xx + **18 mã Q-xx**
+    (Q1–Q18; con số 12 cũ có từ trước khi PRD v3.0 thêm Q13–Q18) + 3 mã TR-xx. Đã sửa cả ở
+    `debt-register.md`.
+  - **Đính chính `docs/architecture/system-overview.md`**: bảng map khối khai có *Map adapter*
+    và *E-invoice adapter* trong `packages/contracts` — **không tồn tại cả hai**. Ảnh hưởng
+    trực tiếp tới giá SOW-03 và SOW-04 (phải viết interface từ đầu, không phải thay mock).
+  - **[CẦN LÀM RÕ]** `docs/prd/04-p1-chuc-nang.md` ghi *"tổng 23 tính năng"* cho P1.0 nhưng
+    liệt kê **25 mã**. Đây là phạm vi hợp đồng của gói thầu — cần người viết PRD xác nhận.
+  - **Sửa một lỗi chỉ lộ ra khi CHẠY**: `demo:tuan11` hỏng từ lượt chạy thứ hai vì hàm dọn
+    dẹp bỏ sót 2 trong 4 bảng tham chiếu `charging_sessions`. Đã kiểm chứng bằng 3 lượt chạy
+    liên tiếp trên DB bẩn. Ghi thêm **N-13** (dữ liệu load test làm nhiễu demo về sau, chưa
+    sửa) → sổ nợ nay có **13 hạng mục**.
+  - Cả 3 demo đã chạy kiểm chứng, mỗi demo **hai lượt liên tiếp**: gate0 HOÀN TẤT ·
+    tuan8 9/9 ĐẠT · tuan11 12/12 ĐẠT.
+- **2026-08-19 · Claude Code (Prompt 11, NF-04 + NF-14) · Load test 300 xe, khung quan sát hệ thống, sổ nợ kỹ thuật.**
+  Thêm [ADR-013](adr/ADR-013-quan-sat-he-thong.md) (NHÁP): ba nguồn metric phân vai rõ
+  (ingest = nhịp dòng dữ liệu · csms = nhịp OCPP · api = tồn kho đọc thẳng từ DB), và
+  **"ingest gián đoạn" bắt bằng gauge mốc-thời-gian chứ không bằng `rate()`** — vì
+  Prometheus không phân biệt được counter *đứng yên* với counter *không tồn tại*, nên cách
+  viết bản năng `rate(...) == 0` sẽ im lặng đúng lúc ingest chết.
+  - **Kết quả load test** ([docs/handover/load-test-300.md](handover/load-test-300.md)):
+    NF-01 ĐẠT với biên rất rộng. **NF-02 thì KHÔNG kết luận được** — `ocpp-sim` chạy đúng
+    một phiên mỗi trụ rồi chỉ heartbeat, nên chỉ có 30 mẫu dồn vào phút đầu. Báo cáo ghi
+    "KHÔNG ĐỦ MẪU" thay vì ghi ĐẠT.
+  - **Chưa nối Alertmanager** — 10 luật cảnh báo đã chạy trên Prometheus nhưng chưa gửi tới
+    người nào, vì **Q6 (ai trực CSKH & cứu hộ 24/7) vẫn MỞ**. Không tự quyết kênh trực.
+  - **Không tự tối ưu gì** sau load test: NF-01/NF-02 không vỡ nên không có gì để tối ưu, và
+    prompt yêu cầu nêu đề xuất chứ không tự sửa.
+  - Thêm [docs/handover/debt-register.md](handover/debt-register.md) — 12 hạng mục nợ, phân
+    mức, **không sửa hạng mục nào**. Nặng nhất: `GET /alerts` trả toạ độ xe trong
+    `payload` mà không ghi audit log, đi vòng qua đúng cơ chế `requireOpenTicket` của
+    quy tắc 5 / NF-06.
 - **2026-08-04 · Claude Code · Nhận tài liệu kỹ thuật Tri-Ring + PRD v3.0.** Ghi TR-01…TR-05,
   Q13–Q18 và delta v2→v3 vào log này; tạo [docs/integrations/tri-ring-tbox.md](integrations/tri-ring-tbox.md).
   **Hai bản sửa phòng vệ trong code** (không quyết thay ai, chỉ để hỏng-âm-thầm thành hỏng-kêu-to):
