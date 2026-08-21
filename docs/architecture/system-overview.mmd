@@ -92,3 +92,14 @@ flowchart TB
   identity --> db
   device --> db
   cskh --> db
+
+  %% --- NF-14: quan sát hệ thống (Prompt 11) ---
+  subgraph quansat["Quan sát hệ thống — NF-14 (infra/monitoring, chỉ bind 127.0.0.1)"]
+    prom["Prometheus<br/>scrape /metrics 15s + 10 luật cảnh báo<br/>(infra/monitoring/prometheus.yml)"]
+    graf["Grafana<br/>1 dashboard mẫu, nạp từ file<br/>(g3-tong-quan.json)"]
+  end
+
+  ingest -. "/health · /metrics :9464<br/>lag p95 NF-01, nhịp bản tin" .-> prom
+  csms -. "/health · /metrics :9465<br/>lag trạng thái trụ NF-02" .-> prom
+  api -. "/health · /metrics :3000<br/>cảnh báo mở, lệch đối soát NF-10" .-> prom
+  prom --> graf

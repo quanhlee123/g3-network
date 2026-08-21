@@ -1,11 +1,12 @@
 // F-G1 — Service ingest: MQTT (EMQX) → validate theo schema_version → telematics_readings.
 // Chạy: npm run start -w services/ingest (cần docker compose up + db:migrate + db:seed).
-// Metric NF-01 expose tại http://localhost:${INGEST_METRICS_PORT}/metrics.
+// NF-14: /health + /metrics tại http://localhost:${INGEST_METRICS_PORT} (chỉ nội bộ).
 import { pathToFileURL } from 'node:url';
 import pg from 'pg';
 import { ConsolePushSender, ConsoleSmsSender } from '@g3/contracts';
 import { databaseUrl, loadEnv } from '@g3/db';
 import { NotifierService } from '@g3/notify';
+import { OpsServer, kiemTraDb } from '@g3/observability';
 import { IngestMetrics } from './metrics';
 import { MqttTelematicsSource } from './mqtt-source';
 import { IngestPipeline } from './pipeline';
@@ -21,7 +22,7 @@ export function resolveMqttUrl(env: NodeJS.ProcessEnv): string {
   return env.MQTT_URL ?? 'mqtt://localhost:1883';
 }
 
-/** Cổng HTTP /metrics (NF-14), mặc định 9464 (chuẩn cộng đồng Prometheus exporter). */
+/** Cổng HTTP /health + /metrics (NF-14), mặc định 9464 (chuẩn cộng đồng Prometheus). */
 export function resolveMetricsPort(env: NodeJS.ProcessEnv): number {
   const port = Number(env.INGEST_METRICS_PORT ?? 9464);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -53,15 +54,29 @@ async function main(): Promise<void> {
 
   source.subscribe((msg) => pipeline.handle(msg));
   await source.connect();
-  const metricsServer = metrics.serve(resolveMetricsPort(process.env));
+  // NF-14: /health phải phản ánh CẢ HAI phụ thuộc sống còn của ingest. Broker đứt mà
+  // /health vẫn xanh thì probe vô dụng — đó đúng là kịch bản "ingest gián đoạn" cần bắt.
+  const ops = new OpsServer({
+    service: 'ingest',
+    registry: metrics.registry,
+    checks: {
+      db: kiemTraDb(pool),
+      mqtt: () =>
+        source.connected
+          ? { ok: true }
+          : { ok: false, chi_tiet: 'chưa/không kết nối được MQTT broker' },
+    },
+  });
+  const opsPort = resolveMetricsPort(process.env);
+  ops.listen(opsPort);
   console.log(
-    `[ingest] đang nhận telemetry từ ${resolveMqttUrl(process.env)} — metrics: http://localhost:${resolveMetricsPort(process.env)}/metrics`,
+    `[ingest] đang nhận telemetry từ ${resolveMqttUrl(process.env)} — health: http://localhost:${opsPort}/health · metrics: http://localhost:${opsPort}/metrics`,
   );
 
   const shutdown = async (signal: string) => {
     console.log(`[ingest] nhận ${signal} — tắt sạch…`);
     await source.disconnect();
-    metricsServer.close();
+    ops.close();
     await pool.end();
     process.exit(0);
   };

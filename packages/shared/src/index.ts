@@ -3,6 +3,9 @@
 // F-G4: types sinh từ schema DB (npm run db:types — xem packages/db)
 export * from './db-types';
 
+// F-F1: chuẩn hoá & kiểm tra SĐT — dùng chung apps/api + apps/mobile
+export * from './phone';
+
 /**
  * Phiên bản schema bản ghi telematics (NF-16).
  * Đổi schema = migration mới + tăng số này. KHÔNG sửa migration cũ đã merge.

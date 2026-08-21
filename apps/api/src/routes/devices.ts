@@ -57,6 +57,12 @@ export async function deviceRoutes(app: FastifyInstance, deps: DeviceRoutesDeps)
                 signal_dbm: Type.Union([Type.Integer(), Type.Null()]),
                 canh_bao_dang_mo: NullableString,
                 loai_im_lang: NullableString,
+                /**
+                 * Hệ toạ độ thiết bị báo về (migration 0029). `chua_ro` nghĩa là CHƯA
+                 * được xác nhận — toạ độ của thiết bị đó không dùng được cho geofence
+                 * hay bản đồ cho tới khi biết là wgs84 hay gcj02 (lệch 100–700m tại VN).
+                 */
+                he_toa_do: Type.String(),
               }),
             ),
           }),
@@ -86,6 +92,7 @@ export async function deviceRoutes(app: FastifyInstance, deps: DeviceRoutesDeps)
                 CASE WHEN d.last_seen_at IS NULL THEN NULL
                      ELSE floor(EXTRACT(EPOCH FROM (now() - d.last_seen_at)))::int END AS im_lang_giay,
                 d.power_status::text AS power_status, d.revoked_at,
+                d.he_toa_do::text AS he_toa_do,
                 cuoi.supply_voltage_v, cuoi.signal_dbm,
                 canh_bao.type::text AS canh_bao_dang_mo,
                 canh_bao.payload ->> 'loai' AS loai_im_lang

@@ -1,0 +1,46 @@
+# NF-14 — Cấu hình Prometheus cho G3 Network (Phase 1, mức KHUNG).
+#
+# Các service Node chạy TRÊN MÁY (npm run dev), Prometheus chạy TRONG Docker, nên target
+# là host.docker.internal chứ không phải tên container. Đổi cổng ở infra/.env thì PHẢI
+# sửa cả file này — Prometheus không đọc biến môi trường trong file cấu hình.
+#
+# Không expose ra internet công cộng (quy tắc 12): chỉ bind cổng ra localhost.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    he_thong: g3-network
+    moi_truong: local-simulator
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # services/ingest — NF-01 (độ trễ telematics), số bản tin, số cảnh báo vừa bắn
+  - job_name: g3-ingest
+    static_configs:
+      - targets: ['host.docker.internal:9464']
+        labels:
+          service: ingest
+
+  # services/csms — NF-02 (độ trễ trạng thái trụ OCPP), số trụ đang kết nối
+  - job_name: g3-csms
+    static_configs:
+      - targets: ['host.docker.internal:9465']
+        labels:
+          service: csms
+
+  # apps/api — tồn kho nghiệp vụ đọc từ DB: cảnh báo đang mở, đối soát lệch (NF-10)
+  - job_name: g3-api
+    static_configs:
+      - targets: ['host.docker.internal:3000']
+        labels:
+          service: api
+
+  # Prometheus tự giám sát chính nó — thiếu cái này thì "không có dữ liệu" và
+  # "Prometheus chết" trông giống hệt nhau trên Grafana.
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: prometheus

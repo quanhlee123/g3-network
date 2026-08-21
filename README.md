@@ -7,6 +7,29 @@ sách sạc & bằng chứng bảo hành, quản lý trạm sạc (OCPP 1.6J), t
 > Phase 1 chạy 100% trên **simulator** và **dữ liệu giả**: không phần cứng thật, không VIN
 > thật, không tiền thật. Đọc `CLAUDE.md` trước khi làm bất cứ việc gì.
 
+## 👷 Dành cho nhà thầu mới
+
+Nếu bạn vừa được cấp quyền vào repo này để báo giá hoặc nhận một gói thầu, **đọc
+[docs/handover/](docs/handover/) trước, đừng đọc tiếp README này**. Ở đó có:
+
+| Tài liệu | Trả lời câu hỏi |
+|---|---|
+| [handover/system-overview.md](docs/handover/system-overview.md) | Hệ thống làm gì · kiến trúc (Mermaid) · luồng dữ liệu · stack · cách chạy · cách demo · **ranh giới Phase 1** |
+| [handover/feature-status.md](docs/handover/feature-status.md) | **46 mã F-xx** với trạng thái thật (Hoàn thành trên mock / Sandbox / Interface-only / Một phần / Chưa làm) + link thẳng tới code và test |
+| [handover/debt-register.md](docs/handover/debt-register.md) | 13 mục nợ kỹ thuật, có mức độ — đọc **trước khi ước lượng công** |
+| [handover/load-test-300.md](docs/handover/load-test-300.md) | Số đo tải ở 300 xe, kèm phần **lượt đo đó KHÔNG chứng minh được** |
+| [handover/sow/](docs/handover/sow/) | 4 gói thầu + Definition of Done từng gói |
+
+Bốn gói thầu: [SOW-01 Hardening & hạ tầng](docs/handover/sow/SOW-01-hardening-ha-tang.md) ·
+[SOW-02 Tích hợp phần cứng](docs/handover/sow/SOW-02-tich-hop-phan-cung.md) ·
+[SOW-03 Thanh toán & hóa đơn production](docs/handover/sow/SOW-03-thanh-toan-hoa-don-production.md) ·
+[SOW-04 App tài xế P1.1](docs/handover/sow/SOW-04-mobile-p1-1.md).
+
+Ràng buộc bắt buộc, kể cả khi bạn **không dùng AI để code**: toàn bộ [CLAUDE.md](CLAUDE.md)
+và `standards/INPUT-05-nha-thau.md` của prompt-kit. Ba điều hay bị bỏ qua nhất — test đi
+kèm **trong cùng PR** với code; PR >500 dòng phải chia nhỏ; tích hợp thật phải **giữ nguyên
+interface** trong `packages/contracts` và **để nguyên simulator + test mock đang xanh**.
+
 ## DEMO GATE 0 — máy sạch, 3 lệnh
 
 Yêu cầu máy: **Node.js ≥ 22**, **Docker Desktop** (đang chạy), **Git**.
@@ -67,6 +90,35 @@ Khung giờ cho phép được dựng **lùi về quá khứ so với lúc chạ
 khung dù demo chạy vào giờ nào trong ngày (có test quét cả 24 giờ khoá lại điều này).
 Demo giữ API sống sau khi xong; `Ctrl+C` để tắt sạch.
 
+## NGHIỆM THU TUẦN 10–11 — một tuần của quản lý đội xe (demo thứ 3)
+
+```bash
+npm run demo:tuan11
+```
+
+Diễn tập đúng **Hành trình 2** (sheet 2 PRD): sáng thứ 2 mở portal thấy tổng quan · giữa tuần
+nhận vi phạm sạc · xử lý ngay từ portal. Chạy ~15 giây, in bảng ĐẠT/HỎNG 12 tiêu chí:
+
+| Bước | Nội dung |
+|---|---|
+| 2 | **Một màn hình tổng quan** có đủ bản đồ toàn đội + danh sách xe + cảnh báo + thiết bị offline (F-E1) |
+| 2 | Quản lý đội **chỉ thấy xe đội mình** — không thấy đội khác (sheet 9) |
+| 3 | Vi phạm sạc nổi lên khối cảnh báo, **mở được bằng chứng ngay từ portal** (F-B3, F-B5) |
+| 4 | Một lần xem bản đồ = **đúng một dòng** nhật ký truy cập vị trí (quy tắc 5, NF-06) |
+| 5 | Bàn giao xe mới theo VIN tới **tick xanh**; chưa có telemetry thì **không chốt được** (F-F2) |
+| 5 | Văn bản đồng ý tự khai là **BẢN NHÁP** vì Q7 chưa chốt |
+| 6 | Mời tài khoản · **khoá có hiệu lực ngay** với token đang cầm (F-F1) |
+
+Xem bằng mắt sau khi chạy: mở <http://localhost:3100>, đăng nhập `0900000002` (quản lý đội)
+hoặc `0900000010` (admin) — mã OTP in ra console của `apps/api`.
+
+Muốn bản đồ có xe **đang chạy thật** thì bật thêm simulator ở cửa sổ khác — lưu ý tiền tố VIN
+phải khớp seed, mặc định của simulator là `G3-SIM` chứ không phải `G3-SIM-VIN`:
+
+```bash
+npm run sim:vehicles -- --count 21 --vin-prefix G3-SIM-VIN
+```
+
 ## Chạy để phát triển
 
 ```bash
@@ -84,6 +136,60 @@ Kiểm tra nhanh sau khi chạy:
 | http://localhost:3000/docs | Tài liệu OpenAPI (tự sinh) — bấm **Authorize** để dán token |
 | http://localhost:3100 | Portal đội xe (trang chào) |
 | http://localhost:18083 | Dashboard EMQX (user `admin`, mật khẩu trong `infra/.env`) |
+| http://localhost:9090 | Prometheus — bấm **Alerts** để xem 10 luật cảnh báo vận hành (NF-14) |
+| http://localhost:3001 | Grafana — dashboard "G3 Network — Sức khỏe hệ thống & đường dữ liệu" |
+
+## Quan sát hệ thống (NF-14)
+
+Mọi service đều có `/health` và `/metrics`. Cả hai chỉ dành cho hạ tầng nội bộ —
+**không expose ra internet** (quy tắc 12); Prometheus và Grafana chỉ bind vào `127.0.0.1`.
+
+| Service | /health | /metrics | Đo gì |
+|---|---|---|---|
+| `apps/api` | http://localhost:3000/health | http://localhost:3000/metrics | Tồn kho nghiệp vụ đọc từ DB: cảnh báo đang mở, đối soát lệch (NF-10), telemetry bị cách ly |
+| `services/ingest` | http://localhost:9464/health | http://localhost:9464/metrics | Độ trễ ingest p95 (NF-01), nhịp bản tin, cảnh báo vừa bắn, lệch đồng hồ thiết bị |
+| `services/csms` | http://localhost:9465/health | http://localhost:9465/metrics | Độ trễ trạng thái trụ (NF-02), số trụ đang kết nối, bản tin OCPP |
+
+`/health` trả **HTTP 503** khi một phụ thuộc hỏng (probe đọc mã trạng thái, không parse JSON):
+
+```bash
+curl -s http://localhost:9464/health
+```
+
+Đăng nhập Grafana: user `admin`, mật khẩu ở biến `GRAFANA_ADMIN_PASSWORD` trong
+`infra/.env` (do `npm install` sinh ngẫu nhiên — không có trong `.env.example`).
+Dashboard và nguồn dữ liệu **nạp tự động từ file**, sửa trên giao diện Grafana sẽ KHÔNG
+lưu lại: muốn đổi thì sửa `infra/monitoring/grafana/dashboards/g3-tong-quan.json` rồi
+`docker compose -f infra/docker-compose.yml restart grafana`.
+
+**Muốn thấy dữ liệu CHẠY trên Grafana ngay bây giờ:** các service chỉ đẩy metric khi
+chúng đang chạy, nên mở Grafana lúc không có gì chạy thì biểu đồ trống. Bật một lượt tải
+ngắn rồi xem:
+
+```bash
+npm run loadtest -- --vehicles 50 --stations 3 --minutes 5 --out load-test-logs/xem-grafana.md
+```
+
+`--out` trỏ sang chỗ khác để lượt xem thử này KHÔNG ghi đè báo cáo load test thật. Nếu
+muốn xem lại lượt chạy 300 xe đã đo, đổi khoảng thời gian trên Grafana sang đúng giờ ghi
+ở đầu [docs/handover/load-test-300.md](docs/handover/load-test-300.md) — Prometheus giữ
+dữ liệu 15 ngày, nhưng khung giờ mặc định của dashboard là `now-1h`.
+
+⚠️ Prometheus scrape các service chạy **trên máy** qua `host.docker.internal`. Đổi cổng
+trong `infra/.env` thì phải sửa cả `infra/monitoring/prometheus.yml` — Prometheus không
+đọc được biến môi trường trong file cấu hình của nó.
+
+## Load test (NF-04)
+
+```bash
+npm run loadtest -- --vehicles 300 --stations 10 --minutes 30
+```
+
+Lệnh này tự bổ sung dữ liệu lên 300 xe + 10 trạm (idempotent, chỉ THÊM), bật
+`services/ingest`, `services/csms`, `apps/api` và hai simulator, lấy mẫu `/metrics`
+mỗi 15 giây, rồi tắt sạch và ghi báo cáo vào
+[docs/handover/load-test-300.md](docs/handover/load-test-300.md). Log từng tiến trình và
+số liệu thô nằm ở `load-test-logs/` (đã gitignore).
 
 ## Đăng nhập API (F-F1)
 
@@ -116,6 +222,59 @@ Ma trận quyền đầy đủ + các điểm cần review: [docs/architecture/r
 Mọi lần truy cập `GET /vehicles/{id}/location` (kể cả bị từ chối) đều ghi `audit_logs`
 — quy tắc 5, NF-06, Nghị định 13/2023.
 
+## Portal đội xe (F-E1, F-F1, F-F2)
+
+```bash
+npm run dev          # API cổng 3000 + Portal cổng 3100
+```
+
+Mở <http://localhost:3100> → đăng nhập bằng SĐT (mã OTP in ra console của `apps/api`).
+
+| Màn hình | Đường dẫn | Vai trò xem được |
+|---|---|---|
+| **Tổng quan** — bản đồ toàn đội + danh sách xe (lọc/tìm) + cảnh báo + thiết bị offline (F-E1) | `/tong-quan` | mọi vai trò, phạm vi theo sheet 9 |
+| **Quản trị tài khoản** — mời, khoá, gán vai trò (F-F1) | `/tai-khoan` | Admin (QL đội chỉ XEM) |
+| **Nhật ký truy cập vị trí** — ai · lúc nào · xe nào · lý do (F-F1, NF-06) | `/audit-log` | Admin, Vận hành, Bảo hành |
+| **Kích hoạt xe** — bàn giao theo VIN tới tick xanh + biên bản in được (F-F2) | `/kich-hoat` | Admin |
+
+Hai biến môi trường (đã có trong `infra/.env.example`): `G3_API_URL`, `G3_API_TIMEOUT_MS`.
+Khác app tài xế, **không** có tiền tố `NEXT_PUBLIC_`: mọi lời gọi API xuất phát từ máy chủ
+Next.js, và token nằm trong **cookie httpOnly** — mã trên trình duyệt không đọc được, nên một
+lỗi XSS bất kỳ cũng không lấy được token xem vị trí toàn đội.
+
+⚠️ **Bản đồ chưa có nền bản đồ thật.** Q5 (VietMap vs Google vs Mapbox) đang MỞ; vẽ tile của
+một nhà cung cấp lúc này là tự chốt Q5 bằng code. Xe hiện trên lưới toạ độ tự dựng — vẫn thấy
+đội hình, cụm xe và xe mất liên lạc. Khi Q5 chốt chỉ phải thay lớp nền: phép chiếu đã tách
+riêng ở `apps/portal/lib/ban-do.ts`.
+
+## App tài xế (F-D4) — mới có KHUNG
+
+D-01 ("có app tài xế ở P1 không") **đã chốt CÓ** ngày 2026-08-03 — xem
+[docs/DECISION-LOG.md](docs/DECISION-LOG.md).
+
+Đã dựng: cấu hình theo môi trường, tầng gọi API (gắn token, hạn chờ, phân loại lỗi),
+luồng đăng nhập OTP, bảng 10 màn hình + luật điều hướng, kho chuỗi tiếng Việt.
+
+**CHƯA vẽ màn hình nào.** Bố cục chờ wireframe của Thiết kế theo chuẩn INPUT-03 §2 —
+yêu cầu đã gửi tại [docs/design/YEU-CAU-WIREFRAME.md](docs/design/YEU-CAU-WIREFRAME.md).
+
+```bash
+npm run start -w apps/mobile
+```
+
+Hai biến môi trường (đã có trong `infra/.env.example`):
+
+| Biến | Ý nghĩa |
+|---|---|
+| `EXPO_PUBLIC_API_URL` | Địa chỉ `apps/api`. **Bỏ trống chỉ chạy được trên trình giả lập Android** (mặc định `http://10.0.2.2:3000`). Điện thoại thật qua Expo Go phải điền IP LAN của máy chạy API, vd `http://192.168.1.50:3000` |
+| `EXPO_PUBLIC_API_TIMEOUT_MS` | Hạn chờ 1 lần gọi API, mặc định `10000` |
+
+⚠️ Tiền tố `EXPO_PUBLIC_` nghĩa là giá trị được **nhúng thẳng vào bundle** tải về máy —
+chỉ đặt thứ công khai được, tuyệt đối không đặt secret.
+
+⚠️ Phase 1 token cất trong bộ nhớ: **đóng app là mất phiên**. Bản dùng Android Keystore
+(`expo-secure-store`) gắn vào ở bước có màn hình — chỗ thay nằm ở `src/app-deps.ts`.
+
 ## Sơ đồ thư mục
 
 ```
@@ -124,7 +283,7 @@ g3-network/
 ├── apps/
 │   ├── api/             # API Fastify + TypeBox (OpenAPI tự sinh) — cổng 3000
 │   ├── portal/          # Portal đội xe Next.js — cổng 3100
-│   └── mobile/          # App tài xế Expo/React Native — KHUNG TRỐNG, build ở Prompt 09 (chờ D-01)
+│   └── mobile/          # F-D4: App tài xế Expo — KHUNG (cấu hình, tầng API, đăng nhập OTP, điều hướng); màn hình chờ wireframe
 ├── packages/
 │   ├── payments/        # F-H1: cổng thanh toán VNPay SANDBOX (từ chối khởi động nếu không phải sandbox)
 │   ├── shared/          # Hằng số & tiện ích dùng chung + db-types.ts sinh từ schema (F-G4)
@@ -138,7 +297,8 @@ g3-network/
 │   └── ocpp-sim/        # F-G2: trụ sạc ảo OCPP 1.6J — 3 kịch bản normal/faulted/disconnect (docs/simulators.md)
 ├── tools/
 │   ├── demo-gate0/      # Kịch bản demo end-to-end cho Gate 0 (npm run demo:gate0)
-│   └── demo-tuan8/      # Nghiệm thu tuần 8: vòng tiền & bảo hành (npm run demo:tuan8)
+│   ├── demo-tuan8/      # Nghiệm thu tuần 8: vòng tiền & bảo hành (npm run demo:tuan8)
+│   └── demo-tuan11/     # Nghiệm thu tuần 10–11: một tuần của quản lý đội (npm run demo:tuan11)
 ├── infra/
 │   ├── docker-compose.yml  # PostgreSQL 16 + TimescaleDB + PostGIS (1 container) + EMQX
 │   ├── .env.example        # Mẫu biến môi trường — copy thành .env (npm install tự làm)
@@ -159,17 +319,19 @@ g3-network/
 |---|---|
 | `docker compose -f infra/docker-compose.yml up -d` + `npm run dev` | Khởi động toàn hệ |
 | `npm run db:migrate` | Chạy migration DB (packages/db/migrations) + áp retention NF-16 |
-| `npm run db:seed` | Seed dữ liệu GIẢ: 20 xe, **6 trạm × 4 trụ** (3 miền Nam + 3 miền Bắc — D-10), 7 tài khoản đủ 7 vai trò, 2 chính sách |
+| `npm run db:seed` | Seed dữ liệu GIẢ: **21 xe** (20 đang chạy + 1 chờ kích hoạt để diễn tập F-F2), **6 trạm × 4 trụ** (3 miền Nam + 3 miền Bắc — D-10), 7 tài khoản đủ 7 vai trò, 2 chính sách |
 | `npm run db:types` | Sinh lại types TypeScript từ schema DB (packages/shared/src/db-types.ts) |
 | `npm test` | Toàn bộ test |
 | `npm test -w apps/api` | Test 1 workspace |
 | `npm run lint` | ESLint + Prettier check |
 | `npm run sim:vehicles -- --count 20` | Giả lập 20 xe gửi telemetry MQTT (kịch bản & flag: `docs/simulators.md`) |
-| `npm run start -w services/ingest` | Chạy service ingest: MQTT → DB, metrics tại http://localhost:9464/metrics |
+| `npm run start -w services/ingest` | Chạy service ingest: MQTT → DB, health/metrics tại http://localhost:9464 |
+| `npm run loadtest -- --vehicles 300 --stations 10 --minutes 30` | Load test NF-04, ghi `docs/handover/load-test-300.md` |
 | `npm run start -w services/csms` | Chạy CSMS: OCPP WebSocket cổng 9220, HTTP nội bộ RemoteStart cổng 9221 |
 | `npm run sim:ocpp -- --stations 3` | Giả lập 3 trụ sạc OCPP (kịch bản: `--scenario normal\|faulted\|disconnect`) |
 | `npm run demo:gate0` | **Demo Gate 0 end-to-end** (tự migrate + seed, ~3 phút) |
 | `npm run demo:tuan8` | **Nghiệm thu tuần 8** — vòng tiền & bảo hành (~2 phút) |
+| `npm run demo:tuan11` | **Nghiệm thu tuần 10–11** — một tuần của quản lý đội xe (~15 giây) |
 | `npm run reconcile` | Chạy tay job đối soát 3 chiều (thêm `-- --lam-lai-tat-ca` để soát lại từ đầu) |
 | `GET /reports/kwh` | F-C6 — sản lượng kWh theo khách/phiên phục vụ hoá đơn & đối soát |
 | `GET /reconciliation/report` | F-C6 — báo cáo lệch **theo ngày**: bắt cả sự cố đơn lẻ lẫn sai lệch hệ thống (mọi phiên dưới ngưỡng nhưng cùng chiều) |
@@ -188,7 +350,10 @@ g3-network/
 | `API_PORT` / `PORTAL_PORT` | Cổng API (3000) và Portal (3100) |
 | `CSMS_WS_PORT` | Cổng WebSocket CSMS cho OCPP 1.6J (trụ kết nối `ws://…/ocpp/{mãTrạm}`) |
 | `CSMS_HTTP_PORT` | Cổng HTTP nội bộ CSMS: RemoteStart/RemoteStop (chuẩn bị F-H1, mặc định 9221) |
-| `INGEST_METRICS_PORT` | Cổng HTTP `/metrics` Prometheus của service ingest (NF-01/NF-14, mặc định 9464) |
+| `INGEST_METRICS_PORT` | Cổng HTTP `/health` + `/metrics` của service ingest (NF-01/NF-14, mặc định 9464) |
+| `CSMS_METRICS_PORT` | Cổng HTTP `/health` + `/metrics` của service CSMS (NF-02/NF-14, mặc định 9465) |
+| `PROMETHEUS_PORT` / `GRAFANA_PORT` | Cổng giao diện Prometheus (9090) và Grafana (3001), chỉ bind 127.0.0.1 |
+| `GRAFANA_ADMIN_PASSWORD` | Mật khẩu admin Grafana — `npm install` sinh ngẫu nhiên vào `infra/.env`, `.env.example` để TRỐNG (quy tắc 3) |
 | `JWT_SECRET` | Khóa ký token API. **Để trống trong `.env.example`** — `npm install` sinh khóa ngẫu nhiên vào `infra/.env` |
 | `JWT_EXPIRES_IN` | Hạn dùng token (mặc định `12h`) |
 | `OTP_TTL_SECONDS` / `OTP_MAX_ATTEMPTS` | Hạn dùng mã OTP (300s) và số lần nhập sai tối đa (5) |

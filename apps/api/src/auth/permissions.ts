@@ -36,6 +36,16 @@ export const PERMISSIONS = [
   'charging_policy.manage',
   /** Xem hồ sơ vi phạm sạc + bằng chứng (F-B3) — sheet 9 dòng "Xem trạng thái / báo cáo bảo hành". */
   'violation.read',
+  /**
+   * Xem cảnh báo pin / bất thường đã bắn (F-A2, F-A4, F-J3) — sheet 9 dòng
+   * "Nhận cảnh báo pin / bất thường": Tài xế ✓, QL đội ✓, Bảo hành V, CSKH V, Admin ✓.
+   * Vận hành G3 Energy và Sale là "—" nên KHÔNG có mặt ở đây.
+   *
+   * Khác `notification.read`: đó là HỘP THƯ của một người (đã gửi cho ai), còn đây là
+   * SỰ KIỆN cảnh báo gắn với xe — màn hình tổng quan F-E1 cần cái sau để hiện khối
+   * "cảnh báo qua đêm" của cả đội, kể cả cảnh báo gửi cho tài xế chứ không gửi cho quản lý.
+   */
+  'alert.read',
   /** Chạy tay job đối chiếu vi phạm (F-B3). */
   'violation.run',
   /**
@@ -68,6 +78,32 @@ export const PERMISSIONS = [
    * thông báo gửi cho họ thì cảnh báo an toàn vô nghĩa. Đã ghi vào rbac-matrix.md để review.
    */
   'notification.read',
+  /**
+   * XEM danh sách tài khoản & vai trò — sheet 9 dòng "Tài khoản & phân quyền (RBAC)":
+   * Chủ xe/QL đội V\* (chỉ đội mình), Admin ✓. Các vai trò khác là "—".
+   */
+  'user.read',
+  /**
+   * MỜI / KHÓA tài khoản, GÁN vai trò (F-F1) — cùng dòng sheet 9, nhưng chỉ Admin có "✓".
+   * QL đội chỉ có "V\*" = XEM, nên tách thành hai quyền: nhìn thấy đội mình là một chuyện,
+   * tự cấp quyền cho người khác là chuyện khác hẳn.
+   */
+  'user.manage',
+  /**
+   * Đọc nhật ký truy cập dữ liệu (F-F1, NF-06) — sheet 9 dòng "Quản trị dữ liệu & audit
+   * log": Vận hành G3 Energy V, Bảo hành G3 Mobility V, Admin ✓. Còn lại "—".
+   */
+  'audit.read',
+  /**
+   * Kích hoạt thiết bị theo VIN khi bàn giao xe (F-F2).
+   *
+   * [SUY LUẬN] Sheet 9 KHÔNG có dòng nào cho provisioning. Việc này do "nhân viên G3" làm
+   * tại chỗ (Hành trình 1 bước 1), mà sheet 9 không có vai trò "nhân viên hiện trường".
+   * Chọn phương án CHẶT: chỉ Admin — gán thiết bị vào xe là thao tác quyết định dữ liệu
+   * của xe đó chảy về đâu, và ghi consent thay tài xế là chạm dữ liệu cá nhân
+   * (Nghị định 13/2023). Xem rbac-matrix R-16.
+   */
+  'provisioning.manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -113,6 +149,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_session.read': { scope: 'own' },
     'charging_policy.read': { scope: 'own' },
     'violation.read': { scope: 'own' },
+    'alert.read': { scope: 'own' }, // sheet 9 "Nhận cảnh báo pin / bất thường" = ✓
     // Sheet 9: Tài xế ✓* — trả tiền cho phiên sạc của XE MÌNH.
     'payment.start': { scope: 'own' },
     'payment.read': { scope: 'own' },
@@ -128,6 +165,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_session.read': { scope: 'fleet' },
     'charging_policy.read': { scope: 'fleet' },
     'violation.read': { scope: 'fleet' },
+    'alert.read': { scope: 'fleet' }, // sheet 9 "Nhận cảnh báo pin / bất thường" = ✓
     // Sheet 9: Chủ xe / QL đội ✓ (đội) — trả tiền cho cả đội.
     'payment.start': { scope: 'fleet' },
     'payment.read': { scope: 'fleet' },
@@ -140,6 +178,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     // Sheet 9: QL đội ✓ (tạo/xem ticket của ĐỘI mình).
     'ticket.create': { scope: 'fleet' },
     'ticket.read': { scope: 'fleet' },
+    // Sheet 9 dòng "Tài khoản & phân quyền (RBAC)" = V* — CHỈ XEM, chỉ đội mình.
+    // KHÔNG có user.manage: quản lý đội không tự mời/khóa tài khoản được.
+    'user.read': { scope: 'fleet' },
   },
   // Vận hành G3 Energy: ✓ trạm & đối soát kWh, nhưng "—" ở dòng "Xem trạng thái & vị trí xe"
   // → KHÔNG có vehicle.read/vehicle.location.read (test bắt buộc của Prompt 06).
@@ -149,6 +190,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_session.read': { scope: 'all' },
     'reconciliation.read': { scope: 'all' },
     'reconciliation.run': { scope: 'all' },
+    // Sheet 9 dòng "Quản trị dữ liệu & audit log" = V (xem rbac-matrix R-14).
+    'audit.read': { scope: 'all' },
   },
   // Bảo hành G3 Mobility: V vị trí xe, ✓ hồ sơ bảo hành (phiên sạc là bằng chứng NF-11).
   warranty_admin: {
@@ -162,6 +205,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     // bảo hành, nên vai trò này vừa đọc vừa chạy được job đối chiếu.
     'violation.read': { scope: 'all' },
     'violation.run': { scope: 'all' },
+    'alert.read': { scope: 'all' }, // sheet 9 "Nhận cảnh báo pin / bất thường" = V
+    // Sheet 9 dòng "Quản trị dữ liệu & audit log" = V (xem rbac-matrix R-14).
+    'audit.read': { scope: 'all' },
   },
   // CSKH Holding: V vị trí xe CHỈ KHI có ticket đang mở; V sức khỏe thiết bị.
   cskh: {
@@ -174,6 +220,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     // Sheet 9 dòng "Xem trạng thái / báo cáo bảo hành" = V — CSKH giải thích cho tài xế
     // vì sao bị cảnh báo vi phạm, nên phải ĐỌC được hồ sơ (không cấu hình, không chạy job).
     'violation.read': { scope: 'all' },
+    'alert.read': { scope: 'all' }, // sheet 9 "Nhận cảnh báo pin / bất thường" = V
     'device_health.read': { scope: 'all' },
     // Sheet 9: CSKH ✓ (XỬ LÝ ticket) — xem tất cả và nhận việc.
     'ticket.read': { scope: 'all' },
@@ -190,6 +237,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'charging_policy.manage': { scope: 'all' },
     'violation.read': { scope: 'all' },
     'violation.run': { scope: 'all' },
+    'alert.read': { scope: 'all' },
     'payment.start': { scope: 'all' },
     'payment.read': { scope: 'all' },
     'device_health.read': { scope: 'all' },
@@ -200,6 +248,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, RoleGrants> = {
     'ticket.create': { scope: 'all' },
     'ticket.read': { scope: 'all' },
     'ticket.handle': { scope: 'all' },
+    // Sheet 9: Admin ✓ ở cả hai dòng "Tài khoản & phân quyền" và "Quản trị dữ liệu & audit log".
+    'user.read': { scope: 'all' },
+    'user.manage': { scope: 'all' },
+    'audit.read': { scope: 'all' },
+    'provisioning.manage': { scope: 'all' },
   },
   // Sale (Holding): sheet 9 cho V ở dòng "Xem trạng thái & vị trí xe".
   // [CẦN REVIEW] Quyền xem toạ độ tài xế cho vai trò bán hàng khó biện minh theo nguyên tắc
