@@ -28,15 +28,23 @@
 buộc lấy từ trụ**. Điều này *củng cố* đối soát 3 chiều chứ không thay thế nó — vẫn cần
 chân "trụ" và chân "thanh toán" để phát hiện lệch.
 
-## 2. CHƯA TRẢ LỜI — đang chặn (ưu tiên cao)
+## 2. Năm câu hỏi kỹ thuật — TẤT CẢ đã hết chặn (2026-08-21)
+
+> **D-13 chốt: G3 TỰ CHỌN T-BOX, không dùng K4-E.** Đây là câu trả lời cho mục 5 phần "Việc
+> tiếp theo" ở cuối tài liệu này, và nó gỡ nốt TR-02/TR-04/TR-05: khi G3 chọn thiết bị thì ba
+> câu đó không còn là câu hỏi cho Tri-Ring nữa — chúng là **tiêu chí chọn thiết bị**, dùng
+> đúng bốn yêu cầu bắt buộc ở §3.0 dưới đây.
+>
+> ⚠️ **Thứ còn chặn thật KHÔNG nằm trong bảng này: file DBC.** Không có DBC thì không đọc được
+> CAN của xe, dù dùng T-BOX nào. Đây mới là phần còn lại của Q1 và của tiêu chí **Gate 0 ①**.
 
 | # | Câu hỏi | Vì sao chặn | Trạng thái |
 |---|---|---|---|
 | TR-01 | **Hệ toạ độ GPS: WGS-84 hay GCJ-02?** | GCJ-02 lệch **100–700 m** tại Việt Nam | ✅ **CHỐT = WGS-84** (§3.1) — phía G3 chọn hệ GPS |
-| TR-02 | **Giao thức truyền lên server: GB/T 32960 hay MQTT/JSON?** | Quyết định hình dạng adapter ingest. Xem §5. | MỞ |
+| TR-02 | **Giao thức truyền lên server: GB/T 32960 hay MQTT/JSON?** | Quyết định hình dạng adapter ingest. Xem §5. | ✅ **HẾT CHẶN** qua D-13 — G3 chọn thiết bị nên chọn luôn giao thức |
 | TR-03 | **Timestamp có phải UTC không?** | TQ là UTC+8, VN UTC+7 | ✅ **CHỐT = GMT+7 + múi giờ tường minh** (§3.2) — T-BOX do VN chọn |
-| TR-04 | **K4-E cấu hình gửi dữ liệu về server tại Việt Nam được không?** | Nếu không, phải đổi terminal — ảnh hưởng kiến trúc backend | MỞ (nhẹ đi: VN tự chọn T-BOX) |
-| TR-05 | **Bộ đệm offline ≥48 giờ?** | NF-09 yêu cầu store-and-forward ≥48h | MỞ — **đưa vào tiêu chí chọn T-BOX** |
+| TR-04 | **K4-E cấu hình gửi dữ liệu về server tại Việt Nam được không?** | Nếu không, phải đổi terminal — ảnh hưởng kiến trúc backend | ✅ **HẾT CHẶN** qua D-13 + D-16 — yêu cầu bắt buộc #4 khi mua sắm; hạ tầng đã chốt đặt tại VN |
+| TR-05 | **Bộ đệm offline ≥48 giờ?** | NF-09 yêu cầu store-and-forward ≥48h | ✅ **HẾT CHẶN** qua D-13 — yêu cầu bắt buộc #3; nghiệm thu bằng **bench test** |
 
 > **Hai quyết định 2026-08-04 đổi thế cờ:** phía Việt Nam chọn **hệ GPS** và chọn **model
 > T-BOX**. TR-01/TR-03 do đó không còn phải chờ Tri-Ring trả lời — chúng trở thành **yêu cầu
@@ -164,6 +172,9 @@ xác nhận trụ thực tế sẽ nói OCPP.
 3. Chốt lịch nhận **file DBC** khi xe mẫu debug xong (tháng 8/2026), kèm yêu cầu **dịch chú
    thích sang tiếng Anh**.
 4. Chuẩn bị harness AMP 174917-2 + thiết bị test CAN (500K, J1939) để bench test.
-5. **Quyết định sớm:** dùng K4-E của Tri-Ring hay tự chọn T-BOX — ảnh hưởng trực tiếp kiến
-   trúc backend và khả năng đưa dữ liệu về server Việt Nam.
+5. ~~**Quyết định sớm:** dùng K4-E của Tri-Ring hay tự chọn T-BOX~~ → ✅ **ĐÃ QUYẾT 2026-08-21
+   (D-13): G3 TỰ CHỌN T-BOX.** Việc còn lại là ra hồ sơ mời thầu thiết bị với 4 yêu cầu bắt
+   buộc ở §3.0, cộng thêm một yêu cầu thứ 5 phát sinh từ D-16: **thiết bị phải nạp được chứng
+   chỉ client** (mTLS cho NF-06 — không có điều khoản này thì NF-06 không thực hiện được dù
+   backend đã sẵn sàng).
 6. Tách luồng công việc trạm sạc thành hạng mục độc lập.

@@ -240,9 +240,14 @@ trước Gate 2 không ai tưởng là đã xong.
 
 ## 3. Tính năng đang chờ quyết định MỞ
 
-`docs/DECISION-LOG.md` còn **28 mục** ở trạng thái MỞ, đếm lại ngày 2026-08-20:
+`docs/DECISION-LOG.md` còn **25 mục** ở trạng thái MỞ, đếm lại ngày 2026-08-21:
 **7 mã D-xx** (D-02, D-05, D-06, D-07, D-08, D-09, D-12) · **18 mã Q-xx** (Q1–Q18) ·
-**3 mã TR-xx** (TR-02, TR-04, TR-05).
+**0 mã TR-xx**.
+
+> ✅ **2026-08-21 — D-13…D-16 gỡ chặn cả 4 gói thầu.** TR-02/TR-04/TR-05 hết chặn vì D-13 chốt
+> G3 tự chọn T-BOX (ba câu đó thành tiêu chí mua sắm, không còn phải chờ Tri-Ring trả lời).
+> D-16 + [ADR-014](../adr/ADR-014-ha-tang-trien-khai-va-vault.md) chốt hạ tầng đặt tại Việt
+> Nam + HashiCorp Vault, gỡ nốt hai mục chặn của SOW-01 (chọn vault, hạ tầng triển khai).
 
 > ✏️ **Đính chính:** bản trước của mục này ghi "12 mục Q-xx" — con số đó có từ trước khi
 > PRD v3.0 bổ sung Q13–Q18 vào sheet 14, và không tính 3 câu hỏi kỹ thuật Tri-Ring.
@@ -256,14 +261,14 @@ Theo mục "Ranh giới" của CLAUDE.md tôi không tự quyết. Ba mục ch�
 | **D-12** — vai trò nhận cảnh báo tháo thiết bị | `device_tamper` đang tạm cấu hình cho `admin`+`fleet_manager`+`cskh`; ma trận phân quyền chưa có vai trò "Quản lý rủi ro" |
 | **Q5** — chọn nhà cung cấp bản đồ | Cảnh báo pin đang gợi ý trạm bằng khoảng cách **đường chim bay** (PostGIS), không phải quãng đường thật theo tuyến |
 
-Và bốn mục **chặn thẳng vào gói thầu** (xem [sow/](sow/)):
+Còn phụ thuộc theo từng gói thầu, **sau khi D-13…D-16 đã gỡ chặn** (xem [sow/](sow/)):
 
-| Mã | Chặn gói nào |
-|---|---|
-| **Q1 · TR-02 · TR-04 · TR-05** | **SOW-02** không khởi động được — chưa có đặc tả telematics thì không viết được adapter |
-| **Q9** | **SOW-03** — chưa chọn nhà cung cấp hóa đơn điện tử, toàn bộ F-H3 đứng |
-| **Q5** + wireframe của Thiết kế | **SOW-04** — chưa có bản đồ và chưa có wireframe thì không dựng được 10 màn hình |
-| **Chọn vault** (chưa có mã quyết định) | **SOW-01** — NF-05 cần ADR trước khi code |
+| Gói | Còn phụ thuộc gì | Có chặn khởi động không |
+|---|---|---|
+| **SOW-01** | Q6 (định tuyến cảnh báo), D-12 (vai trò tamper) | ❌ Không — D-16 đã chốt hạ tầng + vault |
+| **SOW-02** | 🔴 **file DBC** (8/2026, chú thích tiếng Trung, cần dịch), Q8, Q2 | ⚠️ Chặn **phần đọc CAN**. Đặc tả mua sắm T-BOX và adapter thì làm được ngay |
+| **SOW-03** | Q9 (vendor HĐĐT), Q13, hợp đồng cổng thanh toán | ❌ Không — D-14 tách 2 chặng, chặng interface + mock chạy ngay |
+| **SOW-04** | Q5 (bản đồ), Q7 (câu chữ consent), Q6 | ❌ Không — D-15 cho phép nhà thầu vẽ 7/10 màn; Q5 không chặn P1.0 vì F-D2 được mở app ngoài |
 
 ## 3a. 🟡 N-13 · Dữ liệu load test làm nhiễu demo về sau — **chưa sửa**
 

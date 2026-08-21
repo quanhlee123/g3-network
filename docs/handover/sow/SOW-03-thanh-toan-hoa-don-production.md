@@ -85,13 +85,24 @@ F-H4 billing thuê bao SaaS (P1.5, Q3 MỞ) · màn hình app tài xế cho lu�
 
 ## 5. Điều kiện tiên quyết & quyết định MỞ
 
-| Mã | Câu hỏi | Chặn gì |
+> ✅ **Đã gỡ chặn 2026-08-21 — chặng 1 khởi động được ngay.** [D-14](../../DECISION-LOG.md)
+> chốt **tách gói làm 2 chặng**:
+>
+> - **Chặng 1 — khởi động ngay, KHÔNG chờ Q9:** viết interface `IEInvoiceProvider` trong
+>   `packages/contracts` + ít nhất một mock chạy được (quy tắc 2). Interface và mock không
+>   phụ thuộc vendor.
+> - **Chặng 2 — cắm adapter thật** khi Kế toán Holding chốt vendor ở Q9.
+>
+> Tiêu chí chọn vendor đã thống nhất thứ tự: (1) **trùng hệ kế toán Holding đang dùng** để
+> khỏi đối soát 2 hệ thống · (2) có API + sandbox tử tế · (3) chi phí mỗi hoá đơn.
+
+| Mã | Câu hỏi | Trạng thái |
 |---|---|---|
-| **Q9** 🔴 | Nhà cung cấp hóa đơn điện tử & luồng kế toán doanh thu điện | Toàn bộ F-H3 |
-| **D-11** 🟠 | Hiệu chuẩn `CHARGE_EFFICIENCY` — ai làm, trên dữ liệu nào | NF-10 trên phần cứng thật |
-| **Q13** 🟠 | Giá điện động theo khung giờ — ai sở hữu biểu giá | Cách tính tiền phiên sạc |
+| **Q9** 🟠 | Nhà cung cấp hóa đơn điện tử & luồng kế toán doanh thu điện | **Vẫn MỞ** nhưng **chỉ còn chặn chặng 2** |
+| **D-11** 🟠 | Hiệu chuẩn `CHARGE_EFFICIENCY` — ai làm, trên dữ liệu nào | **Giao nhà thầu SOW-02** (người đang cầm dữ liệu pilot), không phải gói này. Vẫn là điều kiện Gate 1 |
+| **Q13** 🟠 | Giá điện động theo khung giờ — ai sở hữu biểu giá | **Vẫn MỞ** — chặn cách tính tiền phiên sạc |
 | **Q3** ⚪ | Giá gói Standard | F-H4 (ngoài phạm vi gói này) |
-| — | Hợp đồng kỹ thuật với cổng thanh toán production | Toàn bộ mục 3.1 |
+| — | Hợp đồng kỹ thuật với cổng thanh toán production | Chặn mục 3.1, không chặn 3.2 |
 
 ## 6. Definition of Done
 

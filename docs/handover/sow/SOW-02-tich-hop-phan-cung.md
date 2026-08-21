@@ -84,18 +84,33 @@ buffer hiện **không có giới hạn dung lượng** và mốc 48h **chưa đ
 Thanh toán production (SOW-03) · màn hình app tài xế (SOW-04) · vault/mTLS hạ tầng (SOW-01,
 nhưng **định danh thiết bị NF-06 phải phối hợp chặt** với gói này) · mua sắm phần cứng.
 
-## 5. Điều kiện tiên quyết — gói này KHÔNG khởi động được nếu thiếu
+## 5. Điều kiện tiên quyết
 
-| Mã | Câu hỏi | Vì sao chặn |
+> ✅ **Đã gỡ chặn phần lớn 2026-08-21.** [D-13](../../DECISION-LOG.md) chốt **G3 tự chọn
+> T-BOX**, không dùng K4-E của Tri-Ring. Hệ quả: **TR-02, TR-04, TR-05 không còn là câu hỏi
+> chờ Tri-Ring trả lời** — chúng trở thành **tiêu chí chọn thiết bị** trong hồ sơ mời thầu,
+> tức G3 tự quyết. Bốn yêu cầu bắt buộc để dán thẳng vào đặc tả mua sắm nằm ở
+> [tri-ring-tbox.md §3.0](../../integrations/tri-ring-tbox.md).
+
+| Mã | Câu hỏi | Trạng thái |
 |---|---|---|
-| **Q1** 🔴 | Đặc tả telematics Tri-Ring: trường dữ liệu, tần suất, giao thức, quyền truy cập BMS, môi trường test | **Là tiêu chí Gate 0 ①.** Không có đặc tả thì không viết được adapter |
-| **TR-02** 🔴 | Giao thức lên server: **GB/T 32960 hay MQTT/JSON**? | Quyết định hình dạng adapter. Chỗ hở đã biết: `payload` hiện khai là JSON string, GB/T là **nhị phân** |
-| **TR-04** 🔴 | Terminal K4-E cấu hình gửi về **server tại Việt Nam** được không? | Nếu không → phải đổi terminal, ảnh hưởng kiến trúc backend |
-| **TR-05** 🟠 | Bộ đệm offline **≥48 giờ** thiết bị làm được không? | Trực tiếp quyết định NF-09 |
-| **Q8** 🟠 | OCPP chỉ 1.6J hay bắt buộc trụ nâng cấp được 2.0.1? | Điều khoản mua sắm trụ |
-| **Q2** 🟠 | Ai vận hành CSMS: G3 Network hay G3 Energy thuê ngoài? | Quyết định ai sở hữu mã nguồn CSMS |
+| **File DBC** 🔴 | Bảng giải mã CAN của xe (dự kiến 8/2026, chú thích tiếng Trung, **cần bản dịch**) | **CÒN CHẶN** — không có DBC thì không đọc được CAN, **dù dùng T-BOX nào**. Đây mới là phần còn lại của Q1 và của tiêu chí **Gate 0 ①** |
+| ~~TR-02~~ giao thức lên server | ✅ Hết chặn qua D-13 — G3 chọn thiết bị nên chọn luôn giao thức | Vẫn phải nới `payload` sang `string \| Uint8Array` nếu thiết bị trúng thầu nói nhị phân |
+| ~~TR-04~~ server tại VN | ✅ Hết chặn qua D-13 + **D-16** (hạ tầng đã chốt đặt tại VN) | Thành **yêu cầu bắt buộc #4** trong hồ sơ mời thầu |
+| ~~TR-05~~ đệm offline ≥48h | ✅ Hết chặn qua D-13 | Thành **yêu cầu bắt buộc #3**; nghiệm thu bằng **bench test**, không bằng lời hứa nhà cung cấp |
+| **Q8** 🟠 | OCPP chỉ 1.6J hay bắt buộc trụ nâng cấp được 2.0.1? | **Vẫn MỞ** — điều khoản mua sắm trụ |
+| **Q2** 🟠 | Ai vận hành CSMS: G3 Network hay G3 Energy thuê ngoài? | **Vẫn MỞ** — quyết định ai sở hữu mã nguồn CSMS |
 
-> **Nếu Q1 trễ:** PRD sheet 13 có **phương án B — gateway OBD bên thứ ba**. Nhà thầu nên
+**Việc phát sinh từ D-13 và D-16 mà nhà thầu phải tính công:**
+
+- Hồ sơ mời thầu T-BOX phải yêu cầu thiết bị **nạp được chứng chỉ client** — không có điều
+  khoản này thì NF-06 (mTLS theo thiết bị) không thực hiện được dù backend đã sẵn sàng.
+- Quy trình cấp chứng chỉ nối vào luồng **provisioning theo VIN (F-F2)**: kích hoạt thiết bị
+  cấp luôn chứng chỉ, thu hồi thiết bị revoke luôn. Phối hợp với SOW-01.
+- Lấy **văn bản chính thức** từ Tri-Ring xác nhận lắp T-BOX bên thứ ba không ảnh hưởng bảo
+  hành xe & pin — hiện mới có xác nhận qua chat.
+
+> **Nếu file DBC trễ:** PRD sheet 13 có **phương án B — gateway OBD bên thứ ba**. Nhà thầu nên
 > báo giá **hai phương án** hoặc nêu rõ giả định đang dùng.
 
 ## 6. Definition of Done

@@ -64,12 +64,22 @@ màn hình app tài xế (SOW-04) · **thuê đơn vị pen-test** (G3 làm).
 
 ## 4. Điều kiện tiên quyết & quyết định MỞ
 
-| Mã | Nội dung | Chặn hạng mục nào |
+> ✅ **Đã gỡ chặn 2026-08-21 — gói này khởi động được ngay.** [D-16](../../DECISION-LOG.md)
+> chốt **host tại Việt Nam + HashiCorp Vault tự dựng**; chi tiết và các phương án đã loại nằm
+> ở [ADR-014](../../adr/ADR-014-ha-tang-trien-khai-va-vault.md) (đang NHÁP, chờ Legal xác nhận
+> NĐ13 và BLĐ duyệt ngân sách).
+>
+> Điểm nhà thầu cần đọc kỹ khi báo giá: chọn Vault **không phải** vì NF-05, mà vì **NF-06**.
+> Mọi giải pháp secret-only đều không cấp/thu hồi được chứng chỉ thiết bị, nên vẫn phải dựng
+> thêm một CA riêng. Phép so đúng là *Vault* với *cloud secrets **cộng** một CA tự dựng* —
+> **công vận hành Vault là chi phí thật, phải nằm trong báo giá, không được giấu đi.**
+
+| Mã | Nội dung | Còn chặn hạng mục nào |
 |---|---|---|
-| **Q6** | Ai vận hành CSKH & cứu hộ 24/7 | NF-03 — chưa biết định tuyến cảnh báo tới đâu, không cấu hình Alertmanager dứt điểm được |
-| **D-12** | Vai trò nhận cảnh báo tháo thiết bị (ma trận chưa có "Quản lý rủi ro") | Phân quyền `device_tamper` |
-| — | Chọn vault (chưa có mã quyết định) | NF-05 — **cần ADR trước khi code** |
-| — | Hạ tầng triển khai thật (cloud nào, VPC, ai giữ khoá) | NF-05, NF-15 |
+| **Q6** | Ai vận hành CSKH & cứu hộ 24/7 | NF-03 — chưa biết định tuyến cảnh báo tới đâu, không cấu hình Alertmanager dứt điểm được. **Vẫn MỞ** |
+| **D-12** | Vai trò nhận cảnh báo tháo thiết bị (ma trận chưa có "Quản lý rủi ro") | Phân quyền `device_tamper`. **Vẫn MỞ** |
+| ~~Chọn vault~~ | ✅ Chốt = HashiCorp Vault (KV v2 + PKI) — D-16 | — |
+| ~~Hạ tầng triển khai~~ | ✅ Chốt = đặt tại Việt Nam — D-16. Nhà cung cấp cụ thể chọn ở bước mua sắm | — |
 
 > Nếu một hạng mục phụ thuộc mục MỞ: **dừng lại và nêu ra trong báo cáo tuần**, không tự
 > giả định. Đây là ranh giới trong CLAUDE.md, áp dụng cho nhà thầu y như đội nội bộ.

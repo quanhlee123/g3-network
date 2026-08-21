@@ -275,20 +275,27 @@ npm run loadtest -- --vehicles 300 --stations 10 --minutes 30
 Những điều dưới đây **không phải thiếu sót**, mà là chỗ Phase 1 cố ý dừng lại:
 
 - **Không có phần cứng thật.** Mọi dữ liệu xe đến từ `simulators/vehicle-sim`, mọi trụ sạc
-  từ `simulators/ocpp-sim`. Đặc tả telematics Tri-Ring (Q1) và 3 trong 5 câu hỏi kỹ thuật
-  TR-02 / TR-04 / TR-05 vẫn **MỞ** — xem [DECISION-LOG.md](../DECISION-LOG.md).
+  từ `simulators/ocpp-sim`. Từ 2026-08-21, **D-13** chốt G3 tự chọn T-BOX nên TR-02/04/05
+  hết chặn (thành tiêu chí mua sắm). Thứ còn chặn thật là **file DBC** để đọc CAN — dự kiến
+  8/2026, chú thích tiếng Trung, cần dịch. Xem [DECISION-LOG.md](../DECISION-LOG.md).
 - **Không có tiền thật.** VNPay chỉ sandbox, có rào chắn kỹ thuật chặn URL production.
   Chưa tích hợp hóa đơn điện tử (F-H3) — nhà cung cấp (Q9) chưa chọn.
 - **App tài xế mới có khung.** Có cấu hình, tầng API, đăng nhập OTP, bảng 10 màn hình và
   luật điều hướng — **chưa vẽ màn hình nào**, chờ wireframe theo
   [YEU-CAU-WIREFRAME.md](../design/YEU-CAU-WIREFRAME.md).
 - **Chưa có bảo mật vận hành thật**: HTTP/MQTT trần trên localhost, chưa mTLS thiết bị
-  (NF-06), chưa vault (NF-05), chưa backup (NF-15), chưa pen-test (NF-07).
-- **28 mục quyết định đang MỞ**, đếm trực tiếp trong [DECISION-LOG.md](../DECISION-LOG.md)
-  ngày 2026-08-20:
+  (NF-06), chưa vault (NF-05), chưa backup (NF-15), chưa pen-test (NF-07). Hướng đi đã chốt
+  ở **D-16 / [ADR-014](../adr/ADR-014-ha-tang-trien-khai-va-vault.md)**: host tại Việt Nam +
+  HashiCorp Vault (KV v2 cho secret, PKI cho chứng chỉ thiết bị).
+- **25 mục quyết định đang MỞ**, đếm trực tiếp trong [DECISION-LOG.md](../DECISION-LOG.md)
+  ngày 2026-08-21:
   - **7 mã D-xx**: D-02, D-05, D-06, D-07, D-08, D-09, D-12
   - **18 mã Q-xx**: Q1–Q18 (toàn bộ)
-  - **3 mã TR-xx**: TR-02, TR-04, TR-05 (câu hỏi kỹ thuật Tri-Ring đang chặn)
+  - **0 mã TR-xx** — cả 5 đã hết chặn (TR-01/TR-03 chốt 04/08; TR-02/04/05 hết chặn qua D-13)
+
+  **Không còn nhóm nào chặn hoàn toàn một gói thầu.** Ba phụ thuộc còn lại đều có đường đi
+  vòng ghi trong từng SOW: **file DBC** (SOW-02), **Q9** (SOW-03 chặng 2), **Q5** (SOW-04,
+  không chặn P1.0 vì F-D2 được phép mở app bản đồ ngoài).
 
   Nếu một hạng mục trong SOW của bạn phụ thuộc mục MỞ thì **dừng lại và nêu ra**, không tự
   giả định — ranh giới này ghi trong CLAUDE.md và áp dụng cho nhà thầu y như cho đội nội bộ.

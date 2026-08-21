@@ -101,13 +101,35 @@ soạn nội dung pháp lý cho consent (Legal) · vẽ wireframe (Thiết kế,
 
 ## 5. Điều kiện tiên quyết & quyết định MỞ
 
-| Mã | Nội dung | Chặn gì |
+> ✅ **Đã gỡ chặn 2026-08-21 — gói khởi động được.** [D-15](../../DECISION-LOG.md) chốt: xin
+> Thiết kế nộp trước **3 màn ưu tiên** làm chuẩn phong cách, **7 màn còn lại nhà thầu SOW-04
+> vẽ theo**, G3 duyệt từng màn theo ràng buộc NF-12/NF-13.
+>
+> | Nộp trước từ Thiết kế | Nhà thầu vẽ, G3 duyệt |
+> |---|---|
+> | SCR-02 màn chính ba con số lớn · SCR-05 luồng QR 3 bước · SCR-08 SOS | SCR-01, 03, 04, 06, 07, 09, 10 |
+>
+> **Q5 không chặn P1.0.** Acceptance F-D2 ghi rõ *"mở điều hướng (in-app **hoặc
+> Google/VietMap**)"* — P1.0 bung app bản đồ ngoài là đạt, không cần SDK. SDK chỉ cần cho
+> F-D1 (hiện bản đồ trạm) và F-D3 (range-aware, P1.1). Nhà thầu **vẫn phải viết interface
+> `IMapProvider` + mock** trong `packages/contracts` (quy tắc 2) để sau này cắm vendor nào cũng được.
+
+| Mã | Nội dung | Trạng thái |
 |---|---|---|
-| **Wireframe** 🔴 | 10 màn hình SCR-01…SCR-10 theo chuẩn INPUT-03 §2 | Toàn bộ mục 3.1 — **gói không khởi động được nếu thiếu** |
-| **Q5** 🔴 | Nhà cung cấp bản đồ: VietMap / Google / Mapbox | F-D1, F-D2, F-D3 |
-| **Q7** 🟠 | Consent & chính sách dữ liệu tài xế (Nghị định 13/2023) | SCR-10, NF-08 |
-| **Q6 / D-09** 🟠 | Ai trực CSKH & cứu hộ 24/7; định hướng module I | F-I2 fallback hotline, "gọi lại ≤5 phút" |
+| ~~Wireframe~~ | ✅ Hết chặn qua D-15 — 3 màn ưu tiên + nhà thầu vẽ tiếp | Cần Thiết kế nộp 3 màn để khởi động |
+| **Q5** 🟠 | Nhà cung cấp bản đồ: VietMap / Google / Mapbox | **Vẫn MỞ** nhưng **không chặn P1.0**; chặn F-D1 phần SDK và F-D3 (P1.1). Đo trong pilot theo khuyến nghị PRD |
+| **Q7** 🟠 | Consent & chính sách dữ liệu tài xế (Nghị định 13/2023) | **Vẫn MỞ** — chặn nội dung chữ của SCR-10. Luồng thì dựng được, **câu chữ do Legal cấp** |
+| **Q6 / D-09** 🟠 | Ai trực CSKH & cứu hộ 24/7; định hướng module I | **Vẫn MỞ** — chặn F-I2 fallback hotline và cam kết "gọi lại ≤5 phút" |
 | **D-01** ✅ | Có app tài xế ở P1 — **ĐÃ CHỐT = CÓ** | (đã gỡ chặn, ⚠️ chờ BLĐ phê chuẩn hình thức) |
+
+**Bốn câu hỏi thiết kế đang chờ trả lời** (nêu ở cuối [YEU-CAU-WIREFRAME.md](../../design/YEU-CAU-WIREFRAME.md)),
+nhà thầu nên hỏi lại trước khi vẽ 7 màn của mình:
+
+1. **km còn lại** hiện số trần hay kèm khoảng tin cậy (`≈120 km`)? Số trần dễ đọc nhưng dễ bị
+   hiểu là cam kết.
+2. Khi **mất sóng**, ba con số hiện giá trị cache kèm nhãn "số liệu lúc HH:mm", hay ẩn hẳn?
+3. Nút **SOS** đặt floating hay trong thanh dưới? Floating luôn thấy nhưng che nội dung.
+4. Nếu **không trạm nào còn trống** trong bán kính hợp lý thì hiện gì?
 
 ## 6. Definition of Done
 

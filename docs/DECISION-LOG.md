@@ -15,6 +15,10 @@ Trạng thái: MỞ / ĐÃ CHỐT / HOÃN · Quyết định hợp lệ phải �
 | D-10 | Vùng địa lý của dữ liệu mô phỏng: seed đặt 3 trạm sạc quanh TP.HCM/Long An, còn vehicle-sim chạy tuyến Hà Nội – Lạng Sơn → "trạm gần nhất" trong cảnh báo pin ra 1.130 km (đúng về mặt tính toán, vô nghĩa về mặt vận hành) | Làm CẢ HAI: (1) seed bổ sung 3 trạm trên hành lang Hà Nội – Lạng Sơn, và (2) vehicle-sim thêm tuyến miền Nam đi qua 3 trạm TP.HCM/Long An, chọn bằng cờ `--route bac\|nam` | Mạng trạm phủ cả hai miền là hình ảnh thật của một nhà vận hành toàn quốc; đội xe giả lập chạy tuyến nào cũng có trạm trong tầm vài km, nên gợi ý trạm của F-A2 và điều hướng F-D2 mới có nghĩa | PM | 2026-07-29 | F-A2, F-D1, F-D2, F-C1, seed & simulator | ĐÃ CHỐT |
 | D-11 | Hiệu suất sạc dùng cho đối soát 3 chiều — hệ số toàn hệ hay theo dòng xe/trạm, và ai hiệu chuẩn trong pilot | MỘT hệ số toàn hệ `CHARGE_EFFICIENCY`, giữ `1.0` ở Phase 1 (simulator lý tưởng), hiệu chuẩn bằng dữ liệu pilot trước Gate 1 — xem ADR-007 | Không có hệ số thì phần cứng thật sẽ báo lệch 5–8% ở 100% số phiên; chia theo dòng xe/trạm là phức tạp chưa có dữ liệu để biện minh | PM | 2026-07-29 | F-C6, NF-10 | ĐÃ CHỐT (⚠️ việc hiệu chuẩn vẫn là điều kiện Gate 1) |
 | D-12 | Vai trò nhận cảnh báo tháo thiết bị: F-J3 và ADR-003 nói báo cho "Vận hành & **Quản lý rủi ro**", nhưng sheet 9 và enum `user_role` KHÔNG có vai trò "Quản lý rủi ro"; "Vận hành G3 Energy" (`energy_ops`) lại là vai trò trạm sạc, ở dòng "Xem trạng thái & vị trí xe" của sheet 9 là "—" | Tạm cấu hình `device_tamper` cho `admin` + `fleet_manager` + `cskh` (theo dòng "Sức khỏe thiết bị telematics" của sheet 9). KHÔNG tự thêm vai trò mới (quy tắc 6) | Quy trình thu hồi xe là việc của bộ phận rủi ro, mà bộ phận đó chưa có chỗ trong ma trận phân quyền → cần người quyết trước khi cấp quyền xem vị trí/thiết bị cho một vai trò mới | PM + Vận hành (+ Legal nếu vai trò mới được xem vị trí xe) | — | F-J3, F-F3, 09-rbac | MỞ |
+| D-13 | Thiết bị telematics: dùng **K4-E của Tri-Ring** hay **G3 tự chọn T-BOX** bên thứ ba? (mục 5 phần "Việc tiếp theo" của [tri-ring-tbox.md](integrations/tri-ring-tbox.md)) | **G3 TỰ CHỌN T-BOX.** Ra hồ sơ mời thầu thiết bị với 4 yêu cầu bắt buộc ở [tri-ring-tbox.md §3.0](integrations/tri-ring-tbox.md): (1) toạ độ WGS-84 thô, (2) timestamp có múi giờ tường minh + NTP, (3) đệm offline ≥48h giữ timestamp gốc, (4) cấu hình được server tại VN + SIM nhà mạng VN | Ba câu hỏi TR-02/TR-04/TR-05 khi đó **không còn phải chờ Tri-Ring trả lời** — chúng thành tiêu chí chọn thiết bị, tức G3 tự quyết được. Rủi ro nặng nhất của đường K4-E là phải **đổi terminal giữa chừng dự án** nếu hoá ra nó không gửi được về server VN (TR-04). Tri-Ring đã xác nhận lắp T-BOX bên thứ ba **không ảnh hưởng bảo hành xe & pin** (cần lấy văn bản chính thức) | PM (Quốc Anh) | 2026-08-21 | F-G1, F-A1, F-F2, NF-01, NF-09, TR-02, TR-04, TR-05 | **ĐÃ CHỐT** |
+| D-14 | Q9 (nhà cung cấp hoá đơn điện tử) đang MỞ — có để cả gói SOW-03 đứng chờ không? | **KHÔNG. Tách SOW-03 làm 2 chặng.** Chặng 1 khởi động ngay: viết interface `IEInvoiceProvider` trong `packages/contracts` + ít nhất 1 mock chạy được. Chặng 2 cắm adapter thật khi Kế toán Holding chốt vendor | Interface và mock **không phụ thuộc vendor** — đó chính là điểm của quy tắc 2. Để cả gói đứng chờ một quyết định kế toán là lãng phí. Tiêu chí chọn vendor giữ nguyên thứ tự: (1) trùng hệ kế toán Holding đang dùng để khỏi đối soát 2 hệ thống, (2) có API + sandbox, (3) chi phí mỗi hoá đơn | PM | 2026-08-21 | F-H3, SOW-03 | **ĐÃ CHỐT** (⚠️ Q9 vẫn MỞ, chỉ hết chặn chặng 1) |
+| D-15 | Wireframe app tài xế chưa nộp (yêu cầu gửi Thiết kế 2026-08-03) — SOW-04 chờ hay đi tiếp? | **Đi tiếp.** Xin Thiết kế nộp trước **3 màn ưu tiên** SCR-02 (ba con số lớn), SCR-05 (luồng QR 3 bước), SCR-08 (SOS) làm chuẩn phong cách. **7 màn còn lại nhà thầu SOW-04 vẽ theo**, G3 duyệt từng màn theo ràng buộc NF-12/NF-13 | Chính [YEU-CAU-WIREFRAME.md](design/YEU-CAU-WIREFRAME.md) đã đề nghị 3 màn này là đủ để khởi động. Để cả gói mobile đứng chờ một người là rủi ro lịch trình lớn nhất của SOW-04 | PM | 2026-08-21 | F-D1..D5, F-H1, F-I2, NF-12, NF-13, SOW-04 | **ĐÃ CHỐT** |
+| D-16 | Hạ tầng triển khai đặt ở đâu, và dùng secret manager nào? (chặn NF-05, NF-06, NF-15 của SOW-01) | **Host tại Việt Nam** (VNG Cloud / Viettel IDC / FPT Cloud / CMC — chọn nhà cung cấp cụ thể ở bước mua sắm) + **HashiCorp Vault tự dựng** — xem [ADR-014](adr/ADR-014-ha-tang-trien-khai-va-vault.md) | Hai lý do độc lập cùng chỉ về một hướng: (1) **TR-04 yêu cầu thiết bị gửi về server tại VN** và Gate 2 ⑤ yêu cầu tuân thủ NĐ 13/2023, trong khi AWS/GCP/Azure **đều không có region tại VN**; (2) **NF-06 cần mTLS/chứng chỉ theo từng thiết bị, thu hồi được** — Vault có sẵn PKI engine làm đúng việc đó, còn giải pháp secret-only nào cũng phải dựng thêm một CA riêng, tức hai hệ thống thay vì một | PM (⚠️ cần Legal xác nhận phần NĐ13 và BLĐ duyệt ngân sách hạ tầng) | 2026-08-21 | NF-05, NF-06, NF-15, TR-04, SOW-01 | **ĐÃ CHỐT** (⚠️ ADR-014 đang NHÁP, chờ duyệt) |
 
 ## Q1–Q12 — chép nguyên trạng từ PRD sheet 14 ([docs/prd/14-decisions.md](prd/14-decisions.md))
 
@@ -54,19 +58,27 @@ khuyến nghị đổi thành *"nghiêng phương án nội địa (VietMap/Be) 
 → Củng cố quyết định của Prompt 10: portal **không** gắn cứng nhà cung cấp bản đồ nào
 (xem `apps/portal/lib/ban-do.ts`).
 
-## TR-01…TR-05 — câu hỏi kỹ thuật Tri-Ring đang CHẶN
+## TR-01…TR-05 — câu hỏi kỹ thuật Tri-Ring (KHÔNG CÒN CHẶN từ 2026-08-21)
 
 > Nguồn: [docs/integrations/tri-ring-tbox.md](integrations/tri-ring-tbox.md) — tổng hợp trao
 > đổi 21–31/07/2026. Đây là phần **chưa trả lời** của Q1 (đặc tả telematics Tri-Ring), tách
 > ra thành từng câu để theo dõi được.
+>
+> **Cả 5 mã đều đã hết chặn.** TR-01/TR-03 chốt ngày 2026-08-04 (phía VN chọn hệ GPS và model
+> T-BOX). TR-02/TR-04/TR-05 hết chặn ngày 2026-08-21 qua **D-13** — khi G3 tự chọn T-BOX thì
+> ba câu này không còn là câu hỏi cho Tri-Ring nữa, chúng là **tiêu chí chọn thiết bị**.
+>
+> ⚠️ Thứ còn chặn thật sự **không nằm trong bảng này**: **file DBC** (dự kiến 8/2026, chú
+> thích tiếng Trung, cần dịch). Không có DBC thì không đọc được CAN của xe, dù dùng T-BOX nào.
+> Đây mới là phần còn lại của Q1 và của tiêu chí **Gate 0 ①**.
 
 | Mã | Câu hỏi | Rủi ro nếu không trả lời | Đã phòng vệ thế nào | Trạng thái |
 |---|---|---|---|---|
 | TR-01 | Hệ toạ độ GPS: **WGS-84 hay GCJ-02**? | GCJ-02 lệch **100–700 m** tại VN → geofence, gợi ý trạm, bản đồ đội đều sai đều mà không có dấu hiệu | **ĐÃ CHỐT = WGS-84** (xem dưới). Migration 0029 `devices.he_toa_do` giữ nguyên để kiểm chứng từng thiết bị | **ĐÃ CHỐT** |
-| TR-02 | Giao thức lên server: **GB/T 32960 hay MQTT/JSON**? | Quyết định hình dạng adapter ingest | `ITelematicsSource` đã trừu tượng hoá; chỗ hở nhỏ: `payload` khai là JSON string, GB/T là nhị phân | MỞ |
+| TR-02 | Giao thức lên server: **GB/T 32960 hay MQTT/JSON**? | Quyết định hình dạng adapter ingest | `ITelematicsSource` đã trừu tượng hoá; chỗ hở nhỏ: `payload` khai là JSON string, GB/T là nhị phân | **HẾT CHẶN** qua D-13 — G3 tự chọn T-BOX nên tự chọn luôn giao thức. Vẫn phải nới `payload` sang `string \| Uint8Array` nếu thiết bị trúng thầu nói nhị phân |
 | TR-03 | Timestamp có phải **UTC** không? | TQ UTC+8 vs VN UTC+7 → lệch 1 giờ → **gắn cờ vi phạm bảo hành oan** toàn bộ phiên sạc đêm (ADR-010) | **ĐÃ CHỐT = giờ vận hành GMT+7, bản tin phải mang múi giờ tường minh** (xem dưới) | **ĐÃ CHỐT** |
-| TR-04 | K4-E cấu hình gửi dữ liệu về **server tại Việt Nam** được không? | Nếu không → phải đổi terminal, ảnh hưởng kiến trúc backend | — | MỞ |
-| TR-05 | Bộ đệm offline **≥48 giờ**? | NF-09 yêu cầu store-and-forward ≥48h; chưa xác nhận thiết bị làm được | — | MỞ |
+| TR-04 | K4-E cấu hình gửi dữ liệu về **server tại Việt Nam** được không? | Nếu không → phải đổi terminal, ảnh hưởng kiến trúc backend | — | **HẾT CHẶN** qua D-13 + D-16 — thành **yêu cầu bắt buộc #4** trong hồ sơ mời thầu T-BOX, và hạ tầng đã chốt đặt tại VN |
+| TR-05 | Bộ đệm offline **≥48 giờ**? | NF-09 yêu cầu store-and-forward ≥48h; chưa xác nhận thiết bị làm được | — | **HẾT CHẶN** qua D-13 — thành **yêu cầu bắt buộc #3** trong hồ sơ mời thầu T-BOX; nghiệm thu bằng bench test, không bằng lời hứa của nhà cung cấp |
 
 ### TR-01 ĐÃ CHỐT (2026-08-04, PM) — hệ toạ độ **WGS-84 (EPSG:4326)**
 
@@ -142,6 +154,20 @@ từng phiên và giữ ≥5 năm**. Khi làm F-C8 phải chuyển từ hằng s
 "giá hiển thị = giá tính tiền" cho một phiên trong quá khứ.
 
 ## Nhật ký thay đổi
+- **2026-08-21 · PM (Quốc Anh) · Chốt D-13…D-16 — gỡ chặn cả 4 gói thầu.**
+  Bốn quyết định lấy sau khi rà [docs/handover/sow/](handover/sow/) và
+  [tri-ring-tbox.md](integrations/tri-ring-tbox.md):
+  - **D-13 — G3 tự chọn T-BOX**, không dùng K4-E. Hệ quả lớn nhất: **TR-02/TR-04/TR-05 hết
+    chặn** vì chúng thành tiêu chí mua sắm thay vì câu hỏi chờ Tri-Ring trả lời.
+  - **D-14 — tách SOW-03 làm 2 chặng**, chặng interface + mock khởi động ngay, không chờ Q9.
+  - **D-15 — SOW-04 đi tiếp** với 3 màn wireframe ưu tiên, 7 màn còn lại nhà thầu vẽ + G3 duyệt.
+  - **D-16 — host tại Việt Nam + HashiCorp Vault** ([ADR-014](adr/ADR-014-ha-tang-trien-khai-va-vault.md),
+    NHÁP). TR-04 và NĐ 13/2023 cùng chỉ về VN, mà AWS/GCP/Azure đều không có region tại VN;
+    NF-06 cần PKI theo thiết bị nên Vault gộp được hai nhu cầu vào một hệ thống.
+  - **Số mục MỞ: 28 → 25.** Không còn nhóm nào **chặn hoàn toàn** một gói thầu. Ba phụ thuộc
+    còn lại đều có đường đi vòng đã ghi rõ trong SOW: **file DBC** (SOW-02 — chặn phần đọc
+    CAN, không chặn đặc tả mua sắm và adapter), **Q9** (SOW-03 — chỉ chặn chặng 2), **Q5**
+    (SOW-04 — không chặn P1.0 vì F-D2 được phép mở app bản đồ ngoài).
 - **2026-08-20 · Claude Code (Prompt 12) · Gói bàn giao nhà thầu.**
   Thêm [docs/handover/](handover/): `system-overview.md`, `feature-status.md` (đối chiếu
   **46 mã F-xx** với mã nguồn và test thật), `README.md` mục lục, và **4 gói thầu** trong

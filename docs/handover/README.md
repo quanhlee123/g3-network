@@ -13,16 +13,20 @@ Phase 1. Đọc theo đúng thứ tự dưới đây.
 
 ## Bốn gói thầu
 
-| Gói | Nội dung | Chặn bởi |
-|---|---|---|
-| [SOW-01](sow/SOW-01-hardening-ha-tang.md) | **Hardening & hạ tầng** — bịt lỗ hổng, TLS/vault, mTLS thiết bị, backup, on-call, pen-test | Q6 · chọn vault · hạ tầng triển khai |
-| [SOW-02](sow/SOW-02-tich-hop-phan-cung.md) | **Tích hợp phần cứng** — adapter Tri-Ring thật, nghiệm thu trụ OCPP thật, provisioning | 🔴 Q1 · TR-02 · TR-04 · TR-05 · Q8 |
-| [SOW-03](sow/SOW-03-thanh-toan-hoa-don-production.md) | **Thanh toán & hóa đơn production** — VNPay production, hóa đơn điện tử, hiệu chuẩn đối soát | 🔴 Q9 · D-11 · Q13 |
-| [SOW-04](sow/SOW-04-mobile-p1-1.md) | **App tài xế P1.1** — 10 màn hình, bản đồ & điều hướng, thanh toán ≤3 chạm, SOS | 🔴 wireframe · Q5 · Q7 |
+> ✅ **Cập nhật 2026-08-21 — không còn gói nào bị chặn hoàn toàn.** Bốn quyết định
+> **D-13…D-16** trong [DECISION-LOG.md](../DECISION-LOG.md) đã gỡ chặn cả bốn gói. Số mục MỞ
+> giảm **28 → 25**. Ba phụ thuộc còn lại đều có đường đi vòng ghi rõ trong từng SOW.
+
+| Gói | Nội dung | Khởi động được? | Còn phụ thuộc |
+|---|---|---|---|
+| [SOW-01](sow/SOW-01-hardening-ha-tang.md) | **Hardening & hạ tầng** — bịt lỗ hổng, TLS/vault, mTLS thiết bị, backup, on-call, pen-test | ✅ **Ngay** — D-16 chốt host tại VN + HashiCorp Vault ([ADR-014](../adr/ADR-014-ha-tang-trien-khai-va-vault.md)) | Q6 (định tuyến cảnh báo) · D-12 (vai trò tamper) |
+| [SOW-02](sow/SOW-02-tich-hop-phan-cung.md) | **Tích hợp phần cứng** — adapter telematics thật, nghiệm thu trụ OCPP thật, provisioning | ⚠️ **Một phần** — D-13 chốt G3 tự chọn T-BOX, gỡ TR-02/04/05. Đặc tả mua sắm + adapter làm được ngay | 🔴 **file DBC** chặn phần đọc CAN · Q8 · Q2 |
+| [SOW-03](sow/SOW-03-thanh-toan-hoa-don-production.md) | **Thanh toán & hóa đơn production** — VNPay production, hóa đơn điện tử, hiệu chuẩn đối soát | ✅ **Chặng 1 ngay** — D-14 tách 2 chặng, interface + mock không cần vendor | Q9 chặn chặng 2 · Q13 · hợp đồng cổng thanh toán |
+| [SOW-04](sow/SOW-04-mobile-p1-1.md) | **App tài xế P1.1** — 10 màn hình, bản đồ & điều hướng, thanh toán ≤3 chạm, SOS | ✅ **Ngay** — D-15: 3 màn ưu tiên từ Thiết kế, 7 màn nhà thầu vẽ + G3 duyệt | Q5 (không chặn P1.0) · Q7 (câu chữ consent) · Q6 |
 
 **Thứ tự đề nghị:** SOW-01 trước (phần bảo mật đường truyền là điều kiện của SOW-02 —
-không cắm thiết bị thật vào một broker MQTT chưa xác thực được). SOW-02, SOW-03, SOW-04
-chạy song song được nếu các mục MỞ tương ứng đã chốt.
+không cắm thiết bị thật vào một broker MQTT chưa xác thực được, và PKI của Vault là thứ cấp
+chứng chỉ cho thiết bị ở SOW-02). SOW-03 và SOW-04 chạy song song được ngay.
 
 ## Ba con số nên tự kiểm chứng trước khi tin tài liệu này
 
